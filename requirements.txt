@@ -1,0 +1,17 @@
+# Install these CUDA builds first using the official cu126 index (see README.md).
+# The local version suffix prevents silently substituting CPU or CUDA 13 builds.
+torch==2.14.0+cu126
+torchvision==0.29.0+cu126
+numpy==2.2.6
+scipy==1.16.2
+pandas==2.3.3
+matplotlib==3.10.6
+scikit-learn==1.7.2
+scikit-image==0.25.2
+opencv-python==4.12.0.88
+Pillow==12.3.0
+tqdm==4.67.1
+jupyterlab==4.4.9
+ipykernel==6.30.1
+tensorboard==2.20.0
+torchinfo==1.8.0

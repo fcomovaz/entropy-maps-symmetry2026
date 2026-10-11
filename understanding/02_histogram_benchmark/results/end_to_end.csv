@@ -1,0 +1,2 @@
+patch_size,patches,pixels,pipeline_scope,pipeline_median_ns,histogram_only_median_ns,histogram_share_percent,independent_runs,repetitions_per_run,entropy_checksum
+64x64,16,65536,Pillow crop + tobytes + H1 histogram + entropy,5823566,4776078,82.013,5,50,21623.665192

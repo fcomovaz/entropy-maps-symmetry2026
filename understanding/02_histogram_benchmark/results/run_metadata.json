@@ -1,0 +1,39 @@
+{
+  "timestamp_utc": "2026-09-28T07:55:33Z",
+  "python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "platform": "Windows-10-10.0.19045-SP0",
+  "pillow": "12.3.0",
+  "seed": 20260928,
+  "patch_sizes": [
+    16,
+    32,
+    64,
+    128,
+    256
+  ],
+  "input_types": [
+    "uniform",
+    "two-level",
+    "gradient",
+    "checkerboard",
+    "low-entropy random",
+    "full-range random",
+    "real image patch"
+  ],
+  "methods": [
+    "H1 direct-address list",
+    "H1-local direct-address list",
+    "H2 array.array",
+    "H3 collections.Counter",
+    "H4 defaultdict",
+    "H5 unroll x4",
+    "H5 unroll x8",
+    "H6 Pillow histogram [library/C implementation baseline]"
+  ],
+  "warmup_calls": 3,
+  "independent_runs": 5,
+  "target_pixels_per_run": 1000000,
+  "timer": "time.perf_counter_ns",
+  "correctness": "all methods exactly matched H1; every histogram summed to N",
+  "array_I_itemsize_bytes": 4
+}

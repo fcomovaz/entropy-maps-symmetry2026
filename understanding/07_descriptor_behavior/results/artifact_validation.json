@@ -1,0 +1,28 @@
+{
+  ".": {
+    "experiment_csvs": 15,
+    "comparisons": 279,
+    "verified_pngs": 606
+  },
+  "outputs\\check_128": {
+    "experiment_csvs": 15,
+    "comparisons": 279,
+    "verified_pngs": 606
+  },
+  "outputs\\check_257": {
+    "experiment_csvs": 1,
+    "comparisons": 4,
+    "verified_pngs": 12
+  },
+  "outputs\\check_cli": {
+    "experiment_csvs": 1,
+    "comparisons": 51,
+    "verified_pngs": 84
+  },
+  "checks": [
+    "all PNG decode",
+    "94 dimensions every CSV row",
+    "offset -40 and +40 exact equality",
+    "CLI grid boundary CSV byte-identical to full run"
+  ]
+}

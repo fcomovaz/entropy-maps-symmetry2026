@@ -1,0 +1,11 @@
+{
+  "entropy_rows": 480,
+  "pipeline_rows": 1200,
+  "histogram_rows": 300,
+  "ranking_patches": 2156,
+  "exact_comparisons": 7668,
+  "exact_tolerance_pass": true,
+  "script_hash_matches": true,
+  "script_hash_basis": "relocation",
+  "two_run_data_errors_scores_ranking_byte_identical": true
+}

@@ -1,0 +1,38 @@
+experiment,series,relation,n,l2_shape,entropy_mean_shape,min_l2,max_l2,max_case,max_parameter,max_l1,max_feature_difference,max_changed
+global_intensity,offset,base,7,non-monotonic,non-monotonic,0.0,0.06994211917484856,002_offset,-10,0.5495761990644408,0.0157782312155329,94
+contrast,contrast,base,6,non-monotonic,monotonic nondecreasing,0.0,2.0498193105926528,000_contrast,0.5,18.873436073733497,0.24435156252005197,94
+noise,noise_sigma,base,6,monotonic nondecreasing,monotonic nondecreasing,0.0,1.559437820679697,005_noise_sigma,30,14.376971660934592,0.19785922270480938,94
+blur,blur_radius,base,5,monotonic nondecreasing,monotonic nonincreasing,0.0,5.30227212263787,004_blur_radius,8,48.266454944535184,0.730730575839648,94
+defect_size,defect_size,base,7,monotonic nondecreasing,monotonic nondecreasing,0.03317341824212551,1.7476599200238205,006_defect_size,64,6.558136206896937,0.7492473635652384,27
+defect_strength,defect_strength,base,7,monotonic nondecreasing,monotonic nondecreasing,0.0,0.8201254972707004,006_defect_strength,1,2.098475428474795,0.5801325593846969,16
+defect_position,horizontal,base,61,non-monotonic,non-monotonic,0.29391586884803966,0.3573632040935514,000_horizontal,0,0.6964878720315539,0.33465851192976015,16
+defect_position,horizontal,consecutive,60,non-monotonic,non-monotonic,0.0,0.13513925531185497,032_horizontal,128,0.2794235049045502,0.10950050441689374,15
+grid_boundary,grid_2,base,9,non-monotonic,non-monotonic,0.08730614029059562,0.1116822666416052,000_grid_2,-8,0.19347169033218314,0.10552904093332227,16
+grid_boundary,grid_2,consecutive,8,non-monotonic,non-monotonic,0.0,0.04139072004086058,003_grid_2,-2,0.08475036406341767,0.03146342016435183,15
+grid_boundary,grid_4,base,9,non-monotonic,non-monotonic,0.08782705680498917,0.1116822666416052,009_grid_4,-8,0.20384722986333717,0.10552904093332227,15
+grid_boundary,grid_4,consecutive,8,non-monotonic,non-monotonic,0.0,0.04106857286343319,012_grid_4,-2,0.07336930718108932,0.03146342016435183,10
+grid_boundary,grid_8,base,9,non-monotonic,non-monotonic,0.09027640574739718,0.1116822666416052,018_grid_8,-8,0.20008155936774827,0.10552904093332227,14
+grid_boundary,grid_8,consecutive,8,non-monotonic,non-monotonic,0.0,0.039253203628425735,021_grid_8,-2,0.05567969345067416,0.03146342016435183,5
+translation,x,base,6,non-monotonic,non-monotonic,0.0,0.2734930093882202,005_x,16,1.4931488807704956,0.07892891746378294,94
+translation,y,base,6,monotonic nondecreasing,non-monotonic,0.0,0.26154285719878,011_y,16,1.2755547618204952,0.07872861158601507,38
+transformations,identity,base,1,approximately flat,approximately flat,0.0,0.0,000_identity,0,0.0,0.0,0
+transformations,lr,base,1,approximately flat,approximately flat,0.29057276210003846,0.29057276210003846,001_lr,0,1.7227725741587694,0.07637276090755407,84
+transformations,tb,base,1,approximately flat,approximately flat,0.1580639168570518,0.1580639168570518,002_tb,0,0.47217218647895143,0.07480983281205789,18
+transformations,rot180,base,1,approximately flat,approximately flat,0.29057276210003846,0.29057276210003846,003_rot180,0,1.7227725741587694,0.07637276090755407,84
+symmetric_defects,mirrored_pair,base,1,approximately flat,approximately flat,0.5067374957490837,0.5067374957490837,000_mirrored_pair,512,1.1497199106838412,0.33465851192976015,13
+symmetric_defects,two_left_equal_area,base,1,approximately flat,approximately flat,0.5099763944427304,0.5099763944427304,001_two_left_equal_area,512,1.2165977537421804,0.33465851192976015,15
+symmetric_defects,single_left,base,1,approximately flat,approximately flat,0.3573632040935514,0.3573632040935514,002_single_left,256,0.6175722360614784,0.33465851192976015,13
+entropy_collision,cellwise_exact_collision,base,1,approximately flat,approximately flat,0.0,0.0,000_cellwise_exact_collision,0,0.0,0.0,0
+same_histogram,patch_alone,base,1,approximately flat,approximately flat,2.29128784747792,2.29128784747792,000_patch_alone,0,21.0,0.25,84
+same_histogram,aligned_r2c2,base,1,approximately flat,approximately flat,0.0,0.0,001_aligned_r2c2,0,0.0,0.0,0
+same_histogram,aligned_r3c5,base,1,approximately flat,approximately flat,0.0,0.0,002_aligned_r3c5,0,0.0,0.0,0
+same_histogram,cross_boundary,base,1,approximately flat,approximately flat,0.13026040625416457,0.13026040625416457,003_cross_boundary,0,0.359375,0.0625,14
+resolution,native,base,3,non-monotonic,non-monotonic,0.0,0.05307281998559713,000_native,128,0.4106905749643755,0.009561859172380727,94
+resolution,resize_nearest,base,3,monotonic nonincreasing,monotonic nondecreasing,0.0,0.031841706826861445,003_resize_nearest,128,0.21830559312881836,0.013221249398155277,94
+resolution,resize_bilinear,base,3,non-monotonic,non-monotonic,0.0,0.17677959995869807,006_resize_bilinear,128,1.577373494535999,0.03668432632737206,94
+bins,stability_scene,base,6,non-monotonic,monotonic nondecreasing,0.0,1.401469519488794,030_stability_scene,256,12.959018226708126,0.16296738651365494,94
+bins,stability_regular,base,6,non-monotonic,monotonic nonincreasing,0.0,1.1524430571616109,031_stability_regular,256,10.625,0.125,85
+bins,stability_noise,base,6,non-monotonic,monotonic nonincreasing,0.0,0.1714772490269707,032_stability_noise,256,1.4477324998763113,0.026636468100338262,94
+bins,stability_defect,base,6,non-monotonic,monotonic nonincreasing,0.0,1.161925804039686,033_stability_defect,256,10.727760756664663,0.16859693936105913,94
+bins,defect_discrimination,base,6,non-monotonic,monotonic nonincreasing,0.3076071524498319,0.3581923518529128,016_defect_discrimination,32,0.6175722360614784,0.3367528895747171,13
+bins,collision_discrimination,base,6,approximately flat,monotonic nonincreasing,0.0,0.0,005_collision_discrimination,8,0.0,0.0,0

@@ -1,0 +1,26 @@
+{
+  "case": "B_non_divisible",
+  "edge_policy": "drop",
+  "original_resolution": [
+    500,
+    333
+  ],
+  "partition_canvas_resolution": [
+    500,
+    333
+  ],
+  "patch_size": [
+    64,
+    64
+  ],
+  "patches_generated": 35,
+  "original_pixels_processed": 143360,
+  "original_pixels_discarded": 23140,
+  "artificial_pixels_added": 0,
+  "real_image_coverage_percent": 86.102102,
+  "pixel_perfect_reconstruction_of_generated_patches": true,
+  "embedded_system_tradeoffs": {
+    "advantage": "Uniform patch buffers without artificial padding.",
+    "disadvantage": "Real border pixels are not processed."
+  }
+}

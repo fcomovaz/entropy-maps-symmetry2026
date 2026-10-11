@@ -1,0 +1,30 @@
+{
+  "timestamp_utc": "2026-09-28T08:01:21Z",
+  "python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "platform": "Windows-10-10.0.19045-SP0",
+  "processor": "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel",
+  "seed": 20260928,
+  "arguments": {
+    "rounds": 7,
+    "entropy_repeats": 300,
+    "target_pixels": 300000
+  },
+  "warmup_calls": 5,
+  "timer": "perf_counter_ns",
+  "clock": {
+    "implementation": "QueryPerformanceCounter()",
+    "monotonic": true,
+    "adjustable": false,
+    "resolution": 1e-07
+  },
+  "source": {
+    "source": "01_patch_partition\\outputs\\A_divisible_patch_32\\partition_input.png",
+    "sha256": "712d7c327c78dcda0726c1d3070f87b31f3a9aa756b9c4b083380ce89795316d",
+    "real_patches": 16
+  },
+  "experiment_02_results_available": true,
+  "exact_tolerance": 1e-12,
+  "max_exact_error": 1.5987211554602254e-14,
+  "exact_comparisons": 7668,
+  "script_sha256": "3539a630fc9fcc9ea8b588f4a4fcb0b21a8a12ce15c86717a91424a913db4a76"
+}

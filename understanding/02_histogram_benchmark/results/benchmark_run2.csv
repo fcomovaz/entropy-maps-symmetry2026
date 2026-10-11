@@ -1,0 +1,281 @@
+patch_size,number_of_pixels,input_type,method,median_ns,min_ns,p25_ns,p75_ns,max_ns,iqr_ns,ns_per_pixel,throughput_pixels_per_s,speedup_vs_h1,repetitions_per_run,independent_runs,conceptual_memory,requires_hashing,requires_dynamic_allocation,c_implementation_ease,embedded_candidate,checksum
+16x16,256,uniform,H1 direct-address list,12955,11842,11881,16710,18498,4829,50.6055,19760710,1.0,2000,5,256 counters,False,False,very easy,True,0
+16x16,256,uniform,H1-local direct-address list,17153,11880,12384,17458,28432,5074,67.0039,14924503,0.7553,2000,5,256 counters,False,False,very easy; alias has no C significance,True,0
+16x16,256,uniform,H2 array.array,26472,21440,23547,26920,32896,3373,103.4062,9670595,0.4894,2000,5,256 uint32 counters = 1024 B,False,False,easy,True,0
+16x16,256,uniform,H3 collections.Counter,55518,46081,48126,58740,60751,10614,216.8672,4611117,0.2333,2000,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+16x16,256,uniform,H4 defaultdict,55262,52270,52754,61017,66081,8263,215.8672,4632478,0.2344,2000,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+16x16,256,uniform,H5 unroll x4,15585,15507,15579,15637,19902,58,60.8789,16426051,0.8312,2000,5,256 counters,False,False,easy,True,0
+16x16,256,uniform,H5 unroll x8,15694,15275,15360,16299,19031,939,61.3047,16311966,0.8255,2000,5,256 counters,False,False,moderate,True,0
+16x16,256,uniform,H6 Pillow histogram [library/C implementation baseline],3588,3318,3319,3750,4310,431,14.0156,71348941,3.6106,2000,5,library-managed,False,False,not directly transferable,False,0
+16x16,256,two-level,H1 direct-address list,12677,11684,12005,13114,22709,1109,49.5195,20194052,1.0,2000,5,256 counters,False,False,very easy,True,0
+16x16,256,two-level,H1-local direct-address list,12656,11744,12293,12949,14160,656,49.4375,20227560,1.0017,2000,5,256 counters,False,False,very easy; alias has no C significance,True,0
+16x16,256,two-level,H2 array.array,22476,20572,21148,24901,26085,3753,87.7969,11389927,0.564,2000,5,256 uint32 counters = 1024 B,False,False,easy,True,0
+16x16,256,two-level,H3 collections.Counter,46166,45139,46137,51067,52645,4930,180.3359,5545206,0.2746,2000,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+16x16,256,two-level,H4 defaultdict,56624,50011,53886,58859,64677,4973,221.1875,4521051,0.2239,2000,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+16x16,256,two-level,H5 unroll x4,15475,14748,15403,20265,20454,4862,60.4492,16542811,0.8192,2000,5,256 counters,False,False,easy,True,0
+16x16,256,two-level,H5 unroll x8,15249,14787,15056,18943,19640,3887,59.5664,16787986,0.8313,2000,5,256 counters,False,False,moderate,True,0
+16x16,256,two-level,H6 Pillow histogram [library/C implementation baseline],4022,3232,3258,4133,4257,875,15.7109,63649925,3.1519,2000,5,library-managed,False,False,not directly transferable,False,0
+16x16,256,gradient,H1 direct-address list,17524,12771,17107,17816,21775,709,68.4531,14608537,1.0,2000,5,256 counters,False,False,very easy,True,160000
+16x16,256,gradient,H1-local direct-address list,12195,11441,11808,13600,17210,1792,47.6367,20992210,1.437,2000,5,256 counters,False,False,very easy; alias has no C significance,True,160000
+16x16,256,gradient,H2 array.array,26220,20197,24381,32141,34626,7760,102.4219,9763539,0.6683,2000,5,256 uint32 counters = 1024 B,False,False,easy,True,160000
+16x16,256,gradient,H3 collections.Counter,48501,44098,46504,50701,50982,4197,189.457,5278242,0.3613,2000,5,up to 256 mapping entries + overhead,True,True,poor,False,160000
+16x16,256,gradient,H4 defaultdict,53766,49460,52392,61476,63713,9084,210.0234,4761373,0.3259,2000,5,up to 256 mapping entries + overhead,True,True,poor,False,160000
+16x16,256,gradient,H5 unroll x4,15931,15326,15762,16077,16390,315,62.2305,16069299,1.1,2000,5,256 counters,False,False,easy,True,160000
+16x16,256,gradient,H5 unroll x8,15455,14507,15163,20466,21133,5303,60.3711,16564219,1.1339,2000,5,256 counters,False,False,moderate,True,160000
+16x16,256,gradient,H6 Pillow histogram [library/C implementation baseline],3347,3227,3232,3686,3720,454,13.0742,76486406,5.2357,2000,5,library-managed,False,False,not directly transferable,False,160000
+16x16,256,checkerboard,H1 direct-address list,12205,11583,11643,14106,17071,2463,47.6758,20975010,1.0,2000,5,256 counters,False,False,very easy,True,1280000
+16x16,256,checkerboard,H1-local direct-address list,16830,11738,11880,17598,23453,5718,65.7422,15210933,0.7252,2000,5,256 counters,False,False,very easy; alias has no C significance,True,1280000
+16x16,256,checkerboard,H2 array.array,23128,20068,20839,30941,31217,10102,90.3438,11068834,0.5277,2000,5,256 uint32 counters = 1024 B,False,False,easy,True,1280000
+16x16,256,checkerboard,H3 collections.Counter,49328,43201,45765,51108,59295,5343,192.6875,5189750,0.2474,2000,5,up to 256 mapping entries + overhead,True,True,poor,False,1280000
+16x16,256,checkerboard,H4 defaultdict,52647,52054,52328,53368,57965,1040,205.6523,4862575,0.2318,2000,5,up to 256 mapping entries + overhead,True,True,poor,False,1280000
+16x16,256,checkerboard,H5 unroll x4,15581,15164,15181,18874,20780,3693,60.8633,16430268,0.7833,2000,5,256 counters,False,False,easy,True,1280000
+16x16,256,checkerboard,H5 unroll x8,15488,15308,15432,20592,20606,5160,60.5,16528926,0.788,2000,5,256 counters,False,False,moderate,True,1280000
+16x16,256,checkerboard,H6 Pillow histogram [library/C implementation baseline],3466,3241,3275,3585,3869,310,13.5391,73860358,3.5214,2000,5,library-managed,False,False,not directly transferable,False,1280000
+16x16,256,low-entropy random,H1 direct-address list,12256,11726,11950,12509,17398,559,47.875,20887728,1.0,2000,5,256 counters,False,False,very easy,True,0
+16x16,256,low-entropy random,H1-local direct-address list,12508,11968,11992,14491,16394,2499,48.8594,20466901,0.9799,2000,5,256 counters,False,False,very easy; alias has no C significance,True,0
+16x16,256,low-entropy random,H2 array.array,20666,20194,20396,24721,24989,4325,80.7266,12387496,0.5931,2000,5,256 uint32 counters = 1024 B,False,False,easy,True,0
+16x16,256,low-entropy random,H3 collections.Counter,46566,43941,46438,48522,49203,2084,181.8984,5497573,0.2632,2000,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+16x16,256,low-entropy random,H4 defaultdict,59291,54020,57081,60187,62394,3106,231.6055,4317687,0.2067,2000,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+16x16,256,low-entropy random,H5 unroll x4,15370,14654,15106,16112,20580,1006,60.0391,16655823,0.7974,2000,5,256 counters,False,False,easy,True,0
+16x16,256,low-entropy random,H5 unroll x8,15348,14735,15227,20019,29275,4792,59.9531,16679698,0.7985,2000,5,256 counters,False,False,moderate,True,0
+16x16,256,low-entropy random,H6 Pillow histogram [library/C implementation baseline],3548,3222,3398,4088,4326,690,13.8594,72153326,3.4543,2000,5,library-managed,False,False,not directly transferable,False,0
+16x16,256,full-range random,H1 direct-address list,12421,11683,11912,17139,26960,5227,48.5195,20610257,1.0,2000,5,256 counters,False,False,very easy,True,10000
+16x16,256,full-range random,H1-local direct-address list,12005,11475,11591,12840,17409,1249,46.8945,21324448,1.0347,2000,5,256 counters,False,False,very easy; alias has no C significance,True,10000
+16x16,256,full-range random,H2 array.array,20576,19458,20183,21200,24799,1017,80.375,12441680,0.6037,2000,5,256 uint32 counters = 1024 B,False,False,easy,True,10000
+16x16,256,full-range random,H3 collections.Counter,35112,32666,34797,35130,39886,333,137.1562,7290955,0.3538,2000,5,up to 256 mapping entries + overhead,True,True,poor,False,10000
+16x16,256,full-range random,H4 defaultdict,64237,56187,60194,64285,72268,4091,250.9258,3985242,0.1934,2000,5,up to 256 mapping entries + overhead,True,True,poor,False,10000
+16x16,256,full-range random,H5 unroll x4,20646,20195,20478,23788,24116,3310,80.6484,12399496,0.6016,2000,5,256 counters,False,False,easy,True,10000
+16x16,256,full-range random,H5 unroll x8,15501,14492,15434,15629,22683,195,60.5508,16515064,0.8013,2000,5,256 counters,False,False,moderate,True,10000
+16x16,256,full-range random,H6 Pillow histogram [library/C implementation baseline],4149,3160,3606,4247,4261,641,16.207,61701615,2.9937,2000,5,library-managed,False,False,not directly transferable,False,10000
+16x16,256,real image patch,H1 direct-address list,12440,11901,12195,17121,22300,4926,48.5938,20578778,1.0,2000,5,256 counters,False,False,very easy,True,0
+16x16,256,real image patch,H1-local direct-address list,12398,11893,12115,17233,17319,5118,48.4297,20648492,1.0034,2000,5,256 counters,False,False,very easy; alias has no C significance,True,0
+16x16,256,real image patch,H2 array.array,29702,20133,22748,35870,39949,13122,116.0234,8618948,0.4188,2000,5,256 uint32 counters = 1024 B,False,False,easy,True,0
+16x16,256,real image patch,H3 collections.Counter,39947,37898,39884,39953,43268,69,156.043,6408491,0.3114,2000,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+16x16,256,real image patch,H4 defaultdict,54794,53734,53989,55669,58463,1680,214.0391,4672044,0.227,2000,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+16x16,256,real image patch,H5 unroll x4,26879,15336,26542,29602,36526,3060,104.9961,9524164,0.4628,2000,5,256 counters,False,False,easy,True,0
+16x16,256,real image patch,H5 unroll x8,15340,15073,15121,16081,18882,960,59.9219,16688396,0.811,2000,5,256 counters,False,False,moderate,True,0
+16x16,256,real image patch,H6 Pillow histogram [library/C implementation baseline],3203,3174,3177,3696,3706,519,12.5117,79925070,3.8839,2000,5,library-managed,False,False,not directly transferable,False,0
+32x32,1024,uniform,H1 direct-address list,52407,51574,51846,63945,64280,12099,51.1787,19539375,1.0,977,5,256 counters,False,False,very easy,True,0
+32x32,1024,uniform,H1-local direct-address list,55332,54209,54624,63104,64795,8480,54.0352,18506470,0.9471,977,5,256 counters,False,False,very easy; alias has no C significance,True,0
+32x32,1024,uniform,H2 array.array,96120,87194,95918,98499,114900,2581,93.8672,10653350,0.5452,977,5,256 uint32 counters = 1024 B,False,False,easy,True,0
+32x32,1024,uniform,H3 collections.Counter,93319,92768,93060,93950,95209,890,91.1318,10973114,0.5616,977,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+32x32,1024,uniform,H4 defaultdict,155212,141457,153728,169328,171184,15600,151.5742,6597428,0.3376,977,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+32x32,1024,uniform,H5 unroll x4,108080,91129,93564,136550,146468,42986,105.5469,9474463,0.4849,977,5,256 counters,False,False,easy,True,0
+32x32,1024,uniform,H5 unroll x8,96991,78000,96786,113340,139015,16554,94.7178,10557681,0.5403,977,5,256 counters,False,False,moderate,True,0
+32x32,1024,uniform,H6 Pillow histogram [library/C implementation baseline],4399,4393,4397,5387,5515,990,4.2959,232780177,11.9134,977,5,library-managed,False,False,not directly transferable,False,0
+32x32,1024,two-level,H1 direct-address list,59584,50480,55294,62564,87846,7270,58.1875,17185822,1.0,977,5,256 counters,False,False,very easy,True,0
+32x32,1024,two-level,H1-local direct-address list,61746,50568,50627,62692,72078,12065,60.2988,16584070,0.965,977,5,256 counters,False,False,very easy; alias has no C significance,True,0
+32x32,1024,two-level,H2 array.array,81374,80207,81167,91761,101104,10594,79.4668,12583872,0.7322,977,5,256 uint32 counters = 1024 B,False,False,easy,True,0
+32x32,1024,two-level,H3 collections.Counter,71952,70100,70742,72900,76450,2158,70.2656,14231710,0.8281,977,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+32x32,1024,two-level,H4 defaultdict,115587,112091,114340,117202,122199,2862,112.8779,8859128,0.5155,977,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+32x32,1024,two-level,H5 unroll x4,76721,68820,69718,79190,89014,9472,74.9229,13347063,0.7766,977,5,256 counters,False,False,easy,True,0
+32x32,1024,two-level,H5 unroll x8,71277,69915,70247,79017,88127,8770,69.6064,14366486,0.8359,977,5,256 counters,False,False,moderate,True,0
+32x32,1024,two-level,H6 Pillow histogram [library/C implementation baseline],4721,4044,4100,4943,5888,843,4.6104,216903198,12.6211,977,5,library-managed,False,False,not directly transferable,False,0
+32x32,1024,gradient,H1 direct-address list,54548,46649,48229,54982,71423,6753,53.2695,18772457,1.0,977,5,256 counters,False,False,very easy,True,156320
+32x32,1024,gradient,H1-local direct-address list,47152,44386,45384,47542,59487,2158,46.0469,21717000,1.1569,977,5,256 counters,False,False,very easy; alias has no C significance,True,156320
+32x32,1024,gradient,H2 array.array,83397,75180,83177,84365,88843,1188,81.4424,12278619,0.6541,977,5,256 uint32 counters = 1024 B,False,False,easy,True,156320
+32x32,1024,gradient,H3 collections.Counter,67150,62702,66419,68338,73292,1919,65.5762,15249442,0.8123,977,5,up to 256 mapping entries + overhead,True,True,poor,False,156320
+32x32,1024,gradient,H4 defaultdict,142050,132228,132520,144970,157946,12450,138.7207,7208729,0.384,977,5,up to 256 mapping entries + overhead,True,True,poor,False,156320
+32x32,1024,gradient,H5 unroll x4,66052,63020,65196,72004,84612,6808,64.5039,15502937,0.8258,977,5,256 counters,False,False,easy,True,156320
+32x32,1024,gradient,H5 unroll x8,81230,60480,72604,83638,85448,11034,79.3262,12606180,0.6715,977,5,256 counters,False,False,moderate,True,156320
+32x32,1024,gradient,H6 Pillow histogram [library/C implementation baseline],4177,4169,4173,5314,5698,1141,4.0791,245152023,13.0591,977,5,library-managed,False,False,not directly transferable,False,156320
+32x32,1024,checkerboard,H1 direct-address list,50024,49590,49628,60442,71098,10814,48.8516,20470174,1.0,977,5,256 counters,False,False,very easy,True,2501120
+32x32,1024,checkerboard,H1-local direct-address list,51115,50058,50675,51805,70965,1130,49.917,20033258,0.9787,977,5,256 counters,False,False,very easy; alias has no C significance,True,2501120
+32x32,1024,checkerboard,H2 array.array,100918,83113,85426,136741,201532,51315,98.5527,10146852,0.4957,977,5,256 uint32 counters = 1024 B,False,False,easy,True,2501120
+32x32,1024,checkerboard,H3 collections.Counter,71310,67903,68035,72111,79183,4076,69.6387,14359837,0.7015,977,5,up to 256 mapping entries + overhead,True,True,poor,False,2501120
+32x32,1024,checkerboard,H4 defaultdict,166716,123636,126180,193380,214778,67200,162.8086,6142182,0.3001,977,5,up to 256 mapping entries + overhead,True,True,poor,False,2501120
+32x32,1024,checkerboard,H5 unroll x4,87660,78459,82719,93462,97671,10743,85.6055,11681497,0.5707,977,5,256 counters,False,False,easy,True,2501120
+32x32,1024,checkerboard,H5 unroll x8,67169,66617,66749,67941,77159,1192,65.5947,15245128,0.7447,977,5,256 counters,False,False,moderate,True,2501120
+32x32,1024,checkerboard,H6 Pillow histogram [library/C implementation baseline],4081,4033,4062,4110,5648,48,3.9854,250918892,12.2578,977,5,library-managed,False,False,not directly transferable,False,2501120
+32x32,1024,low-entropy random,H1 direct-address list,50559,50175,50243,50671,60299,428,49.374,20253565,1.0,977,5,256 counters,False,False,very easy,True,0
+32x32,1024,low-entropy random,H1-local direct-address list,50589,49209,49279,60149,97854,10870,49.4033,20241554,0.9994,977,5,256 counters,False,False,very easy; alias has no C significance,True,0
+32x32,1024,low-entropy random,H2 array.array,101672,90698,99601,125894,166314,26293,99.2891,10071603,0.4973,977,5,256 uint32 counters = 1024 B,False,False,easy,True,0
+32x32,1024,low-entropy random,H3 collections.Counter,78076,71133,77823,79561,85270,1738,76.2461,13115426,0.6476,977,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+32x32,1024,low-entropy random,H4 defaultdict,111650,103298,107664,130287,139221,22623,109.0332,9171518,0.4528,977,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+32x32,1024,low-entropy random,H5 unroll x4,68635,67276,68259,77123,86198,8864,67.0264,14919502,0.7366,977,5,256 counters,False,False,easy,True,0
+32x32,1024,low-entropy random,H5 unroll x8,78487,68073,77190,81347,82940,4157,76.6475,13046747,0.6442,977,5,256 counters,False,False,moderate,True,0
+32x32,1024,low-entropy random,H6 Pillow histogram [library/C implementation baseline],4287,4173,4272,5104,5533,832,4.1865,238861675,11.7936,977,5,library-managed,False,False,not directly transferable,False,0
+32x32,1024,full-range random,H1 direct-address list,70550,46564,56637,71993,116952,15356,68.8965,14514529,1.0,977,5,256 counters,False,False,very easy,True,24425
+32x32,1024,full-range random,H1-local direct-address list,45523,45014,45149,45947,137894,798,44.4561,22494124,1.5498,977,5,256 counters,False,False,very easy; alias has no C significance,True,24425
+32x32,1024,full-range random,H2 array.array,83421,73373,73948,85103,106429,11155,81.4658,12275087,0.8457,977,5,256 uint32 counters = 1024 B,False,False,easy,True,24425
+32x32,1024,full-range random,H3 collections.Counter,46989,45997,46942,49574,49955,2632,45.8877,21792334,1.5014,977,5,up to 256 mapping entries + overhead,True,True,poor,False,24425
+32x32,1024,full-range random,H4 defaultdict,146176,114600,115376,158036,170963,42660,142.75,7005254,0.4826,977,5,up to 256 mapping entries + overhead,True,True,poor,False,24425
+32x32,1024,full-range random,H5 unroll x4,112863,93461,105262,123265,123418,18003,110.2178,9072947,0.6251,977,5,256 counters,False,False,easy,True,24425
+32x32,1024,full-range random,H5 unroll x8,111327,94148,105114,111858,112258,6744,108.7178,9198128,0.6337,977,5,256 counters,False,False,moderate,True,24425
+32x32,1024,full-range random,H6 Pillow histogram [library/C implementation baseline],5734,5211,5225,6564,6578,1339,5.5996,178583886,12.3038,977,5,library-managed,False,False,not directly transferable,False,24425
+32x32,1024,real image patch,H1 direct-address list,68972,58060,58178,69816,91516,11638,67.3555,14846604,1.0,977,5,256 counters,False,False,very easy,True,0
+32x32,1024,real image patch,H1-local direct-address list,69431,55468,69156,71200,90378,2044,67.8037,14748455,0.9934,977,5,256 counters,False,False,very easy; alias has no C significance,True,0
+32x32,1024,real image patch,H2 array.array,97508,77569,81899,110216,135714,28317,95.2227,10501702,0.7073,977,5,256 uint32 counters = 1024 B,False,False,easy,True,0
+32x32,1024,real image patch,H3 collections.Counter,55768,51481,51853,60977,65861,9124,54.4609,18361785,1.2368,977,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+32x32,1024,real image patch,H4 defaultdict,121985,114420,114452,173674,198188,59222,119.126,8394475,0.5654,977,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+32x32,1024,real image patch,H5 unroll x4,65963,64734,64739,72924,83927,8185,64.417,15523854,1.0456,977,5,256 counters,False,False,easy,True,0
+32x32,1024,real image patch,H5 unroll x8,73094,63225,63473,74443,101089,10970,71.3809,14009358,0.9436,977,5,256 counters,False,False,moderate,True,0
+32x32,1024,real image patch,H6 Pillow histogram [library/C implementation baseline],3978,3933,3939,4338,4572,399,3.8848,257415787,17.3384,977,5,library-managed,False,False,not directly transferable,False,0
+64x64,4096,uniform,H1 direct-address list,252276,211813,252247,267742,306122,15495,61.5908,16236186,1.0,245,5,256 counters,False,False,very easy,True,0
+64x64,4096,uniform,H1-local direct-address list,222790,216543,218492,224894,251485,6402,54.3921,18385026,1.1323,245,5,256 counters,False,False,very easy; alias has no C significance,True,0
+64x64,4096,uniform,H2 array.array,387902,371742,371855,389078,425775,17223,94.7026,10559368,0.6504,245,5,256 uint32 counters = 1024 B,False,False,easy,True,0
+64x64,4096,uniform,H3 collections.Counter,183633,172529,181428,186098,188501,4670,44.8323,22305359,1.3738,245,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+64x64,4096,uniform,H4 defaultdict,373744,350775,358233,406489,409303,48256,91.2461,10959373,0.675,245,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+64x64,4096,uniform,H5 unroll x4,289011,285363,286753,295675,332124,8922,70.5593,14172471,0.8729,245,5,256 counters,False,False,easy,True,0
+64x64,4096,uniform,H5 unroll x8,322056,281190,283088,323498,397727,40410,78.627,12718285,0.7833,245,5,256 counters,False,False,moderate,True,0
+64x64,4096,uniform,H6 Pillow histogram [library/C implementation baseline],8600,8587,8595,8620,8638,25,2.0996,476279070,29.3344,245,5,library-managed,False,False,not directly transferable,False,0
+64x64,4096,two-level,H1 direct-address list,243960,219260,226942,249322,358457,22380,59.5605,16789638,1.0,245,5,256 counters,False,False,very easy,True,0
+64x64,4096,two-level,H1-local direct-address list,222161,213399,218847,245858,298666,27011,54.2385,18437079,1.0981,245,5,256 counters,False,False,very easy; alias has no C significance,True,0
+64x64,4096,two-level,H2 array.array,430575,387610,428842,443203,454022,14361,105.1208,9512861,0.5666,245,5,256 uint32 counters = 1024 B,False,False,easy,True,0
+64x64,4096,two-level,H3 collections.Counter,184897,180503,184563,187130,194615,2567,45.1409,22152874,1.3194,245,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+64x64,4096,two-level,H4 defaultdict,646531,379541,591963,780234,824029,188271,157.8445,6335350,0.3773,245,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+64x64,4096,two-level,H5 unroll x4,480722,368966,479391,490686,493382,11295,117.3638,8520517,0.5075,245,5,256 counters,False,False,easy,True,0
+64x64,4096,two-level,H5 unroll x8,400714,385157,385333,417687,453807,32354,97.8306,10221754,0.6088,245,5,256 counters,False,False,moderate,True,0
+64x64,4096,two-level,H6 Pillow histogram [library/C implementation baseline],9683,9666,9682,10024,11282,342,2.364,423009398,25.1947,245,5,library-managed,False,False,not directly transferable,False,0
+64x64,4096,gradient,H1 direct-address list,281716,233991,273586,282475,323280,8889,68.7783,14539465,1.0,245,5,256 counters,False,False,very easy,True,78400
+64x64,4096,gradient,H1-local direct-address list,239741,229879,233469,273192,273576,39723,58.5305,17085104,1.1751,245,5,256 counters,False,False,very easy; alias has no C significance,True,78400
+64x64,4096,gradient,H2 array.array,430671,391136,404329,464402,477152,60073,105.1443,9510740,0.6541,245,5,256 uint32 counters = 1024 B,False,False,easy,True,78400
+64x64,4096,gradient,H3 collections.Counter,152859,149333,151237,159938,161848,8701,37.3191,26795936,1.843,245,5,up to 256 mapping entries + overhead,True,True,poor,False,78400
+64x64,4096,gradient,H4 defaultdict,336329,298488,299259,343730,466771,44471,82.1116,12178551,0.8376,245,5,up to 256 mapping entries + overhead,True,True,poor,False,78400
+64x64,4096,gradient,H5 unroll x4,412855,344050,378120,436524,446520,58404,100.7947,9921159,0.6824,245,5,256 counters,False,False,easy,True,78400
+64x64,4096,gradient,H5 unroll x8,292391,252151,290355,309084,441820,18729,71.3845,14008639,0.9635,245,5,256 counters,False,False,moderate,True,78400
+64x64,4096,gradient,H6 Pillow histogram [library/C implementation baseline],7190,7029,7136,7378,10391,242,1.7554,569680111,39.1816,245,5,library-managed,False,False,not directly transferable,False,78400
+64x64,4096,checkerboard,H1 direct-address list,214972,208098,213037,220437,222107,7400,52.4834,19053644,1.0,245,5,256 counters,False,False,very easy,True,2508800
+64x64,4096,checkerboard,H1-local direct-address list,253599,219098,230739,282521,285452,51782,61.9138,16151483,0.8477,245,5,256 counters,False,False,very easy; alias has no C significance,True,2508800
+64x64,4096,checkerboard,H2 array.array,406474,353208,404183,433140,473889,28957,99.2368,10076905,0.5289,245,5,256 uint32 counters = 1024 B,False,False,easy,True,2508800
+64x64,4096,checkerboard,H3 collections.Counter,209988,175400,207953,220176,274048,12223,51.2666,19505877,1.0237,245,5,up to 256 mapping entries + overhead,True,True,poor,False,2508800
+64x64,4096,checkerboard,H4 defaultdict,374251,366479,371118,379666,483763,8548,91.3699,10944527,0.5744,245,5,up to 256 mapping entries + overhead,True,True,poor,False,2508800
+64x64,4096,checkerboard,H5 unroll x4,287503,285451,287432,331115,362411,43683,70.1912,14246808,0.7477,245,5,256 counters,False,False,easy,True,2508800
+64x64,4096,checkerboard,H5 unroll x8,352717,278298,296744,398625,545479,101881,86.1125,11612709,0.6095,245,5,256 counters,False,False,moderate,True,2508800
+64x64,4096,checkerboard,H6 Pillow histogram [library/C implementation baseline],7310,7266,7280,7355,7686,75,1.7847,560328317,29.4079,245,5,library-managed,False,False,not directly transferable,False,2508800
+64x64,4096,low-entropy random,H1 direct-address list,256758,212693,253234,292269,426358,39035,62.6851,15952765,1.0,245,5,256 counters,False,False,very easy,True,0
+64x64,4096,low-entropy random,H1-local direct-address list,268449,219722,256211,326091,333864,69880,65.5393,15258019,0.9564,245,5,256 counters,False,False,very easy; alias has no C significance,True,0
+64x64,4096,low-entropy random,H2 array.array,383323,378574,380854,384960,397018,4106,93.5847,10685505,0.6698,245,5,256 uint32 counters = 1024 B,False,False,easy,True,0
+64x64,4096,low-entropy random,H3 collections.Counter,186674,173686,180511,191191,210966,10680,45.5747,21941995,1.3754,245,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+64x64,4096,low-entropy random,H4 defaultdict,351374,340697,350378,380609,460546,30231,85.7847,11657095,0.7307,245,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+64x64,4096,low-entropy random,H5 unroll x4,332607,288418,289753,332829,359845,43076,81.2029,12314834,0.772,245,5,256 counters,False,False,easy,True,0
+64x64,4096,low-entropy random,H5 unroll x8,407424,281533,360952,454032,592081,93080,99.4688,10053409,0.6302,245,5,256 counters,False,False,moderate,True,0
+64x64,4096,low-entropy random,H6 Pillow histogram [library/C implementation baseline],8273,8267,8268,9473,11645,1205,2.0198,495104557,31.0357,245,5,library-managed,False,False,not directly transferable,False,0
+64x64,4096,full-range random,H1 direct-address list,205545,176493,183689,216821,268331,33132,50.1819,19927510,1.0,245,5,256 counters,False,False,very easy,True,18375
+64x64,4096,full-range random,H1-local direct-address list,192061,178834,184357,197985,325128,13628,46.8899,21326558,1.0702,245,5,256 counters,False,False,very easy; alias has no C significance,True,18375
+64x64,4096,full-range random,H2 array.array,330830,288788,324762,402885,534387,78123,80.769,12380981,0.6213,245,5,256 uint32 counters = 1024 B,False,False,easy,True,18375
+64x64,4096,full-range random,H3 collections.Counter,137109,135155,136069,138659,156956,2590,33.4739,29874042,1.4991,245,5,up to 256 mapping entries + overhead,True,True,poor,False,18375
+64x64,4096,full-range random,H4 defaultdict,378337,341224,342532,388765,399367,46233,92.3674,10826327,0.5433,245,5,up to 256 mapping entries + overhead,True,True,poor,False,18375
+64x64,4096,full-range random,H5 unroll x4,323133,290619,294182,343802,354158,49620,78.8899,12675895,0.6361,245,5,256 counters,False,False,easy,True,18375
+64x64,4096,full-range random,H5 unroll x8,251385,247398,249659,252079,286414,2420,61.3733,16293733,0.8177,245,5,256 counters,False,False,moderate,True,18375
+64x64,4096,full-range random,H6 Pillow histogram [library/C implementation baseline],7576,6982,7572,7908,11209,336,1.8496,540654699,27.1311,245,5,library-managed,False,False,not directly transferable,False,18375
+64x64,4096,real image patch,H1 direct-address list,255011,223238,230019,267357,387413,37338,62.2585,16062052,1.0,245,5,256 counters,False,False,very easy,True,0
+64x64,4096,real image patch,H1-local direct-address list,205473,187746,201636,268005,270827,66369,50.1643,19934493,1.2411,245,5,256 counters,False,False,very easy; alias has no C significance,True,0
+64x64,4096,real image patch,H2 array.array,303204,293699,296097,326063,364537,29966,74.0244,13509057,0.8411,245,5,256 uint32 counters = 1024 B,False,False,easy,True,0
+64x64,4096,real image patch,H3 collections.Counter,140127,132522,137064,140840,141189,3776,34.2107,29230627,1.8199,245,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+64x64,4096,real image patch,H4 defaultdict,368524,309700,342791,373419,750226,30628,89.9717,11114609,0.692,245,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+64x64,4096,real image patch,H5 unroll x4,474801,316091,404073,475935,546444,71862,115.9182,8626772,0.5371,245,5,256 counters,False,False,easy,True,0
+64x64,4096,real image patch,H5 unroll x8,522288,300480,476740,531342,668041,54602,127.5117,7842416,0.4883,245,5,256 counters,False,False,moderate,True,0
+64x64,4096,real image patch,H6 Pillow histogram [library/C implementation baseline],8073,7792,7936,8412,8701,476,1.9709,507370247,31.5881,245,5,library-managed,False,False,not directly transferable,False,0
+128x128,16384,uniform,H1 direct-address list,2010247,1094295,1602653,2024487,2373484,421834,122.6957,8150242,1.0,62,5,256 counters,False,False,very easy,True,0
+128x128,16384,uniform,H1-local direct-address list,1402845,1050316,1385142,1589244,2557924,204102,85.6229,11679123,1.433,62,5,256 counters,False,False,very easy; alias has no C significance,True,0
+128x128,16384,uniform,H2 array.array,1968058,1847226,1961413,2549973,2686461,588560,120.1207,8324958,1.0214,62,5,256 uint32 counters = 1024 B,False,False,easy,True,0
+128x128,16384,uniform,H3 collections.Counter,784019,641189,648976,961508,1068244,312532,47.8527,20897453,2.564,62,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+128x128,16384,uniform,H4 defaultdict,1580858,1425815,1566856,1646237,1778390,79381,96.4879,10363992,1.2716,62,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+128x128,16384,uniform,H5 unroll x4,1222740,1145044,1166587,1613176,1613595,446589,74.6301,13399414,1.6441,62,5,256 counters,False,False,easy,True,0
+128x128,16384,uniform,H5 unroll x8,1243666,1186289,1195895,1499681,1581394,303786,75.9073,13173955,1.6164,62,5,256 counters,False,False,moderate,True,0
+128x128,16384,uniform,H6 Pillow histogram [library/C implementation baseline],26985,25921,26952,28010,40332,1058,1.647,607152122,74.495,62,5,library-managed,False,False,not directly transferable,False,0
+128x128,16384,two-level,H1 direct-address list,1437439,844411,923410,1454861,1724548,531451,87.7343,11398049,1.0,62,5,256 counters,False,False,very easy,True,0
+128x128,16384,two-level,H1-local direct-address list,898061,872769,888576,1128015,1211924,239439,54.8133,18243750,1.6006,62,5,256 counters,False,False,very easy; alias has no C significance,True,0
+128x128,16384,two-level,H2 array.array,1588174,1457906,1532098,1740408,1884124,208310,96.9344,10316250,0.9051,62,5,256 uint32 counters = 1024 B,False,False,easy,True,0
+128x128,16384,two-level,H3 collections.Counter,674929,627606,640645,720044,875379,79399,41.1944,24275146,2.1298,62,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+128x128,16384,two-level,H4 defaultdict,1699313,1540585,1646984,1766355,2147852,119371,103.7178,9641543,0.8459,62,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+128x128,16384,two-level,H5 unroll x4,1644545,1204256,1419763,2417044,2452668,997281,100.3751,9962634,0.8741,62,5,256 counters,False,False,easy,True,0
+128x128,16384,two-level,H5 unroll x8,1879479,1533884,1709590,1904315,2307495,194725,114.7143,8717309,0.7648,62,5,256 counters,False,False,moderate,True,0
+128x128,16384,two-level,H6 Pillow histogram [library/C implementation baseline],21702,21161,21702,21945,26435,243,1.3246,754953461,66.2353,62,5,library-managed,False,False,not directly transferable,False,0
+128x128,16384,gradient,H1 direct-address list,879800,725468,784856,964658,1111127,179802,53.6987,18622414,1.0,62,5,256 counters,False,False,very easy,True,39680
+128x128,16384,gradient,H1-local direct-address list,1086610,705981,771658,1134682,1369034,363024,66.3214,15078087,0.8097,62,5,256 counters,False,False,very easy; alias has no C significance,True,39680
+128x128,16384,gradient,H2 array.array,1483502,1143115,1155381,1568352,1638524,412971,90.5458,11044137,0.5931,62,5,256 uint32 counters = 1024 B,False,False,easy,True,39680
+128x128,16384,gradient,H3 collections.Counter,508484,464842,479581,523029,537737,43448,31.0354,32221269,1.7302,62,5,up to 256 mapping entries + overhead,True,True,poor,False,39680
+128x128,16384,gradient,H4 defaultdict,1447877,1305932,1312937,2104823,2502882,791886,88.3714,11315878,0.6076,62,5,up to 256 mapping entries + overhead,True,True,poor,False,39680
+128x128,16384,gradient,H5 unroll x4,1262082,1054208,1186026,1419439,1566956,233413,77.0314,12981724,0.6971,62,5,256 counters,False,False,easy,True,39680
+128x128,16384,gradient,H5 unroll x8,1190295,1052647,1055431,1224571,1346639,169140,72.6498,13764655,0.7391,62,5,256 counters,False,False,moderate,True,39680
+128x128,16384,gradient,H6 Pillow histogram [library/C implementation baseline],26423,21345,21513,28718,36369,7205,1.6127,620065852,33.2967,62,5,library-managed,False,False,not directly transferable,False,39680
+128x128,16384,checkerboard,H1 direct-address list,1037073,851365,855708,1052656,1204471,196948,63.2979,15798309,1.0,62,5,256 counters,False,False,very easy,True,2539520
+128x128,16384,checkerboard,H1-local direct-address list,1263553,904474,1248810,1443635,1494523,194825,77.1212,12966611,0.8208,62,5,256 counters,False,False,very easy; alias has no C significance,True,2539520
+128x128,16384,checkerboard,H2 array.array,1574358,1466313,1511529,2024089,3135900,512560,96.0912,10406782,0.6587,62,5,256 uint32 counters = 1024 B,False,False,easy,True,2539520
+128x128,16384,checkerboard,H3 collections.Counter,633952,595411,611076,639868,669947,28792,38.6934,25844228,1.6359,62,5,up to 256 mapping entries + overhead,True,True,poor,False,2539520
+128x128,16384,checkerboard,H4 defaultdict,1759371,1605727,1649340,1782663,2194771,133323,107.3835,9312419,0.5895,62,5,up to 256 mapping entries + overhead,True,True,poor,False,2539520
+128x128,16384,checkerboard,H5 unroll x4,1680997,1175342,1518573,1770973,1781205,252400,102.5999,9746597,0.6169,62,5,256 counters,False,False,easy,True,2539520
+128x128,16384,checkerboard,H5 unroll x8,1260445,1142163,1220574,1287745,1386929,67171,76.9315,12998584,0.8228,62,5,256 counters,False,False,moderate,True,2539520
+128x128,16384,checkerboard,H6 Pillow histogram [library/C implementation baseline],21506,20573,20582,23076,34087,2494,1.3126,761833907,48.2225,62,5,library-managed,False,False,not directly transferable,False,2539520
+128x128,16384,low-entropy random,H1 direct-address list,919584,843726,868639,1011608,1038077,142969,56.127,17816752,1.0,62,5,256 counters,False,False,very easy,True,0
+128x128,16384,low-entropy random,H1-local direct-address list,1337608,966773,1062527,1375763,1608502,313236,81.6411,12248731,0.6875,62,5,256 counters,False,False,very easy; alias has no C significance,True,0
+128x128,16384,low-entropy random,H2 array.array,1511760,1445400,1499511,1527008,1783173,27497,92.2705,10837699,0.6083,62,5,256 uint32 counters = 1024 B,False,False,easy,True,0
+128x128,16384,low-entropy random,H3 collections.Counter,602034,595045,598350,605818,632310,7468,36.7452,27214410,1.5275,62,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+128x128,16384,low-entropy random,H4 defaultdict,1415523,1401389,1412374,1461281,1726903,48907,86.3967,11574521,0.6496,62,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+128x128,16384,low-entropy random,H5 unroll x4,1184127,1152579,1167671,1282979,1665785,115308,72.2734,13836354,0.7766,62,5,256 counters,False,False,easy,True,0
+128x128,16384,low-entropy random,H5 unroll x8,1292118,1141503,1145844,1303750,1484921,157906,78.8646,12679956,0.7117,62,5,256 counters,False,False,moderate,True,0
+128x128,16384,low-entropy random,H6 Pillow histogram [library/C implementation baseline],21005,20968,20984,21021,23702,37,1.282,780004761,43.7793,62,5,library-managed,False,False,not directly transferable,False,0
+128x128,16384,full-range random,H1 direct-address list,717884,696345,713369,734627,738935,21258,43.8162,22822629,1.0,62,5,256 counters,False,False,very easy,True,17980
+128x128,16384,full-range random,H1-local direct-address list,734629,700811,728169,1535439,2172247,807270,44.8382,22302414,0.9772,62,5,256 counters,False,False,very easy; alias has no C significance,True,17980
+128x128,16384,full-range random,H2 array.array,1269177,1173589,1181656,1671871,1977955,490215,77.4644,12909153,0.5656,62,5,256 uint32 counters = 1024 B,False,False,easy,True,17980
+128x128,16384,full-range random,H3 collections.Counter,461673,446787,454498,461768,468265,7270,28.1783,35488322,1.555,62,5,up to 256 mapping entries + overhead,True,True,poor,False,17980
+128x128,16384,full-range random,H4 defaultdict,1147540,1118282,1141187,1294529,1829379,153342,70.0403,14277498,0.6256,62,5,up to 256 mapping entries + overhead,True,True,poor,False,17980
+128x128,16384,full-range random,H5 unroll x4,1174274,1017390,1046315,1219987,2339302,173672,71.672,13952451,0.6113,62,5,256 counters,False,False,easy,True,17980
+128x128,16384,full-range random,H5 unroll x8,1148655,981250,1016574,1207903,1227752,191329,70.1083,14263639,0.625,62,5,256 counters,False,False,moderate,True,17980
+128x128,16384,full-range random,H6 Pillow histogram [library/C implementation baseline],20344,20284,20300,20479,21779,179,1.2417,805348014,35.2873,62,5,library-managed,False,False,not directly transferable,False,17980
+128x128,16384,real image patch,H1 direct-address list,921679,806647,884863,1162065,1344653,277202,56.2548,17776254,1.0,62,5,256 counters,False,False,very easy,True,0
+128x128,16384,real image patch,H1-local direct-address list,949163,695290,770789,1167248,1231768,396459,57.9323,17261524,0.971,62,5,256 counters,False,False,very easy; alias has no C significance,True,0
+128x128,16384,real image patch,H2 array.array,1165535,1141753,1146111,1303832,1306485,157721,71.1386,14057064,0.7908,62,5,256 uint32 counters = 1024 B,False,False,easy,True,0
+128x128,16384,real image patch,H3 collections.Counter,463331,449961,462753,464874,465548,2121,28.2795,35361329,1.9892,62,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+128x128,16384,real image patch,H4 defaultdict,1154223,1119397,1143073,1361598,2173853,218525,70.4482,14194831,0.7985,62,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+128x128,16384,real image patch,H5 unroll x4,1041231,1037592,1039319,1057866,1186334,18547,63.5517,15735221,0.8852,62,5,256 counters,False,False,easy,True,0
+128x128,16384,real image patch,H5 unroll x8,1422256,1021947,1046421,1607139,1818098,560718,86.8076,11519726,0.648,62,5,256 counters,False,False,moderate,True,0
+128x128,16384,real image patch,H6 Pillow histogram [library/C implementation baseline],22058,21852,21934,22098,23690,164,1.3463,742769063,41.7843,62,5,library-managed,False,False,not directly transferable,False,0
+256x256,65536,uniform,H1 direct-address list,3482512,3393425,3425931,6335019,7036062,2909088,53.1389,18818600,1.0,16,5,256 counters,False,False,very easy,True,0
+256x256,65536,uniform,H1-local direct-address list,4440000,3604281,4221412,4698869,5673350,477457,67.749,14760360,0.7843,16,5,256 counters,False,False,very easy; alias has no C significance,True,0
+256x256,65536,uniform,H2 array.array,6298488,5817850,6235731,6783188,6812419,547457,96.1073,10405037,0.5529,16,5,256 uint32 counters = 1024 B,False,False,easy,True,0
+256x256,65536,uniform,H3 collections.Counter,2318556,2280362,2311031,2324425,2342388,13394,35.3784,28265869,1.502,16,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+256x256,65536,uniform,H4 defaultdict,5449338,4911069,5050100,5485594,5719119,435494,83.1503,12026415,0.6391,16,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+256x256,65536,uniform,H5 unroll x4,5260162,4634819,5240981,5736238,6488456,495257,80.2637,12458932,0.6621,16,5,256 counters,False,False,easy,True,0
+256x256,65536,uniform,H5 unroll x8,4602531,4535012,4601269,5183700,7751975,582431,70.229,14239122,0.7567,16,5,256 counters,False,False,moderate,True,0
+256x256,65536,uniform,H6 Pillow histogram [library/C implementation baseline],98488,98444,98469,98525,107088,56,1.5028,665421168,35.3598,16,5,library-managed,False,False,not directly transferable,False,0
+256x256,65536,two-level,H1 direct-address list,4194769,3456231,3472844,6402581,6886100,2929737,64.0071,15623268,1.0,16,5,256 counters,False,False,very easy,True,0
+256x256,65536,two-level,H1-local direct-address list,3635406,3495969,3546362,8135075,10245925,4588713,55.4719,18027147,1.1539,16,5,256 counters,False,False,very easy; alias has no C significance,True,0
+256x256,65536,two-level,H2 array.array,6074344,5607606,5869662,6479644,7262194,609982,92.6871,10788984,0.6906,16,5,256 uint32 counters = 1024 B,False,False,easy,True,0
+256x256,65536,two-level,H3 collections.Counter,2486369,2389275,2413356,2503469,2682650,90113,37.939,26358115,1.6871,16,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+256x256,65536,two-level,H4 defaultdict,6421650,5260869,5987600,6991988,10005844,1004388,97.9866,10205477,0.6532,16,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+256x256,65536,two-level,H5 unroll x4,4673631,4537169,4654769,4785981,5433088,131212,71.3139,14022502,0.8975,16,5,256 counters,False,False,easy,True,0
+256x256,65536,two-level,H5 unroll x8,4713644,4564444,4653694,5841119,7078481,1187425,71.9245,13903468,0.8899,16,5,256 counters,False,False,moderate,True,0
+256x256,65536,two-level,H6 Pillow histogram [library/C implementation baseline],72825,70856,72788,72850,72919,62,1.1112,899910745,57.6007,16,5,library-managed,False,False,not directly transferable,False,0
+256x256,65536,gradient,H1 direct-address list,3478731,2795844,2854006,3543712,3623594,689706,53.0812,18839054,1.0,16,5,256 counters,False,False,very easy,True,20480
+256x256,65536,gradient,H1-local direct-address list,4218181,2949356,3586656,4455019,4684506,868363,64.3643,15536555,0.8247,16,5,256 counters,False,False,very easy; alias has no C significance,True,20480
+256x256,65536,gradient,H2 array.array,5738262,5709756,5719775,6186775,6239119,467000,87.5589,11420880,0.6062,16,5,256 uint32 counters = 1024 B,False,False,easy,True,20480
+256x256,65536,gradient,H3 collections.Counter,1771506,1704144,1763750,1784756,1792656,21006,27.031,36994512,1.9637,16,5,up to 256 mapping entries + overhead,True,True,poor,False,20480
+256x256,65536,gradient,H4 defaultdict,4371725,4307838,4343319,4570069,5032056,226750,66.7072,14990879,0.7957,16,5,up to 256 mapping entries + overhead,True,True,poor,False,20480
+256x256,65536,gradient,H5 unroll x4,4498775,4124781,4188931,4694425,4817469,505494,68.6459,14567521,0.7733,16,5,256 counters,False,False,easy,True,20480
+256x256,65536,gradient,H5 unroll x8,4504225,3972162,4116525,5078750,6020075,962225,68.729,14549895,0.7723,16,5,256 counters,False,False,moderate,True,20480
+256x256,65536,gradient,H6 Pillow histogram [library/C implementation baseline],79019,73181,74756,102112,116438,27356,1.2057,829370151,44.024,16,5,library-managed,False,False,not directly transferable,False,20480
+256x256,65536,checkerboard,H1 direct-address list,3443981,3320412,3393294,3975519,4844456,582225,52.551,19029141,1.0,16,5,256 counters,False,False,very easy,True,2621440
+256x256,65536,checkerboard,H1-local direct-address list,4142562,3499269,4063050,7449681,8390075,3386631,63.2105,15820162,0.8314,16,5,256 counters,False,False,very easy; alias has no C significance,True,2621440
+256x256,65536,checkerboard,H2 array.array,5797025,5650769,5683531,7264719,7341175,1581188,88.4556,11305109,0.5941,16,5,256 uint32 counters = 1024 B,False,False,easy,True,2621440
+256x256,65536,checkerboard,H3 collections.Counter,2325044,2305100,2324994,2346912,2364350,21918,35.4774,28186993,1.4813,16,5,up to 256 mapping entries + overhead,True,True,poor,False,2621440
+256x256,65536,checkerboard,H4 defaultdict,5494175,4994562,5018119,5649606,5929144,631487,83.8345,11928269,0.6268,16,5,up to 256 mapping entries + overhead,True,True,poor,False,2621440
+256x256,65536,checkerboard,H5 unroll x4,4808506,4644188,4750625,5179100,6383181,428475,73.372,13629181,0.7162,16,5,256 counters,False,False,easy,True,2621440
+256x256,65536,checkerboard,H5 unroll x8,4633638,4526162,4538162,5110275,6301431,572113,70.7037,14143530,0.7433,16,5,256 counters,False,False,moderate,True,2621440
+256x256,65536,checkerboard,H6 Pillow histogram [library/C implementation baseline],70919,70825,70881,70950,71062,69,1.0821,924096504,48.5622,16,5,library-managed,False,False,not directly transferable,False,2621440
+256x256,65536,low-entropy random,H1 direct-address list,3438700,3388050,3412194,3458488,4725100,46294,52.4704,19058365,1.0,16,5,256 counters,False,False,very easy,True,0
+256x256,65536,low-entropy random,H1-local direct-address list,4312400,4030769,4286194,5239181,5547294,952987,65.802,15197106,0.7974,16,5,256 counters,False,False,very easy; alias has no C significance,True,0
+256x256,65536,low-entropy random,H2 array.array,5799125,5669588,5764581,6172925,6702712,408344,88.4876,11301015,0.593,16,5,256 uint32 counters = 1024 B,False,False,easy,True,0
+256x256,65536,low-entropy random,H3 collections.Counter,2283019,2270294,2271856,2285212,2293156,13356,34.8361,28705850,1.5062,16,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+256x256,65536,low-entropy random,H4 defaultdict,5589400,4913394,5459844,5894619,6143219,434775,85.2875,11725051,0.6152,16,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+256x256,65536,low-entropy random,H5 unroll x4,5580262,5276031,5433412,6083888,6636306,650476,85.148,11744251,0.6162,16,5,256 counters,False,False,easy,True,0
+256x256,65536,low-entropy random,H5 unroll x8,4594556,4475156,4525162,5157000,7774694,631838,70.1074,14263837,0.7484,16,5,256 counters,False,False,moderate,True,0
+256x256,65536,low-entropy random,H6 Pillow histogram [library/C implementation baseline],73012,72856,72950,78738,111875,5788,1.1141,897605873,47.0977,16,5,library-managed,False,False,not directly transferable,False,0
+256x256,65536,full-range random,H1 direct-address list,3795438,3304488,3345888,3823562,5561562,477674,57.9138,17267045,1.0,16,5,256 counters,False,False,very easy,True,21680
+256x256,65536,full-range random,H1-local direct-address list,4352300,2923150,3068606,4911444,5609381,1842838,66.4108,15057786,0.8721,16,5,256 counters,False,False,very easy; alias has no C significance,True,21680
+256x256,65536,full-range random,H2 array.array,4770300,4609319,4677412,5200888,5305188,523476,72.789,13738339,0.7956,16,5,256 uint32 counters = 1024 B,False,False,easy,True,21680
+256x256,65536,full-range random,H3 collections.Counter,1810175,1745612,1805900,1824175,1834144,18275,27.6211,36204234,2.0967,16,5,up to 256 mapping entries + overhead,True,True,poor,False,21680
+256x256,65536,full-range random,H4 defaultdict,4959425,4551856,4908256,5660412,5693794,752156,75.6748,13214435,0.7653,16,5,up to 256 mapping entries + overhead,True,True,poor,False,21680
+256x256,65536,full-range random,H5 unroll x4,4788300,4304475,4305212,4930444,8511575,625232,73.0637,13686695,0.7926,16,5,256 counters,False,False,easy,True,21680
+256x256,65536,full-range random,H5 unroll x8,4763319,4147919,4706219,5040781,6081819,334562,72.6825,13758474,0.7968,16,5,256 counters,False,False,moderate,True,21680
+256x256,65536,full-range random,H6 Pillow histogram [library/C implementation baseline],77556,76275,76588,77850,134594,1262,1.1834,845015215,48.938,16,5,library-managed,False,False,not directly transferable,False,21680
+256x256,65536,real image patch,H1 direct-address list,3775019,3139138,3559319,3777419,3846762,218100,57.6022,17360442,1.0,16,5,256 counters,False,False,very easy,True,0
+256x256,65536,real image patch,H1-local direct-address list,3780662,3112069,3159006,4397456,5838550,1238450,57.6883,17334530,0.9985,16,5,256 counters,False,False,very easy; alias has no C significance,True,0
+256x256,65536,real image patch,H2 array.array,4931162,4820375,4909725,5519731,5595888,610006,75.2436,13290174,0.7655,16,5,256 uint32 counters = 1024 B,False,False,easy,True,0
+256x256,65536,real image patch,H3 collections.Counter,1941288,1880550,1927100,1942694,1991275,15594,29.6217,33759030,1.9446,16,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+256x256,65536,real image patch,H4 defaultdict,4627475,4543475,4601150,4667219,5193550,66069,70.6097,14162367,0.8158,16,5,up to 256 mapping entries + overhead,True,True,poor,False,0
+256x256,65536,real image patch,H5 unroll x4,5648050,4572188,5024962,5900938,5909269,875976,86.1824,11603297,0.6684,16,5,256 counters,False,False,easy,True,0
+256x256,65536,real image patch,H5 unroll x8,5592400,4771456,5588700,6247775,6884194,659075,85.3333,11718761,0.675,16,5,256 counters,False,False,moderate,True,0
+256x256,65536,real image patch,H6 Pillow histogram [library/C implementation baseline],76356,73625,74981,80538,124969,5557,1.1651,858295353,49.4397,16,5,library-managed,False,False,not directly transferable,False,0
