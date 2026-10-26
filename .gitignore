@@ -12,3 +12,4 @@ results/*
 !results/.gitkeep
 !results/environment_debug.md
 !results/README.md
+data/*

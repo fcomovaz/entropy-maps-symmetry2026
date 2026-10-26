@@ -1,0 +1,24 @@
+[configs]
+path = "configs/base.toml"
+
+[datasets.mvtecad]
+name = "mvtec-ad"
+input_path = "data/raw/mvtec-ad"
+csv_path = "data/csv/mvtec-ad/"
+subdatasets = [
+    "bottle",
+    "cable",
+    "capsule",
+    "carpet",
+    "grid",
+    "hazelnut",
+    "leather",
+    "metal_nut",
+    "pill",
+    "screw",
+    "tile",
+    "toothbrush",
+    "transistor",
+    "wood",
+    "zipper",
+]

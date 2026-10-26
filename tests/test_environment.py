@@ -1,4 +1,5 @@
 """Verify project imports and real CUDA execution; never fall back to CPU."""
+
 import sys
 import traceback
 
@@ -23,7 +24,18 @@ def main() -> int:
         traceback.print_exc()
         return 1
 
-    packages = [numpy, scipy, pandas, matplotlib, sklearn, skimage, cv2, PIL, torch, torchvision]
+    packages = [
+        numpy,
+        scipy,
+        pandas,
+        matplotlib,
+        sklearn,
+        skimage,
+        cv2,
+        PIL,
+        torch,
+        torchvision,
+    ]
     for package in packages:
         print(f"{package.__name__}: {getattr(package, '__version__', 'unknown')}")
     cuda = torch.cuda.is_available()
@@ -36,7 +48,9 @@ def main() -> int:
         # Explicit initialization preserves the actual driver/DLL error on failure.
         torch.cuda.init()
         if not cuda:
-            raise RuntimeError("CUDA is required but torch.cuda.is_available() is False.")
+            raise RuntimeError(
+                "CUDA is required but torch.cuda.is_available() is False."
+            )
         print(f"Device count: {torch.cuda.device_count()}")
         index = torch.cuda.current_device()
         props = torch.cuda.get_device_properties(index)
@@ -69,7 +83,9 @@ def main() -> int:
             output = model(torch.randn(64, 128, device=device))
         torch.cuda.synchronize(device)
         if output.shape != (64, 10) or output.device.type != "cuda":
-            raise RuntimeError(f"Unexpected model output: {output.shape}, {output.device}")
+            raise RuntimeError(
+                f"Unexpected model output: {output.shape}, {output.device}"
+            )
         if not torch.isfinite(output).all().item():
             raise RuntimeError("Model output contains non-finite values.")
         print("MODEL CUDA TEST: PASS")
