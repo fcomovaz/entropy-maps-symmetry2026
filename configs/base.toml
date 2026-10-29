@@ -5,6 +5,8 @@ path = "configs/base.toml"
 name = "mvtec-ad"
 input_path = "data/raw/mvtec-ad"
 csv_path = "data/csv/mvtec-ad/"
+output_path = "data/preprocessed/mvtec-ad"
+output_path_inverted = "data/preprocessed/mvtec-ad-inverted"
 subdatasets = [
     "bottle",
     "cable",

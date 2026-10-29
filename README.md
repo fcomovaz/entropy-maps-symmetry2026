@@ -123,7 +123,36 @@ Guardar los artefactos que interesen fuera de TEMP antes de una limpieza del
 sistema. Invocar los scripts originales directamente también funciona, pero
 sobrescribe sus archivos fijos; los README históricos no se actualizan solos.
 
-## Ejemplos CNN y exploración opcional
+## Preprocesamiento de datasets (MVTec-AD)
+
+El preprocesamiento estandariza las imágenes a escala de grises (`mode 'L'`) y tamaño `128x128` mediante letterboxing/padding centrado con valor `0` (negro), conservando la relación de aspecto original sin distorsiones geométricas.
+
+### Comandos de ejecución
+
+```powershell
+# 1. Pruebas unitarias y de integración
+.\code\.venv\Scripts\python.exe -m unittest tests/test_preprocessing.py
+
+# 2. Conteo previo (dry-run, sin escribir archivos)
+.\code\.venv\Scripts\python.exe -m experiments.preprocess_mvtec_ad --dry-run
+
+# 3. Procesamiento completo
+.\code\.venv\Scripts\python.exe -m experiments.preprocess_mvtec_ad
+
+# 4. Verificación de integridad y visualización comparativa
+.\code\.venv\Scripts\python.exe understanding/08_verify_mvtec_preprocessing/verify.py
+```
+
+### Configuración y salida
+
+- Configuración de dataset y rutas: `configs/base.toml` (`[datasets.mvtecad]`).
+- Parámetros de preprocesamiento: `configs/preprocessing/mvtec_ad.toml`.
+  - `target_size = 128`, `pad_value = 0`, `padding_anchor = "center"`.
+  - Imágenes: interpolación `LANCZOS`, conversión a escala de grises.
+  - Máscaras (`ground_truth`): interpolación `NEAREST` para preservar valores discretos `{0, 255}`, sin alteración de niveles de gris.
+- Directorio de salida: `data/preprocessed/mvtec-ad/` (refleja la estructura de subcarpetas de `data/raw/mvtec-ad/`).
+- Nota metodológica: el reescalado a 128 px con interpolación de vecinos cercanos en máscaras puede atenuar o eliminar defectos minúsculos de pocos píxeles presentes en resoluciones nativas de 1024 px.
+
 
 La [guía de CNN](understanding/04_lightweight_cnns/README.md) incluye inspección,
 entrenamiento, inferencia y benchmark desde la raíz, con salidas por corrida.

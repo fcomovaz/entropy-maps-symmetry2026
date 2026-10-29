@@ -24,11 +24,11 @@ code/
 ├── .venv/                    Python 3.11.9, PyTorch 2.14.0+cu126, CUDA verified on GTX 1050
 ├── requirements.txt          direct pins (torch+cu126 first, then the rest)
 ├── README.md                 environment, install, replay protocol (stale lab list)
-├── src/                      EMPTY reservation: formal pipeline modules (see src/README.md)
-├── experiments/              EMPTY reservation: integrated scientific experiments
-├── tests/                    test_environment.py (requires real CUDA, exit 1 on fail)
+├── src/                      formal pipeline modules (src/preprocessing/: letterbox, mvtec_ad)
+├── experiments/              CLI experiments (experiments/preprocess_mvtec_ad.py)
+├── tests/                    test_environment.py (CUDA), test_preprocessing.py (letterbox & dataset tests)
 ├── results/                  env diagnostics + review logs (results/README.md = review registry)
-└── understanding/            the seven labs (all real work lives here)
+└── understanding/            the eight labs (01–07 exploratory labs + 08 verification lab)
     ├── 01_patch_partition/       patch geometry, DROP/PARTIAL/PAD edge policies, exact reconstruction
     ├── 02_histogram_benchmark/   8 exact histogram implementations, 35 inputs, cost study
     ├── 03_entropy_benchmark/     Shannon E1-E5, LUTs, quantization, ranking; reference `e1`

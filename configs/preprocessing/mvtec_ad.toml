@@ -1,0 +1,22 @@
+# Preprocessing of MVTec-AD: grayscale + letterbox to a square canvas.
+# Dataset paths (input_path, output_path, subdatasets) live in configs/base.toml
+# under [datasets.mvtecad]; this file only holds preprocessing parameters.
+
+[preprocessing]
+base_config = "configs/base.toml"   # file holding [datasets.mvtecad]
+dataset_key = "mvtecad"             # table name inside [datasets]
+target_size = 128                   # final square side in pixels
+pad_value = 0                       # padding value (0 = black)
+padding_anchor = "center"           # only "center" supported
+image_extensions = [".png"]
+overwrite = false                   # skip existing outputs when false
+
+[preprocessing.images]
+resampling = "LANCZOS"              # PIL.Image.Resampling name
+convert_to_grayscale = true
+invert = false                      # invert intensity (255 - x) for non-mask images
+
+[preprocessing.masks]
+folder = "ground_truth"             # mask folder name inside each category
+resampling = "NEAREST"              # keeps labels unmodified (no new gray levels)
+convert_to_grayscale = false        # masks are already single channel; never converted
