@@ -25,3 +25,10 @@ subdatasets = [
     "wood",
     "zipper",
 ]
+
+[datasets.kolektorsdd2]
+name = "KolektorSDD2"
+input_path = "data/raw/KolektorSDD2"
+output_path = "data/preprocessed/KolektorSDD2"
+output_path_inverted = "data/preprocessed/KolektorSDD2-inverted"
+splits = ["train", "test"]

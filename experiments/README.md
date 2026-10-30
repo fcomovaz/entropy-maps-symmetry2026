@@ -93,3 +93,53 @@ Serializa cada imagen preprocesada de MVTec-AD (`128x128` en escala de grises) e
 .\.venv\Scripts\python.exe understanding/09_verify_mvtec_csv/verify.py --inverted
 ```
 
+---
+
+## Experimento 03: Preprocesamiento y clasificación de KolektorSDD2
+
+Prepara el dataset KolektorSDD2 inspeccionando cada máscara binaria `_GT` a resolución nativa para clasificar la muestra en `good` o `defect`, estandarizando las imágenes a escala de grises (`mode 'L'`) y canvas cuadrado de `128x128` mediante letterboxing centrado con valor de relleno `0`. Las máscaras se descartan de la jerarquía procesada final.
+
+### Qué hace el proceso
+
+1. **Emparejamiento determinista (`N.png` con `N_GT.png`)**:
+   - Valida stems contra el patrón configurado `^\d+$`.
+   - Ignora y registra advertencias para archivos de copia u huérfanos (ej. `10301 (copy).png` y `10301_GT (copy).png`).
+2. **Clasificación binaria por máscara nativa**:
+   - Muestra evaluada como `defect` si `mask.max() > defect_threshold` (por defecto `0`). De lo contrario se asigna a `good`.
+   - **Las máscaras no se guardan en la salida**: sólo se leen para clasificar la muestra.
+3. **Conversión a grises**: convierte imágenes RGB a `mode 'L'` mediante ITU-R 601 luma.
+4. **Letterboxing centrado a 128x128**:
+   - Escala imágenes de aspecto ~1:2.8 centrando el contenido y rellenando los laterales con `0` (interpolación `LANCZOS`).
+5. **Inversión opcional (`--inverted`)**:
+   - Invierte intensidad de imagen (`255 - x`) antes del letterbox para que el padding permanezca en `0`.
+   - Guarda los resultados en directorio independiente `data/processed/KolektorSDD2-inverted/`.
+
+### Comandos de ejecución manual (PowerShell desde carpeta `code/`)
+
+```powershell
+Set-Location D:\Publications\2026-10-Symmetry-Entropy\code
+
+# 1. Ejecutar tests unitarios (debe pasar 9/9)
+.\.venv\Scripts\python.exe -m unittest tests/test_kolektorsdd2.py
+
+# 2. Conteo previo sin escribir archivos (dry-run estándar)
+# Esperado: 3335 pares (train: 2085 good, 246 defect; test: 894 good, 110 defect), 2 huérfanos omitidos
+.\.venv\Scripts\python.exe -m experiments.preprocess_kolektorsdd2 --dry-run
+
+# 3. Conteo previo sin escribir archivos (dry-run invertido)
+.\.venv\Scripts\python.exe -m experiments.preprocess_kolektorsdd2 --inverted --dry-run
+
+# 4. Ejecutar preprocesamiento estándar completo
+.\.venv\Scripts\python.exe -m experiments.preprocess_kolektorsdd2
+
+# 5. Ejecutar preprocesamiento con intensidad invertida (255 - x)
+.\.venv\Scripts\python.exe -m experiments.preprocess_kolektorsdd2 --inverted
+
+# 6. Opcional: forzar reprocesamiento sobrescribiendo existentes
+.\.venv\Scripts\python.exe -m experiments.preprocess_kolektorsdd2 --overwrite
+.\.venv\Scripts\python.exe -m experiments.preprocess_kolektorsdd2 --inverted --overwrite
+
+# 7. Verificar integridad, conteos exactos y generar figura visual comparativa
+.\.venv\Scripts\python.exe understanding/10_verify_kolektorsdd2/verify.py
+.\.venv\Scripts\python.exe understanding/10_verify_kolektorsdd2/verify.py --inverted
+```

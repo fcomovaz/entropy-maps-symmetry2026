@@ -1,0 +1,26 @@
+# Preprocessing of KolektorSDD2: binary classification (good/defect) via mask inspection,
+# grayscale conversion, and centered letterboxing to 128x128 square canvas.
+# Dataset paths live in configs/base.toml under [datasets.kolektorsdd2].
+
+[preprocessing]
+base_config = "configs/base.toml"
+dataset_key = "kolektorsdd2"
+target_size = 128
+pad_value = 0
+padding_anchor = "center"
+overwrite = false
+
+[preprocessing.images]
+extension = ".png"
+resampling = "LANCZOS"
+convert_to_grayscale = true
+invert = false
+
+[preprocessing.masks]
+suffix = "_GT"
+defect_threshold = 0            # defect if mask.max() > threshold
+good_folder = "good"
+defect_folder = "defect"
+
+[preprocessing.pairing]
+stem_pattern = '^\d+$'          # valid sample ids; anything else (e.g. "10301 (copy)") is skipped

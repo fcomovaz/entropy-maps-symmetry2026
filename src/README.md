@@ -17,6 +17,12 @@ Preprocesamiento geométrico y fotométrico de imágenes:
 - `mvtec_ad.py`:
   - `load_config(config_path, project_root)`: lectura y validación estricta de parámetros TOML.
   - `run(cfg, dry_run=False)`: recorrido batch de MVTec-AD con skip de archivos existentes, interpolación `LANCZOS` para imágenes, `NEAREST` para máscaras de defectos y soporte para variante invertida (`mvtec-ad-inverted`).
+- `kolektorsdd2.py`:
+  - `load_config(config_path, project_root)`: carga y validación estricta de parámetros TOML para KolektorSDD2.
+  - `is_defective(mask, threshold=0)`: detección binaria de defectos sobre máscara a resolución nativa (`mask.max() > threshold`).
+  - `discover_pairs(split_dir, cfg)` / `iter_pairs(split_dir, cfg)`: emparejamiento determinista de imágenes y máscaras `_GT` con filtrado de stems inválidos y huérfanos.
+  - `process_pair(pair, split, cfg, dry_run=False)`: clasificación a `good`/`defect`, conversión a grises, letterboxing centrado 128x128 e inversión opcional.
+  - `run(cfg, dry_run=False)`: procesamiento batch por particiones con conteo de métricas y exclusión de máscaras en la salida.
 
 ### 2. `src/datasets/`
 

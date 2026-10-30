@@ -36,7 +36,7 @@ El proyecto se encuentra en la transición entre el análisis exploratorio a niv
 
 ---
 
-## Mapa de los nueve laboratorios
+## Mapa de los diez laboratorios
 
 Todos los laboratorios residen en carpetas hermanas dentro de `code/understanding/`:
 
@@ -51,6 +51,7 @@ Todos los laboratorios residen en carpetas hermanas dentro de `code/understandin
 | [07_descriptor_behavior/](07_descriptor_behavior/README.md) | Pruebas unitarias científicas sobre `x94` | Reutiliza 06; escenas analíticas | 279 filas medidas, curvas de respuesta y CSVs |
 | [08_verify_mvtec_preprocessing/](08_verify_mvtec_preprocessing/README.md) | Control de integridad de MVTec-AD | `data/preprocessed/mvtec-ad(-inverted)` | Métricas MB y `preprocessing_verification.png` |
 | [09_verify_mvtec_csv/](09_verify_mvtec_csv/README.md) | Control de integridad de CSV MVTec-AD | `data/csv/mvtec-ad(-inverted).csv` | Validación 16391 cols y `csv_roundtrip.png` |
+| [10_verify_kolektorsdd2/](10_verify_kolektorsdd2/README.md) | Verificación e integridad KolektorSDD2 | `data/processed/KolektorSDD2(-inverted)` | Conteos good/defect y `kolektorsdd2_verification.png` |
 
 ---
 
@@ -67,9 +68,11 @@ Píxeles crudos
      │                                                                           │
      ├──> [04] Modelos CNN de referencia (GTX 1050)                              └──> [07] Comportamiento x94
      │                                                                                       │
-     └──> [08] MVTec-AD estandarizado (128x128, grises, letterbox) <────────────────────────┘
-                 │
-                 ├───> [09] MVTec-AD serializado en CSV (16391 cols, row-major)
+     ├──> [08] MVTec-AD estandarizado (128x128, grises, letterbox) <────────────────────────┤
+     │           │                                                                           │
+     │           └───> [09] MVTec-AD serializado en CSV (16391 cols, row-major)              │
+     │                                                                                       │
+     └──> [10] KolektorSDD2 (clasificación por máscara nativa, 128x128, grises) <────────────┘
                  │
                  └───> Conexión formal en experiments/ (clasificación, selección y coste total)
 ```
@@ -93,12 +96,18 @@ Píxeles crudos
   - MVTec-AD requiere letterboxing centrado para preservar la relación de aspecto original sin distorsiones geométricas.
   - Las máscaras de defectos deben interpolarse con `NEAREST` para no introducir niveles espurios fuera de $\{0, 255\}$ y permanecer perfectamente alineadas con las imágenes.
   - La inversión de intensidad (`255 - x`) debe aplicarse antes del letterbox para que el padding conserve el valor $0$ (negro).
+- **Serialización tabular CSV (09):**
+  - Exportación en streaming atómica (`.tmp` -> final) de 16391 columnas con reconstrucción exacta píxel a píxel (diferencia absoluta 0).
+- **Preprocesamiento y clasificación de KolektorSDD2 (10):**
+  - Clasificación binaria (`good`/`defect`) mediante inspección de la máscara binaria en su resolución nativa (`mask.max() > 0`) antes del reescalado para evitar atenuar defectos microscópicos.
+  - Letterbox centrado a 128x128 preservando el aspecto vertical (~1:2.8).
+  - Exclusión total de archivos de máscara en el directorio procesado final.
 
 ---
 
 ## Qué falta comprender o comprobar (Gaps hacia el paper)
 
-1. **Capacidad predictiva real:** evaluar si `x94` separa defectos industriales reales en MVTec-AD mediante clasificadores clásicos (regresión logística, Random Forest, SVM) y MLP ligeros.
+1. **Capacidad predictiva real:** evaluar si `x94` separa defectos industriales reales en MVTec-AD y KolektorSDD2 mediante clasificadores clásicos (regresión logística, Random Forest, SVM) y MLP ligeros.
 2. **Ablación de componentes:** cuantificar el aporte real de las 85 entropías solas vs. las 9 asimetrías solas vs. el vector combinado 94.
 3. **Mecanismos de selección:** diseñar selectores basados en entropía local (top-k / threshold) para descartar regiones homogéneas y alimentar las CNN de [04](04_lightweight_cnns/README.md).
 4. **Evaluación de coste total ($T_{\text{total}}$):** verificar experimentalmente si seleccionar parches reduce el tiempo total de inferencia o si el coste del selector ($T_{\text{selector}}$) supera el ahorro del modelo ($T_{\text{model}}$).
@@ -124,4 +133,13 @@ Para ejecutar los laboratorios individuales o sus tests manuales:
 
 # Verificación de preprocesamiento MVTec-AD
 .\code\.venv\Scripts\python.exe .\code\understanding\08_verify_mvtec_preprocessing\verify.py
+.\code\.venv\Scripts\python.exe .\code\understanding\08_verify_mvtec_preprocessing\verify.py --inverted
+
+# Verificación de exportación CSV MVTec-AD
+.\code\.venv\Scripts\python.exe .\code\understanding\09_verify_mvtec_csv\verify.py
+.\code\.venv\Scripts\python.exe .\code\understanding\09_verify_mvtec_csv\verify.py --inverted
+
+# Verificación de preprocesamiento KolektorSDD2
+.\code\.venv\Scripts\python.exe .\code\understanding\10_verify_kolektorsdd2\verify.py
+.\code\.venv\Scripts\python.exe .\code\understanding\10_verify_kolektorsdd2\verify.py --inverted
 ```

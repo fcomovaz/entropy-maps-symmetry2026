@@ -12,6 +12,7 @@ Suites de pruebas automáticas, unitarias y de integración del proyecto.
 
 # 2. Pruebas de preprocesamiento (letterboxing, máscaras e inversión)
 .\.venv\Scripts\python.exe -m unittest tests/test_preprocessing.py
+.\.venv\Scripts\python.exe -m unittest tests/test_kolektorsdd2.py
 
 # 3. Pruebas de exportación CSV (esquema tabular, streaming y atomicidad)
 .\.venv\Scripts\python.exe -m unittest tests/test_csv_export.py
@@ -31,7 +32,8 @@ Suites de pruebas automáticas, unitarias y de integración del proyecto.
 | Suite | Ámbito / Qué demuestra | Requisitos / Notas |
 |---|---|---|
 | `test_environment.py` | Imports, asignación/transferencia CUDA, matmul GPU y forward de red mínima | Entorno local y GPU NVIDIA (Pascal/GTX 1050); falla sin CUDA real |
-| `test_preprocessing.py` | Letterbox centrado, conversión a grises, preservación binaria de máscaras (`{0, 255}`), inversión y orquestación CLI | Cobertura integral de `src/preprocessing/` |
+| `test_preprocessing.py` | Letterbox centrado, conversión a grises, preservación binaria de máscaras (`{0, 255}`), inversión y orquestación CLI | Cobertura integral de `src/preprocessing/mvtec_ad.py` |
+| `test_kolektorsdd2.py` | Emparejamiento `_GT`, descarte de huérfanos/copias, clasificación binaria, letterbox 128x128, grises, inversión y CLI | Cobertura integral de `src/preprocessing/kolektorsdd2.py` |
 | `test_csv_export.py` | Lectura de TOML, nombres de columnas, aplanado row-major, streaming temporal seguro, conteos y CLI | Cobertura integral de `src/datasets/mvtec_ad_csv.py` |
 | `03/test_entropy.py` | 5 tests: formulaciones Shannon E1–E5, cotas, LUTs y rankings | Utiliza artefactos cacheados de 01 |
 | `04/tests/test_models.py` | 8 tests: shapes, backward/Adam, parámetros y capas depthwise en 7 CNNs | CPU obligatorio, CUDA probado en hardware compatible |

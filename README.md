@@ -8,6 +8,7 @@ Todos los comandos de esta página se ejecutan desde `D:\Publications\2026-10-Sy
 Set-Location D:\Publications\2026-10-Symmetry-Entropy
 .\code\.venv\Scripts\python.exe .\code\tests\test_environment.py
 .\code\.venv\Scripts\python.exe -m pip check
+.\code\.venv\Scripts\python.exe -m unittest .\code\tests\test_preprocessing.py .\code\tests\test_kolektorsdd2.py .\code\tests\test_csv_export.py
 .\code\.venv\Scripts\python.exe .\code\understanding\03_entropy_benchmark\test_entropy.py
 .\code\.venv\Scripts\python.exe .\code\understanding\04_lightweight_cnns\tests\test_models.py
 ```
@@ -66,10 +67,10 @@ El diagnóstico, la evidencia del intento original y las limitaciones están en 
 
 Las rutas de esta lista son relativas a `code/`. Los comandos de este documento se ejecutan desde la raíz del proyecto.
 
-- [src/](src/README.md): módulos formales reutilizables (`src/preprocessing/` para letterbox y MVTec-AD; `src/datasets/` para exportación tabular CSV).
-- [experiments/](experiments/README.md): puntos de entrada CLI para experimentos del pipeline (`preprocess_mvtec_ad.py`, `export_mvtec_ad_csv.py`).
-- [understanding/](understanding/README.md): nueve laboratorios pedagógicos (`01_patch_partition/` a `09_verify_mvtec_csv/`).
-- [tests/](tests/README.md): verificación del entorno CUDA, suites de preprocesamiento, exportación CSV y tests de laboratorios.
+- [src/](src/README.md): módulos formales reutilizables (`src/preprocessing/` para letterbox, MVTec-AD y KolektorSDD2; `src/datasets/` para exportación tabular CSV).
+- [experiments/](experiments/README.md): puntos de entrada CLI para experimentos del pipeline (`preprocess_mvtec_ad.py`, `export_mvtec_ad_csv.py`, `preprocess_kolektorsdd2.py`).
+- [understanding/](understanding/README.md): diez laboratorios pedagógicos (`01_patch_partition/` a `10_verify_kolektorsdd2/`).
+- [tests/](tests/README.md): verificación del entorno CUDA, suites de preprocesamiento (MVTec-AD y KolektorSDD2), exportación CSV y tests de laboratorios.
 - [results/](results/README.md): diagnóstico, logs y registro de revisión. Los resultados de cada laboratorio viven dentro de él.
 
 `notebooks/` se retiró porque solo contenía `.gitkeep`. Jupyter permanece instalado, pero no hay notebooks que ejecutar. No se cambiaron paquetes por esta limpieza.
@@ -175,6 +176,40 @@ Aplana las imágenes preprocesadas en formato tabular (un registro por fila con 
 .\code\.venv\Scripts\python.exe code/understanding/09_verify_mvtec_csv/verify.py
 .\code\.venv\Scripts\python.exe code/understanding/09_verify_mvtec_csv/verify.py --inverted
 ```
+
+## Preprocesamiento y clasificación de datasets (KolektorSDD2)
+
+Clasifica las muestras en `train/good`, `train/defect`, `test/good` y `test/defect` inspeccionando la máscara binaria nativa `_GT` (`mask.max() > 0`), estandarizando a escala de grises (`mode 'L'`) y tamaño cuadrado `128x128` mediante letterboxing centrado con valor `0`. Las máscaras de defectos no se almacenan en la salida procesada.
+
+### Comandos de ejecución
+
+```powershell
+# 1. Pruebas unitarias y de integración de KolektorSDD2
+.\code\.venv\Scripts\python.exe -m unittest tests/test_kolektorsdd2.py
+
+# 2. Conteo previo (dry-run, sin escribir archivos)
+.\code\.venv\Scripts\python.exe -m experiments.preprocess_kolektorsdd2 --dry-run
+.\code\.venv\Scripts\python.exe -m experiments.preprocess_kolektorsdd2 --inverted --dry-run
+
+# 3. Procesamiento completo estándar e invertido
+.\code\.venv\Scripts\python.exe -m experiments.preprocess_kolektorsdd2
+.\code\.venv\Scripts\python.exe -m experiments.preprocess_kolektorsdd2 --inverted
+
+# 4. Verificación de integridad, conteos y visualización comparativa
+.\code\.venv\Scripts\python.exe code/understanding/10_verify_kolektorsdd2/verify.py
+.\code\.venv\Scripts\python.exe code/understanding/10_verify_kolektorsdd2/verify.py --inverted
+```
+
+### Configuración y salida
+
+- Configuración de dataset y rutas: `configs/base.toml` (`[datasets.kolektorsdd2]`).
+- Parámetros de preprocesamiento: `configs/preprocessing/kolektorsdd2.toml`.
+  - `target_size = 128`, `pad_value = 0`, `padding_anchor = "center"`.
+  - `resampling = "LANCZOS"`, conversión a escala de grises ITU-R 601 luma.
+  - Clasificación: `defect_threshold = 0`, carpetas `good` y `defect`.
+  - Emparejamiento: regex `^\d+$` que ignora copias y archivos huérfanos.
+- Directorios de salida: `data/processed/KolektorSDD2/` y `data/processed/KolektorSDD2-inverted/`.
+
 
 
 

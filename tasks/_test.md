@@ -29,3 +29,4 @@ both path are valids so i can show if use the inverted or the not inverted ones
 
 - [] Read AGENTS.md file to know the general rules of the project.
 - [] Create a detailed plan for this task and update it here to implement it later for an agent, so it needs to be detailed.
+- [] Update this file with the plan, stages and everything to resolve and implement the task.
