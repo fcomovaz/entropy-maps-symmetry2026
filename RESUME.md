@@ -24,18 +24,20 @@ code/
 ├── .venv/                    Python 3.11.9, PyTorch 2.14.0+cu126, CUDA verified on GTX 1050
 ├── requirements.txt          direct pins (torch+cu126 first, then the rest)
 ├── README.md                 environment, install, replay protocol (stale lab list)
-├── src/                      formal pipeline modules (src/preprocessing/: letterbox, mvtec_ad)
-├── experiments/              CLI experiments (experiments/preprocess_mvtec_ad.py)
-├── tests/                    test_environment.py (CUDA), test_preprocessing.py (letterbox & dataset tests)
+├── src/                      formal pipeline modules (src/preprocessing/: letterbox, mvtec_ad; src/datasets/: mvtec_ad_csv)
+├── experiments/              CLI experiments (experiments/preprocess_mvtec_ad.py, experiments/export_mvtec_ad_csv.py)
+├── tests/                    test_environment.py (CUDA), test_preprocessing.py (letterbox & dataset), test_csv_export.py (CSV export)
 ├── results/                  env diagnostics + review logs (results/README.md = review registry)
-└── understanding/            the eight labs (01–07 exploratory labs + 08 verification lab)
+└── understanding/            the nine labs (01–07 exploratory labs + 08 preprocessing verification + 09 csv verification)
     ├── 01_patch_partition/       patch geometry, DROP/PARTIAL/PAD edge policies, exact reconstruction
     ├── 02_histogram_benchmark/   8 exact histogram implementations, 35 inputs, cost study
     ├── 03_entropy_benchmark/     Shannon E1-E5, LUTs, quantization, ranking; reference `e1`
     ├── 04_lightweight_cnns/      7 CNN architectures, demo training/inference/benchmark (CPU/CUDA)
     ├── 05_symmetry_features/     9 asymmetry features of entropy layouts; theory + tests
     ├── 06_entropy_pyramid_descriptor/  CANONICAL image -> x94 extractor (schema x94-v1)
-    └── 07_descriptor_behavior/   15 controlled behavior experiments on x94 (279 comparison rows)
+    ├── 07_descriptor_behavior/   15 controlled behavior experiments on x94 (279 comparison rows)
+    ├── 08_verify_mvtec_preprocessing/  verification and visual comparison for letterboxed 128x128 dataset
+    └── 09_verify_mvtec_csv/      verification and visual round-trip comparison for flattened CSV dataset
 ```
 
 Each lab keeps its data/results next to its own code (`assets/`, `outputs/`, `results/`). Labs 01–03 write to fixed paths: repeat them only via the replay-copy procedure in `code/README.md` ("Repetir 01-03 sin sobrescribir evidencia") or you overwrite canonical evidence.

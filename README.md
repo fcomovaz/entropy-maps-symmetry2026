@@ -66,10 +66,10 @@ El diagnóstico, la evidencia del intento original y las limitaciones están en 
 
 Las rutas de esta lista son relativas a `code/`. Los comandos de este documento se ejecutan desde la raíz del proyecto.
 
-- [src/](src/README.md): reserva para módulos formales reutilizables; sin implementaciones aún.
-- [experiments/](experiments/README.md): reserva para estudios científicos del pipeline; sin scripts aún.
-- [understanding/](understanding/README.md): cuatro laboratorios pedagógicos, de `01_patch_partition/` a `04_lightweight_cnns/`.
-- [tests/](tests/README.md): verificación del entorno y ubicación de las suites locales.
+- [src/](src/README.md): módulos formales reutilizables (`src/preprocessing/` para letterbox y MVTec-AD; `src/datasets/` para exportación tabular CSV).
+- [experiments/](experiments/README.md): puntos de entrada CLI para experimentos del pipeline (`preprocess_mvtec_ad.py`, `export_mvtec_ad_csv.py`).
+- [understanding/](understanding/README.md): nueve laboratorios pedagógicos (`01_patch_partition/` a `09_verify_mvtec_csv/`).
+- [tests/](tests/README.md): verificación del entorno CUDA, suites de preprocesamiento, exportación CSV y tests de laboratorios.
 - [results/](results/README.md): diagnóstico, logs y registro de revisión. Los resultados de cada laboratorio viven dentro de él.
 
 `notebooks/` se retiró porque solo contenía `.gitkeep`. Jupyter permanece instalado, pero no hay notebooks que ejecutar. No se cambiaron paquetes por esta limpieza.
@@ -152,6 +152,30 @@ El preprocesamiento estandariza las imágenes a escala de grises (`mode 'L'`) y 
   - Máscaras (`ground_truth`): interpolación `NEAREST` para preservar valores discretos `{0, 255}`, sin alteración de niveles de gris.
 - Directorio de salida: `data/preprocessed/mvtec-ad/` (refleja la estructura de subcarpetas de `data/raw/mvtec-ad/`).
 - Nota metodológica: el reescalado a 128 px con interpolación de vecinos cercanos en máscaras puede atenuar o eliminar defectos minúsculos de pocos píxeles presentes en resoluciones nativas de 1024 px.
+
+## Exportación tabular CSV (MVTec-AD)
+
+Aplana las imágenes preprocesadas en formato tabular (un registro por fila con 16391 columnas) almacenado en `data/csv/mvtec-ad.csv` (y `data/csv/mvtec-ad-inverted.csv`), con metadatos de procedencia y píxeles en orden row-major (`px_00000...px_16383`).
+
+### Comandos de ejecución
+
+```powershell
+# 1. Pruebas unitarias y de integración de exportación CSV
+.\code\.venv\Scripts\python.exe -m unittest tests/test_csv_export.py
+
+# 2. Conteo previo (dry-run, sin escribir archivos)
+.\code\.venv\Scripts\python.exe -m experiments.export_mvtec_ad_csv --dry-run
+.\code\.venv\Scripts\python.exe -m experiments.export_mvtec_ad_csv --inverted --dry-run
+
+# 3. Exportación completa estándar e invertida
+.\code\.venv\Scripts\python.exe -m experiments.export_mvtec_ad_csv
+.\code\.venv\Scripts\python.exe -m experiments.export_mvtec_ad_csv --inverted
+
+# 4. Verificación de integridad y reconstrucción píxel a píxel
+.\code\.venv\Scripts\python.exe code/understanding/09_verify_mvtec_csv/verify.py
+.\code\.venv\Scripts\python.exe code/understanding/09_verify_mvtec_csv/verify.py --inverted
+```
+
 
 
 La [guía de CNN](understanding/04_lightweight_cnns/README.md) incluye inspección,

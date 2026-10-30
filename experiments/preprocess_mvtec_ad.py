@@ -64,11 +64,12 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None, project_root: Path = PROJECT_ROOT) -> int:
     """Main execution routine.
 
     Args:
         argv: Command-line arguments. If None, defaults to sys.argv[1:].
+        project_root: Root directory of the repository for path anchoring.
 
     Returns:
         Integer exit code (0 for success, non-zero on failure).
@@ -78,7 +79,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        cfg = load_config(args.config, PROJECT_ROOT)
+        cfg = load_config(args.config, project_root)
         if args.overwrite:
             cfg = replace(cfg, overwrite=True)
         if args.inverted:

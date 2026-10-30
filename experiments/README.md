@@ -48,3 +48,48 @@ Prepara el dataset base estandarizando imágenes y máscaras de defectos a escal
 # 7. Verificar integridad, reducción en MB y generar figura comparativa
 .\.venv\Scripts\python.exe understanding/08_verify_mvtec_preprocessing/verify.py
 ```
+
+---
+
+## Experimento 02: Exportación CSV de MVTec-AD
+
+Serializa cada imagen preprocesada de MVTec-AD (`128x128` en escala de grises) en una fila dentro de un archivo CSV plano (`data/csv/mvtec-ad.csv` o `data/csv/mvtec-ad-inverted.csv`), conteniendo metadatos de trazabilidad, vector de intensidades de píxeles (`px_00000...px_16383`) y dimensiones espaciales.
+
+### Esquema de columnas (16391 columnas)
+
+1. `object_name`: nombre de la categoría (1 de las 15 en `configs/base.toml`).
+2. `split`: partición (`train`, `test`, `ground_truth`).
+3. `type`: clasificación binaria de la muestra (`good` si la carpeta es `good`, `defect` para cualquier carpeta de anomalía).
+4. `defect_name`: nombre original de la carpeta de defecto o `good`.
+5. `file_name`: nombre del archivo PNG original (ej. `000.png` o `000_mask.png`).
+6. `px_00000` a `px_16383`: intensidades de píxel uint8 en orden row-major (`row * 128 + col`).
+7. `width`: ancho en píxeles (`128`).
+8. `height`: alto en píxeles (`128`).
+
+### Comandos de ejecución manual (PowerShell desde carpeta `code/`)
+
+```powershell
+# 1. Ejecutar tests unitarios y de integración de exportación CSV
+.\.venv\Scripts\python.exe -m unittest tests/test_csv_export.py
+
+# 2. Conteo previo estándar sin escribir archivos (dry-run)
+.\.venv\Scripts\python.exe -m experiments.export_mvtec_ad_csv --dry-run
+
+# 3. Conteo previo de variante invertida (dry-run)
+.\.venv\Scripts\python.exe -m experiments.export_mvtec_ad_csv --inverted --dry-run
+
+# 4. Exportar dataset estándar a CSV (salta si ya existe)
+.\.venv\Scripts\python.exe -m experiments.export_mvtec_ad_csv
+
+# 5. Exportar variante invertida a CSV (salta si ya existe)
+.\.venv\Scripts\python.exe -m experiments.export_mvtec_ad_csv --inverted
+
+# 6. Forzar re-exportación sobrescribiendo archivo existente (--overwrite)
+.\.venv\Scripts\python.exe -m experiments.export_mvtec_ad_csv --overwrite
+.\.venv\Scripts\python.exe -m experiments.export_mvtec_ad_csv --inverted --overwrite
+
+# 7. Verificar integridad, esquema y reconstrucción píxel a píxel
+.\.venv\Scripts\python.exe understanding/09_verify_mvtec_csv/verify.py
+.\.venv\Scripts\python.exe understanding/09_verify_mvtec_csv/verify.py --inverted
+```
+

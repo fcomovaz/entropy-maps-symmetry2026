@@ -104,7 +104,12 @@ def load_config(config_path: Path, project_root: Path) -> PreprocessConfig:
 
     base_config_path = (project_root / base_config_rel).resolve()
     if not base_config_path.is_file():
-        raise FileNotFoundError(f"Base configuration file not found: {base_config_path}")
+        alt_base = (resolved_config_path.parent / base_config_rel).resolve()
+        if alt_base.is_file():
+            base_config_path = alt_base
+            project_root = resolved_config_path.parent
+        else:
+            raise FileNotFoundError(f"Base configuration file not found: {base_config_path}")
 
     with base_config_path.open("rb") as f:
         base_data = tomllib.load(f)

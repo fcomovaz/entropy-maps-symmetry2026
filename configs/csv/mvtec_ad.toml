@@ -1,0 +1,21 @@
+# Export of preprocessed MVTec-AD PNGs to one flat CSV (one row per image).
+# Dataset paths live in configs/base.toml [datasets.mvtecad];
+# image size comes from configs/preprocessing/mvtec_ad.toml [preprocessing].target_size.
+
+[csv]
+base_config = "configs/base.toml"
+dataset_key = "mvtecad"
+preprocessing_config = "configs/preprocessing/mvtec_ad.toml"
+inverted = false                 # true -> read *-inverted root, write csv_path_inverted
+overwrite = false                # false -> abort if the output CSV exists
+image_extensions = [".png"]
+splits = ["train", "test", "ground_truth"]
+
+[csv.labels]
+good_folder = "good"             # class folder name meaning "no defect"
+good = "good"                    # value written in column `type`
+defect = "defect"
+
+[csv.pixels]
+column_prefix = "px_"
+index_digits = 5                 # px_00000 ... px_16383 for 128x128

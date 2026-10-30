@@ -12,7 +12,7 @@ El proyecto se encuentra en la transición entre el análisis exploratorio a niv
 
 ```
 [ Fase 1: Primitivas ]  ──>  [ Fase 2: Baselines CNN ]  ──>  [ Fase 3: Descriptor x94 ]  ──>  [ Fase 4: Dataset Real ]  ──>  [ Fase 5: Experimentos ]
-   (01, 02, 03)                     (04)                         (05, 06, 07)                       (08)                  (experiments/)
+   (01, 02, 03)                     (04)                         (05, 06, 07)                     (08, 09)                  (experiments/)
     COMPLETADA                       COMPLETADA                    COMPLETADA                    LISTA PARA VALIDAR             SIGUIENTE HITO
 ```
 
@@ -28,6 +28,7 @@ El proyecto se encuentra en la transición entre el análisis exploratorio a niv
    - Caracterización científica del comportamiento de `x94` ante 15 perturbaciones controladas: ruido, desenfoque, contraste, defectos locales y colisiones estructurales ([07](07_descriptor_behavior/README.md)).
 4. **Fase 4 — Validación y control de dataset real (Implementada / Lista para validación):**
    - Herramientas de inspección, verificación métrica y visualización del dataset industrial MVTec-AD estandarizado a 128x128 en escala de grises y variante invertida ([08](08_verify_mvtec_preprocessing/README.md)).
+   - Herramientas de control de integridad tabular, cardinalidad, esquema de 16391 columnas y reconstrucción píxel a píxel del dataset serializado en CSV plano ([09](09_verify_mvtec_csv/README.md)).
 5. **Próxima fase — Integración científica (`code/experiments/`):**
    - Clasificación de defectos con clasificadores ligeros (SVM, RF, MLP) consumiendo `x94`.
    - Pipeline de selección de regiones informativas (top-k / umbral) conectado a las CNN de [04](04_lightweight_cnns/README.md).
@@ -35,7 +36,7 @@ El proyecto se encuentra en la transición entre el análisis exploratorio a niv
 
 ---
 
-## Mapa de los ocho laboratorios
+## Mapa de los nueve laboratorios
 
 Todos los laboratorios residen en carpetas hermanas dentro de `code/understanding/`:
 
@@ -49,6 +50,7 @@ Todos los laboratorios residen en carpetas hermanas dentro de `code/understandin
 | [06_entropy_pyramid_descriptor/](06_entropy_pyramid_descriptor/README.md) | Extractor canónico `image -> x94` | Sintético / imágenes arbitrarias | API `extract_descriptor`, schema `x94-v1` |
 | [07_descriptor_behavior/](07_descriptor_behavior/README.md) | Pruebas unitarias científicas sobre `x94` | Reutiliza 06; escenas analíticas | 279 filas medidas, curvas de respuesta y CSVs |
 | [08_verify_mvtec_preprocessing/](08_verify_mvtec_preprocessing/README.md) | Control de integridad de MVTec-AD | `data/preprocessed/mvtec-ad(-inverted)` | Métricas MB y `preprocessing_verification.png` |
+| [09_verify_mvtec_csv/](09_verify_mvtec_csv/README.md) | Control de integridad de CSV MVTec-AD | `data/csv/mvtec-ad(-inverted).csv` | Validación 16391 cols y `csv_roundtrip.png` |
 
 ---
 
@@ -66,6 +68,8 @@ Píxeles crudos
      ├──> [04] Modelos CNN de referencia (GTX 1050)                              └──> [07] Comportamiento x94
      │                                                                                       │
      └──> [08] MVTec-AD estandarizado (128x128, grises, letterbox) <────────────────────────┘
+                 │
+                 ├───> [09] MVTec-AD serializado en CSV (16391 cols, row-major)
                  │
                  └───> Conexión formal en experiments/ (clasificación, selección y coste total)
 ```
