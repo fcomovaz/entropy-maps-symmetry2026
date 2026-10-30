@@ -36,7 +36,7 @@ El proyecto se encuentra en la transición entre el análisis exploratorio a niv
 
 ---
 
-## Mapa de los diez laboratorios
+## Mapa de los laboratorios
 
 Todos los laboratorios residen en carpetas hermanas dentro de `code/understanding/`:
 
@@ -52,6 +52,7 @@ Todos los laboratorios residen en carpetas hermanas dentro de `code/understandin
 | [08_verify_mvtec_preprocessing/](08_verify_mvtec_preprocessing/README.md) | Control de integridad de MVTec-AD | `data/preprocessed/mvtec-ad(-inverted)` | Métricas MB y `preprocessing_verification.png` |
 | [09_verify_mvtec_csv/](09_verify_mvtec_csv/README.md) | Control de integridad de CSV MVTec-AD | `data/csv/mvtec-ad(-inverted).csv` | Validación 16391 cols y `csv_roundtrip.png` |
 | [10_verify_kolektorsdd2/](10_verify_kolektorsdd2/README.md) | Verificación e integridad KolektorSDD2 | `data/processed/KolektorSDD2(-inverted)` | Conteos good/defect y `kolektorsdd2_verification.png` |
+| [11_verify_kolektorsdd2_csv/](11_verify_kolektorsdd2_csv/README.md) | Control de integridad CSV KolektorSDD2 | `data/csv/kolektorsdd2(-inverted).csv` | Validación 16387 cols y `csv_roundtrip.png` |
 
 ---
 
@@ -74,7 +75,9 @@ Píxeles crudos
      │                                                                                       │
      └──> [10] KolektorSDD2 (clasificación por máscara nativa, 128x128, grises) <────────────┘
                  │
-                 └───> Conexión formal en experiments/ (clasificación, selección y coste total)
+                 └───> [11] KolektorSDD2 serializado en CSV (16387 cols, row-major)
+                             │
+                             └───> Conexión formal en experiments/ (clasificación, selección y coste total)
 ```
 
 ---
@@ -102,6 +105,9 @@ Píxeles crudos
   - Clasificación binaria (`good`/`defect`) mediante inspección de la máscara binaria en su resolución nativa (`mask.max() > 0`) antes del reescalado para evitar atenuar defectos microscópicos.
   - Letterbox centrado a 128x128 preservando el aspecto vertical (~1:2.8).
   - Exclusión total de archivos de máscara en el directorio procesado final.
+- **Serialización tabular CSV de KolektorSDD2 (11):**
+  - Exportación en streaming atómica (`.tmp` -> final) de 16387 columnas (`split`, `type`, `file_name`, 16384 intensidades de píxel en row-major, `width`, `height`).
+  - Total de 3335 muestras balanceadas por split (`train`: 2085 good, 246 defect; `test`: 894 good, 110 defect) y reconstrucción exacta píxel a píxel (diferencia absoluta 0).
 
 ---
 

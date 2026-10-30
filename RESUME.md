@@ -12,7 +12,7 @@ Stated claim to test: selecting informative regions / describing images with ent
 
 ## 2. Current state in one paragraph
 
-Ten understanding labs exist under `code/understanding/` (01–10). Labs 01–04 cover exploratory primitives (patches, histograms, entropy benchmark, lightweight CNNs). Labs 05–07 establish the canonical 94-dimension descriptor `image -> x94` (schema `x94-v1`: 85 pyramid Shannon entropies + 9 asymmetry residuals) and its 15 behavior experiments. Formal pipeline modules live in `code/src/` (`src/preprocessing/` for letterbox, MVTec-AD and KolektorSDD2; `src/datasets/` for tabular CSV export). CLI experiment entry points in `code/experiments/` automate dataset standardization (`preprocess_mvtec_ad.py`, `export_mvtec_ad_csv.py`, `preprocess_kolektorsdd2.py`). Labs 08–10 provide visual validation and metric integrity checks for MVTec-AD (standard and inverted), its flattened CSV representation, and KolektorSDD2 binary classification. Formal unit tests in `code/tests/` verify environment, preprocessing, KolektorSDD2 pairing, and CSV export.
+Eleven understanding labs exist under `code/understanding/` (01–11). Labs 01–04 cover exploratory primitives (patches, histograms, entropy benchmark, lightweight CNNs). Labs 05–07 establish the canonical 94-dimension descriptor `image -> x94` (schema `x94-v1`: 85 pyramid Shannon entropies + 9 asymmetry residuals) and its 15 behavior experiments. Formal pipeline modules live in `code/src/` (`src/preprocessing/` for letterbox, MVTec-AD and KolektorSDD2; `src/datasets/` for tabular CSV export). CLI experiment entry points in `code/experiments/` automate dataset standardization (`preprocess_mvtec_ad.py`, `export_mvtec_ad_csv.py`, `preprocess_kolektorsdd2.py`, `export_kolektorsdd2_csv.py`). Labs 08–11 provide visual validation and metric integrity checks for MVTec-AD (standard and inverted), its flattened CSV representation, KolektorSDD2 binary classification, and KolektorSDD2 flattened CSV representation. Formal unit tests in `code/tests/` verify environment, preprocessing, KolektorSDD2 pairing, and CSV export suites.
 
 ## 3. Directory map
 
@@ -24,28 +24,33 @@ code/
 ├── configs/                  declarative configurations (no hardcoding in src/)
 │   ├── base.toml             dataset roots, categories, and splits
 │   ├── logging.py            centralized rotating logging setup
-│   └── preprocessing/
-│       ├── mvtec_ad.toml     letterbox, 128x128, LANCZOS, NEAREST for masks
-│       ├── mvtec_ad_csv.toml 16391 columns tabular export specification
-│       └── kolektorsdd2.toml binary mask threshold, letterbox, regex stem pairing
+│   ├── preprocessing/
+│   │   ├── mvtec_ad.toml     letterbox, 128x128, LANCZOS, NEAREST for masks
+│   │   └── kolektorsdd2.toml binary mask threshold, letterbox, regex stem pairing
+│   └── csv/
+│       ├── mvtec_ad.toml     16391 columns tabular export specification
+│       └── kolektorsdd2.toml 16387 columns tabular export specification
 ├── src/                      formal pipeline modules
 │   ├── preprocessing/
 │   │   ├── letterbox.py      pure routines: letterbox_to_square, to_grayscale, invert_intensity
 │   │   ├── mvtec_ad.py       batch traversal, LANCZOS images, NEAREST masks, inverted variant
 │   │   └── kolektorsdd2.py   stem pairing, native mask defect classification, letterbox, no mask output
 │   └── datasets/
-│       └── mvtec_ad_csv.py   streaming CSV writer (.tmp -> atomic replace), 16391 columns
+│       ├── mvtec_ad_csv.py   streaming CSV writer (.tmp -> atomic replace), 16391 columns
+│       └── kolektorsdd2_csv.py streaming CSV writer (.tmp -> atomic replace), 16387 columns
 ├── experiments/              CLI experiment entry points
 │   ├── preprocess_mvtec_ad.py       MVTec-AD standardized letterboxing
 │   ├── export_mvtec_ad_csv.py       MVTec-AD row-major pixel flattening
-│   └── preprocess_kolektorsdd2.py   KolektorSDD2 pairing, classification, letterboxing
+│   ├── preprocess_kolektorsdd2.py   KolektorSDD2 pairing, classification, letterboxing
+│   └── export_kolektorsdd2_csv.py   KolektorSDD2 row-major pixel flattening
 ├── tests/                    formal test suites (runnable via unittest)
 │   ├── test_environment.py          real CUDA execution, matmul, small net forward on GTX 1050
 │   ├── test_preprocessing.py        letterbox geometry, masks preservation, inversion, CLI
 │   ├── test_kolektorsdd2.py         mask classification, copy/orphan filtering, letterbox, CLI
-│   └── test_csv_export.py           CSV schema, pixel round-trip, streaming, CLI
+│   ├── test_csv_export.py           MVTec-AD CSV schema, pixel round-trip, streaming, CLI
+│   └── test_kolektorsdd2_csv_export.py KolektorSDD2 CSV schema, pixel round-trip, streaming, CLI
 ├── results/                  env diagnostics + review logs (results/README.md = review registry)
-└── understanding/            ten pedagogical laboratories
+└── understanding/            eleven pedagogical laboratories
     ├── 01_patch_partition/          patch geometry, DROP/PARTIAL/PAD edge policies, exact reconstruction
     ├── 02_histogram_benchmark/      8 exact histogram implementations, 35 inputs, cost study
     ├── 03_entropy_benchmark/        Shannon E1-E5, LUTs, quantization, ranking; reference `e1`
@@ -55,7 +60,8 @@ code/
     ├── 07_descriptor_behavior/      15 controlled behavior experiments on x94 (279 comparison rows)
     ├── 08_verify_mvtec_preprocessing/  verification and visual comparison for letterboxed 128x128 dataset
     ├── 09_verify_mvtec_csv/         verification and visual round-trip comparison for flattened CSV dataset
-    └── 10_verify_kolektorsdd2/      verification and visual comparison for KolektorSDD2 128x128 good/defect
+    ├── 10_verify_kolektorsdd2/      verification and visual comparison for KolektorSDD2 128x128 good/defect
+    └── 11_verify_kolektorsdd2_csv/  verification and visual round-trip comparison for KolektorSDD2 CSV
 ```
 
 ## 4. Dependency graph (imports)

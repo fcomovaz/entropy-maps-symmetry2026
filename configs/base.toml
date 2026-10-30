@@ -29,6 +29,8 @@ subdatasets = [
 [datasets.kolektorsdd2]
 name = "KolektorSDD2"
 input_path = "data/raw/KolektorSDD2"
+csv_path = "data/csv/kolektorsdd2.csv"
+csv_path_inverted = "data/csv/kolektorsdd2-inverted.csv"
 output_path = "data/preprocessed/KolektorSDD2"
 output_path_inverted = "data/preprocessed/KolektorSDD2-inverted"
 splits = ["train", "test"]

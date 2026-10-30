@@ -8,7 +8,7 @@ Todos los comandos de esta página se ejecutan desde `D:\Publications\2026-10-Sy
 Set-Location D:\Publications\2026-10-Symmetry-Entropy
 .\code\.venv\Scripts\python.exe .\code\tests\test_environment.py
 .\code\.venv\Scripts\python.exe -m pip check
-.\code\.venv\Scripts\python.exe -m unittest .\code\tests\test_preprocessing.py .\code\tests\test_kolektorsdd2.py .\code\tests\test_csv_export.py
+.\code\.venv\Scripts\python.exe -m unittest .\code\tests\test_preprocessing.py .\code\tests\test_kolektorsdd2.py .\code\tests\test_csv_export.py .\code\tests\test_kolektorsdd2_csv_export.py
 .\code\.venv\Scripts\python.exe .\code\understanding\03_entropy_benchmark\test_entropy.py
 .\code\.venv\Scripts\python.exe .\code\understanding\04_lightweight_cnns\tests\test_models.py
 ```
@@ -67,10 +67,10 @@ El diagnóstico, la evidencia del intento original y las limitaciones están en 
 
 Las rutas de esta lista son relativas a `code/`. Los comandos de este documento se ejecutan desde la raíz del proyecto.
 
-- [src/](src/README.md): módulos formales reutilizables (`src/preprocessing/` para letterbox, MVTec-AD y KolektorSDD2; `src/datasets/` para exportación tabular CSV).
-- [experiments/](experiments/README.md): puntos de entrada CLI para experimentos del pipeline (`preprocess_mvtec_ad.py`, `export_mvtec_ad_csv.py`, `preprocess_kolektorsdd2.py`).
-- [understanding/](understanding/README.md): diez laboratorios pedagógicos (`01_patch_partition/` a `10_verify_kolektorsdd2/`).
-- [tests/](tests/README.md): verificación del entorno CUDA, suites de preprocesamiento (MVTec-AD y KolektorSDD2), exportación CSV y tests de laboratorios.
+- [src/](src/README.md): módulos formales reutilizables (`src/preprocessing/` para letterbox, MVTec-AD y KolektorSDD2; `src/datasets/` para exportación tabular CSV de MVTec-AD y KolektorSDD2).
+- [experiments/](experiments/README.md): puntos de entrada CLI para experimentos del pipeline (`preprocess_mvtec_ad.py`, `export_mvtec_ad_csv.py`, `preprocess_kolektorsdd2.py`, `export_kolektorsdd2_csv.py`).
+- [understanding/](understanding/README.md): once laboratorios pedagógicos (`01_patch_partition/` a `11_verify_kolektorsdd2_csv/`).
+- [tests/](tests/README.md): verificación del entorno CUDA, suites de preprocesamiento (MVTec-AD y KolektorSDD2), suites de exportación CSV (MVTec-AD y KolektorSDD2) y tests de laboratorios.
 - [results/](results/README.md): diagnóstico, logs y registro de revisión. Los resultados de cada laboratorio viven dentro de él.
 
 `notebooks/` se retiró porque solo contenía `.gitkeep`. Jupyter permanece instalado, pero no hay notebooks que ejecutar. No se cambiaron paquetes por esta limpieza.
@@ -209,6 +209,36 @@ Clasifica las muestras en `train/good`, `train/defect`, `test/good` y `test/defe
   - Clasificación: `defect_threshold = 0`, carpetas `good` y `defect`.
   - Emparejamiento: regex `^\d+$` que ignora copias y archivos huérfanos.
 - Directorios de salida: `data/processed/KolektorSDD2/` y `data/processed/KolektorSDD2-inverted/`.
+
+## Exportación tabular CSV (KolektorSDD2)
+
+Aplana las imágenes preprocesadas de KolektorSDD2 en formato tabular (un registro por fila con 16387 columnas) almacenado en `data/csv/kolektorsdd2.csv` (y `data/csv/kolektorsdd2-inverted.csv`), con metadatos de procedencia (`split, type, file_name`), vector de intensidades de píxeles en orden row-major (`px_00000...px_16383`) y dimensiones espaciales (`width, height`).
+
+### Comandos de ejecución
+
+```powershell
+# 1. Pruebas unitarias y de integración de exportación CSV KolektorSDD2
+.\code\.venv\Scripts\python.exe -m unittest tests/test_kolektorsdd2_csv_export.py
+
+# 2. Conteo previo (dry-run, sin escribir archivos)
+.\code\.venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv --dry-run
+.\code\.venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv --inverted --dry-run
+
+# 3. Exportación completa estándar e invertida
+.\code\.venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv
+.\code\.venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv --inverted
+
+# 4. Verificación de integridad y reconstrucción píxel a píxel
+.\code\.venv\Scripts\python.exe code/understanding/11_verify_kolektorsdd2_csv/verify.py
+.\code\.venv\Scripts\python.exe code/understanding/11_verify_kolektorsdd2_csv/verify.py --inverted
+```
+
+### Configuración y salida
+
+- Configuración de dataset y rutas: `configs/base.toml` (`[datasets.kolektorsdd2]`).
+- Parámetros de exportación: `configs/csv/kolektorsdd2.toml`.
+- Archivos de salida: `data/csv/kolektorsdd2.csv` y `data/csv/kolektorsdd2-inverted.csv`.
+
 
 
 

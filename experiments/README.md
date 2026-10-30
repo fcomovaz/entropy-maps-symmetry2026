@@ -143,3 +143,46 @@ Set-Location D:\Publications\2026-10-Symmetry-Entropy\code
 .\.venv\Scripts\python.exe understanding/10_verify_kolektorsdd2/verify.py
 .\.venv\Scripts\python.exe understanding/10_verify_kolektorsdd2/verify.py --inverted
 ```
+
+---
+
+## Experimento 04: Exportación CSV de KolektorSDD2
+
+Serializa cada imagen preprocesada de KolektorSDD2 (`128x128` en escala de grises) en una fila dentro de un archivo CSV plano (`data/csv/kolektorsdd2.csv` o `data/csv/kolektorsdd2-inverted.csv`), conteniendo metadatos de partición y tipo (`split, type, file_name`), vector de intensidades de píxeles (`px_00000...px_16383`) y dimensiones espaciales (`width, height`).
+
+### Esquema de columnas (16387 columnas)
+
+1. `split`: partición (`train` o `test`).
+2. `type`: clasificación binaria de la muestra (`good` o `defect`).
+3. `file_name`: nombre del archivo PNG original (ej. `10021.png`).
+4. `px_00000` a `px_16383`: intensidades de píxel uint8 en orden row-major (`row * 128 + col`).
+5. `width`: ancho en píxeles (`128`).
+6. `height`: alto en píxeles (`128`).
+
+### Comandos de ejecución manual (PowerShell desde carpeta `code/`)
+
+```powershell
+# 1. Ejecutar tests unitarios y de integración de exportación CSV KolektorSDD2
+.\.venv\Scripts\python.exe -m unittest tests/test_kolektorsdd2_csv_export.py
+
+# 2. Conteo previo estándar sin escribir archivos (dry-run)
+.\.venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv --dry-run
+
+# 3. Conteo previo de variante invertida (dry-run)
+.\.venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv --inverted --dry-run
+
+# 4. Exportar dataset estándar a CSV (salta si ya existe)
+.\.venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv
+
+# 5. Exportar variante invertida a CSV (salta si ya existe)
+.\.venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv --inverted
+
+# 6. Forzar re-exportación sobrescribiendo archivo existente (--overwrite)
+.\.venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv --overwrite
+.\.venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv --inverted --overwrite
+
+# 7. Verificar integridad, esquema y reconstrucción píxel a píxel
+.\.venv\Scripts\python.exe understanding/11_verify_kolektorsdd2_csv/verify.py
+.\.venv\Scripts\python.exe understanding/11_verify_kolektorsdd2_csv/verify.py --inverted
+```
+

@@ -1,0 +1,21 @@
+# Export of preprocessed KolektorSDD2 PNGs to one flat CSV (one row per image).
+# Dataset paths live in configs/base.toml under [datasets.kolektorsdd2];
+# image size comes from configs/preprocessing/kolektorsdd2.toml under [preprocessing].target_size.
+
+[csv]
+base_config = "configs/base.toml"
+dataset_key = "kolektorsdd2"
+preprocessing_config = "configs/preprocessing/kolektorsdd2.toml"
+inverted = false
+overwrite = false
+image_extensions = [".png"]
+splits = ["train", "test"]
+
+[csv.labels]
+good_folder = "good"
+good = "good"
+defect = "defect"
+
+[csv.pixels]
+column_prefix = "px_"
+index_digits = 5
