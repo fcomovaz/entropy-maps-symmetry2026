@@ -13,3 +13,6 @@ results/*
 !results/environment_debug.md
 !results/README.md
 data/*
+memory/*
+!memory/.gitkeep
+
