@@ -208,11 +208,11 @@ Clasifica las muestras en `train/good`, `train/defect`, `test/good` y `test/defe
   - `resampling = "LANCZOS"`, conversión a escala de grises ITU-R 601 luma.
   - Clasificación: `defect_threshold = 0`, carpetas `good` y `defect`.
   - Emparejamiento: regex `^\d+$` que ignora copias y archivos huérfanos.
-- Directorios de salida: `data/processed/KolektorSDD2/` y `data/processed/KolektorSDD2-inverted/`.
+- Directorios de salida: `data/preprocessed/KolektorSDD2/` y `data/preprocessed/KolektorSDD2-inverted/`.
 
 ## Exportación tabular CSV (KolektorSDD2)
 
-Aplana las imágenes preprocesadas de KolektorSDD2 en formato tabular (un registro por fila con 16387 columnas) almacenado en `data/csv/kolektorsdd2.csv` (y `data/csv/kolektorsdd2-inverted.csv`), con metadatos de procedencia (`split, type, file_name`), vector de intensidades de píxeles en orden row-major (`px_00000...px_16383`) y dimensiones espaciales (`width, height`).
+Aplana las imágenes preprocesadas de KolektorSDD2 en formato tabular (un registro por fila con 16389 columnas) almacenado en `data/csv/kolektorsdd2.csv` (y `data/csv/kolektorsdd2-inverted.csv`), con metadatos de procedencia (`split, type, file_name`), vector de intensidades de píxeles en orden row-major (`px_00000...px_16383`) y dimensiones espaciales (`width, height`).
 
 ### Comandos de ejecución
 

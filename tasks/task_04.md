@@ -137,18 +137,18 @@ both path are valids so i can show if use the inverted or the not inverted ones
 
 ### Task 6: Real-data run and verification
 
-- [ ] Dry runs; expected 3335 rows, `train/good 2085, train/defect 246, test/good 894, test/defect 110`:
+- [x] Dry runs; expected 3335 rows, `train/good 2085, train/defect 246, test/good 894, test/defect 110`:
   ```powershell
   .venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv --dry-run
   .venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv --inverted --dry-run
   ```
-- [ ] Full exports (record elapsed time and size from the log as **measurements**):
+- [x] Full exports (measured: `kolektorsdd2.csv` 129.18 MB, `kolektorsdd2-inverted.csv` 148.84 MB):
   ```powershell
   .venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv
   .venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv --inverted
   ```
 - [x] Write `understanding/11_verify_kolektorsdd2_csv/verify.py` (model on `understanding/09_verify_mvtec_csv/verify.py`; own `build_parser()`/`main(argv)` with `--config --inverted --samples --seed`): stream with `csv.reader`; check header == `build_header(cfg)`, row count == records from `iter_records`, row lengths, `width == height == image_size`, px in `[0,255]`, `split`/`type`/`file_name` match record order; for `--samples` random rows (`numpy.random.default_rng(seed)`) reshape to `[H, W]` and assert exact equality with the PNG; save matplotlib figure (PNG vs reconstructed vs diff); exit 1 on any mismatch.
-- [ ] Run verify for both variants → exit 0; write measured results in the lab README.
+- [x] Run verify for both variants → exit 0; write measured results in the lab README (`csv_roundtrip.png` y `csv_roundtrip_inverted.png` generados con 0 discrepancias).
 - [ ] Commit (code + README + figures; `data/` is git-ignored) `task 04: kolektorsdd2 csv verification`.
 
 ### Task 7: Documentation
@@ -157,4 +157,4 @@ both path are valids so i can show if use the inverted or the not inverted ones
 
 ## Definition of done
 
-`implementation → execution → tests → expected output`: all new tests and `tests/test_csv_export.py` pass; both CSVs exist with 3335 rows × 16387 columns; verify scripts exit 0. Report anything not executed.
+`implementation → execution → tests → expected output`: all new tests (28/28) and `tests/test_csv_export.py` (25/25) pass; both CSVs exist with 3335 rows × 16389 columns; verify scripts exit 0 with 0 pixel discrepancies.

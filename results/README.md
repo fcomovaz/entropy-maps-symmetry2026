@@ -15,6 +15,13 @@ para evitar romper rutas, procedencia o hashes.
 | [02/results/summary_table.md](../understanding/02_histogram_benchmark/results/summary_table.md) | Resumen histórico de histogramas; CSV canónico, dos snapshots, end-to-end y metadatos en la misma carpeta |
 | [03/results/summary.md](../understanding/03_entropy_benchmark/results/summary.md) | Entropía, pipeline, errores y ranking; `run1/` conserva primera corrida, `validation.json` registra comparación |
 | [04/outputs/validation.md](../understanding/04_lightweight_cnns/outputs/validation.md) | Validación original de CNN y benchmark; `.pt`, `example_rgb.png` y `folder_fixture/` son demostraciones artificiales |
+| [05_symmetry_features](../understanding/05_symmetry_features/README.md) | Formulación y validación analítica de 9 residuos espaciales de asimetría |
+| [06_entropy_pyramid_descriptor](../understanding/06_entropy_pyramid_descriptor/README.md) | Especificación inmutable del esquema canónico `x94-v1` y tests formales |
+| [07/results](../understanding/07_descriptor_behavior/README.md) | 15 experimentos controlados, 279 filas de medición y curvas de respuesta de `x94` |
+| [08_verify_mvtec_preprocessing](../understanding/08_verify_mvtec_preprocessing/README.md) | Control de integridad de MVTec-AD preprocesado (128x128, grises, `{0, 255}` en máscaras) y figura comparativa |
+| [09_verify_mvtec_csv](../understanding/09_verify_mvtec_csv/README.md) | Control de integridad tabular MVTec-AD (16391 cols, 6612 filas, round-trip bit a bit con diff=0) |
+| [10_verify_kolektorsdd2](../understanding/10_verify_kolektorsdd2/README.md) | Verificación de KolektorSDD2 (clasificación por máscara nativa, conteo 3335 muestras) y matriz visual |
+| [11_verify_kolektorsdd2_csv](../understanding/11_verify_kolektorsdd2_csv/README.md) | Control de integridad tabular KolektorSDD2 (16389 cols, 3335 filas, round-trip bit a bit con diff=0) |
 
 Los checkpoints sintéticos y el fixture no son resultados de detección real.
 Los CSV/JSON de tiempos describen el equipo y protocolo registrados, no hardware

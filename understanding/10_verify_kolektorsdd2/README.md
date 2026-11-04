@@ -2,7 +2,7 @@
 
 ## 1. Propósito
 
-Inspeccionar, medir y validar visualmente los resultados del pipeline de preprocesamiento y clasificación binaria aplicado al dataset industrial KolektorSDD2 (`data/raw/KolektorSDD2` → `data/processed/KolektorSDD2` y `data/processed/KolektorSDD2-inverted`).
+Inspeccionar, medir y validar visualmente los resultados del pipeline de preprocesamiento y clasificación binaria aplicado al dataset industrial KolektorSDD2 (`data/raw/KolektorSDD2` → `data/preprocessed/KolektorSDD2` y `data/preprocessed/KolektorSDD2-inverted`).
 
 Este laboratorio actúa como herramienta de control de calidad e integridad tras la ejecución de `experiments.preprocess_kolektorsdd2`.
 
@@ -18,7 +18,7 @@ Este laboratorio actúa como herramienta de control de calidad e integridad tras
 5. **Inspección visual cualitativa y fotométrica**: genera una matriz comparativa con Matplotlib conteniendo:
    - Muestra `train/good`, `train/defect`, `test/good` y `test/defect`.
    - Comparación visual: imagen raw vertical (~1:2.8), máscara binaria original, imagen procesada letterboxed 128x128 e histogramas de intensidad superpuestos.
-   - Guarda el artefacto en `understanding/10_verify_kolektorsdd2/outputs/kolektorsdd2_verification.png` (o `_inverted.png`).
+   - Guarda el artefacto en `understanding/10_verify_kolektorsdd2/outputs/kolektorsdd2_verification.png` (o `kolektorsdd2_inverted_verification.png`).
 
 ## 3. Comandos de ejecución manual (PowerShell en carpeta `code/`)
 

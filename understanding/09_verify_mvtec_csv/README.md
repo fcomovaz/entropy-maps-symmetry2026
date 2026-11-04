@@ -27,12 +27,12 @@ Validar la integridad, consistencia dimensional, fidelidad de píxeles y corresp
      - `understanding/09_verify_mvtec_csv/csv_roundtrip.png`
      - `understanding/09_verify_mvtec_csv/csv_roundtrip_inverted.png`
 
-## 3. Comandos de ejecución manual
+## 3. Comandos de ejecución manual (PowerShell en carpeta `code/`)
 
 ```powershell
 # Verificación de la exportación estándar:
-.\code\.venv\Scripts\python.exe code/understanding/09_verify_mvtec_csv/verify.py
+.\.venv\Scripts\python.exe understanding/09_verify_mvtec_csv/verify.py
 
 # Verificación de la exportación invertida:
-.\code\.venv\Scripts\python.exe code/understanding/09_verify_mvtec_csv/verify.py --inverted
+.\.venv\Scripts\python.exe understanding/09_verify_mvtec_csv/verify.py --inverted
 ```

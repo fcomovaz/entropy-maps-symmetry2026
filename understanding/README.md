@@ -11,9 +11,9 @@ No es código de producción: una implementación migra a `src/` únicamente cua
 El proyecto se encuentra en la transición entre el análisis exploratorio a nivel de componentes y la experimentación formal con datasets reales:
 
 ```
-[ Fase 1: Primitivas ]  ──>  [ Fase 2: Baselines CNN ]  ──>  [ Fase 3: Descriptor x94 ]  ──>  [ Fase 4: Dataset Real ]  ──>  [ Fase 5: Experimentos ]
-   (01, 02, 03)                     (04)                         (05, 06, 07)                     (08, 09)                  (experiments/)
-    COMPLETADA                       COMPLETADA                    COMPLETADA                    LISTA PARA VALIDAR             SIGUIENTE HITO
+[ Fase 1: Primitivas ]  ──>  [ Fase 2: Baselines CNN ]  ──>  [ Fase 3: Descriptor x94 ]  ──>  [ Fase 4: Datasets Reales ]  ──>  [ Fase 5: Experimentos ]
+   (01, 02, 03)                     (04)                         (05, 06, 07)                    (08, 09, 10, 11)                 (experiments/)
+    COMPLETADA                       COMPLETADA                    COMPLETADA                       COMPLETADA                    SIGUIENTE HITO
 ```
 
 1. **Fase 1 — Primitivas matemáticas y computacionales (Completada):**
@@ -26,9 +26,9 @@ El proyecto se encuentra en la transición entre el análisis exploratorio a niv
    - 9 residuos de asimetría espacial de distribución de entropía (LR, TB, R180) ([05](05_symmetry_features/README.md)).
    - Extractor canónico multiescala `image -> x94` bajo esquema congelado `x94-v1` (85 entropías + 9 asimetrías) ([06](06_entropy_pyramid_descriptor/README.md)).
    - Caracterización científica del comportamiento de `x94` ante 15 perturbaciones controladas: ruido, desenfoque, contraste, defectos locales y colisiones estructurales ([07](07_descriptor_behavior/README.md)).
-4. **Fase 4 — Validación y control de dataset real (Implementada / Lista para validación):**
-   - Herramientas de inspección, verificación métrica y visualización del dataset industrial MVTec-AD estandarizado a 128x128 en escala de grises y variante invertida ([08](08_verify_mvtec_preprocessing/README.md)).
-   - Herramientas de control de integridad tabular, cardinalidad, esquema de 16391 columnas y reconstrucción píxel a píxel del dataset serializado en CSV plano ([09](09_verify_mvtec_csv/README.md)).
+4. **Fase 4 — Validación y control de datasets reales (Completada):**
+   - MVTec-AD estandarizado a 128x128 en grises e invertido ([08](08_verify_mvtec_preprocessing/README.md)), y su serialización tabular de 16391 columnas con reconstrucción exacta ([09](09_verify_mvtec_csv/README.md)).
+   - KolektorSDD2 preprocesado mediante clasificación por máscara nativa a 128x128 ([10](10_verify_kolektorsdd2/README.md)), y su serialización tabular de 16389 columnas con reconstrucción exacta ([11](11_verify_kolektorsdd2_csv/README.md)).
 5. **Próxima fase — Integración científica (`code/experiments/`):**
    - Clasificación de defectos con clasificadores ligeros (SVM, RF, MLP) consumiendo `x94`.
    - Pipeline de selección de regiones informativas (top-k / umbral) conectado a las CNN de [04](04_lightweight_cnns/README.md).
@@ -51,8 +51,8 @@ Todos los laboratorios residen en carpetas hermanas dentro de `code/understandin
 | [07_descriptor_behavior/](07_descriptor_behavior/README.md) | Pruebas unitarias científicas sobre `x94` | Reutiliza 06; escenas analíticas | 279 filas medidas, curvas de respuesta y CSVs |
 | [08_verify_mvtec_preprocessing/](08_verify_mvtec_preprocessing/README.md) | Control de integridad de MVTec-AD | `data/preprocessed/mvtec-ad(-inverted)` | Métricas MB y `preprocessing_verification.png` |
 | [09_verify_mvtec_csv/](09_verify_mvtec_csv/README.md) | Control de integridad de CSV MVTec-AD | `data/csv/mvtec-ad(-inverted).csv` | Validación 16391 cols y `csv_roundtrip.png` |
-| [10_verify_kolektorsdd2/](10_verify_kolektorsdd2/README.md) | Verificación e integridad KolektorSDD2 | `data/processed/KolektorSDD2(-inverted)` | Conteos good/defect y `kolektorsdd2_verification.png` |
-| [11_verify_kolektorsdd2_csv/](11_verify_kolektorsdd2_csv/README.md) | Control de integridad CSV KolektorSDD2 | `data/csv/kolektorsdd2(-inverted).csv` | Validación 16387 cols y `csv_roundtrip.png` |
+| [10_verify_kolektorsdd2/](10_verify_kolektorsdd2/README.md) | Verificación e integridad KolektorSDD2 | `data/preprocessed/KolektorSDD2(-inverted)` | Conteos good/defect y `kolektorsdd2_verification.png` |
+| [11_verify_kolektorsdd2_csv/](11_verify_kolektorsdd2_csv/README.md) | Control de integridad CSV KolektorSDD2 | `data/csv/kolektorsdd2(-inverted).csv` | Validación 16389 cols y `csv_roundtrip.png` |
 
 ---
 
@@ -106,7 +106,7 @@ Píxeles crudos
   - Letterbox centrado a 128x128 preservando el aspecto vertical (~1:2.8).
   - Exclusión total de archivos de máscara en el directorio procesado final.
 - **Serialización tabular CSV de KolektorSDD2 (11):**
-  - Exportación en streaming atómica (`.tmp` -> final) de 16387 columnas (`split`, `type`, `file_name`, 16384 intensidades de píxel en row-major, `width`, `height`).
+  - Exportación en streaming atómica (`.tmp` -> final) de 16389 columnas (`split`, `type`, `file_name`, 16384 intensidades de píxel en row-major, `width`, `height`).
   - Total de 3335 muestras balanceadas por split (`train`: 2085 good, 246 defect; `test`: 894 good, 110 defect) y reconstrucción exacta píxel a píxel (diferencia absoluta 0).
 
 ---

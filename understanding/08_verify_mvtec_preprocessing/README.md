@@ -16,7 +16,7 @@ Este laboratorio no realiza transformaciones de entrenamiento ni modelos; actúa
    - 3 muestras reales de categorías distintas (`train/good`).
    - 1 máscara de defecto real (`ground_truth`).
    - 1 caso sintético no cuadrado para validar el padding simétrico y la relación de aspecto.
-   - Guarda el artefacto en `understanding/08_verify_mvtec_preprocessing/preprocessing_verification.png` (o `_inverted.png`).
+   - Guarda el artefacto en `understanding/08_verify_mvtec_preprocessing/preprocessing_verification.png` (o `preprocessing_verification_inverted.png`).
 
 ## 3. Comandos de ejecución manual
 

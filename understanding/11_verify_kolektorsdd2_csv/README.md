@@ -6,21 +6,23 @@ Validar de manera exhaustiva y sin cargar el archivo completo en memoria la estr
 
 Este laboratorio actúa como control de calidad e integridad matemática tras la ejecución de `experiments.export_kolektorsdd2_csv`.
 
-## 2. Esquema tabular (16387 columnas)
+## 2. Esquema tabular (16389 columnas)
 
 A diferencia de MVTec-AD (que incluye `object_name` y `defect_name`), KolektorSDD2 es un dataset de objeto único sin máscaras en el árbol procesado final, por lo que su esquema optimizado consta de:
 
 1. `split`: partición (`train` o `test`).
 2. `type`: clasificación binaria (`good` o `defect`).
 3. `file_name`: nombre del archivo PNG original (ej. `10021.png`).
-4. `px_00000` a `px_16383`: vector plano de intensidades en escala de grises uint8 en orden row-major (`row * 128 + col`).
+4. `px_00000` a `px_16383`: vector plano de 16384 intensidades en escala de grises uint8 en orden row-major (`row * 128 + col`).
 5. `width`: ancho en píxeles (`128`).
 6. `height`: alto en píxeles (`128`).
 
+Total: 3 metadatos + 16384 píxeles + 2 dimensiones = 16389 columnas.
+
 ## 3. Qué mide y valida
 
-1. **Esquema e integridad de cabecera**: comprueba que los nombres y el orden exacto de las 16387 columnas coincidan con la especificación.
-2. **Dimensiones y formato**: verifica que cada fila contenga exactamente 16387 campos y que `width == height == 128`.
+1. **Esquema e integridad de cabecera**: comprueba que los nombres y el orden exacto de las 16389 columnas coincidan con la especificación.
+2. **Dimensiones y formato**: verifica que cada fila contenga exactamente 16389 campos y que `width == height == 128`.
 3. **Rangos fotométricos**: comprueba que los valores numéricos de píxeles pertenezcan estrictamente al rango uint8 `[0, 255]`.
 4. **Conteos exactos de registros**:
    - `train/good`: 2085 muestras
@@ -47,3 +49,11 @@ A diferencia de MVTec-AD (que incluye `object_name` y `defect_name`), KolektorSD
 # 2. Verificación de la variante invertida:
 .\.venv\Scripts\python.exe understanding/11_verify_kolektorsdd2_csv/verify.py --inverted
 ```
+
+## 5. Resultados verificados empíricamente (2026-10-30)
+
+| Archivo evaluado | Filas | Columnas | Tamaño en disco | Muestras validadas | Discrepancias | Artefacto visual | Estado |
+|---|---|---|---|---|---|---|---|
+| `data/csv/kolektorsdd2.csv` | 3335 | 16389 | 129.18 MB | 5 aleatorias (seed=42) | 0 píxeles | `csv_roundtrip.png` | PASS |
+| `data/csv/kolektorsdd2-inverted.csv` | 3335 | 16389 | 148.84 MB | 5 aleatorias (seed=42) | 0 píxeles | `csv_roundtrip_inverted.png` | PASS |
+

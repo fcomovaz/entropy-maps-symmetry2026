@@ -108,6 +108,7 @@ Key API (06): `extract_descriptor(image, bins) -> DescriptorResult` (`.vector`, 
 - **08** — Quality control of MVTec-AD standardization: dimensional integrity (`128x128`, `'L'`), strict mask binary preservation (`{0, 255}` via `NEAREST`), disk usage reduction, visual validation matrix.
 - **09** — Quality control of MVTec-AD CSV serialization: validates 16391 columns header schema, 6612 total records, deterministic row-major order, and bit-exact reconstruction (absolute difference = 0).
 - **10** — Quality control of KolektorSDD2: confirms binary defect classification via full-resolution mask inspection (`mask.max() > 0`), verifies exact category counts (train: 2085 good / 246 defect; test: 894 good / 110 defect), confirms zero mask files in output tree, generates visual comparison matrix.
+- **11** — Quality control of KolektorSDD2 CSV serialization: validates 16389 columns header schema (`split, type, file_name, px_00000...px_16383, width, height`), 3335 total records, deterministic row-major order, and bit-exact reconstruction (absolute difference = 0).
 
 ## 7. What does NOT exist yet (the actual remaining gaps)
 
@@ -130,6 +131,7 @@ Set-Location D:\Publications\2026-10-Symmetry-Entropy\code
 .\.venv\Scripts\python.exe -m unittest tests/test_preprocessing.py
 .\.venv\Scripts\python.exe -m unittest tests/test_kolektorsdd2.py
 .\.venv\Scripts\python.exe -m unittest tests/test_csv_export.py
+.\.venv\Scripts\python.exe -m unittest tests/test_kolektorsdd2_csv_export.py
 
 # 2. Dataset preprocessing & export experiments
 .\.venv\Scripts\python.exe -m experiments.preprocess_mvtec_ad
@@ -138,11 +140,15 @@ Set-Location D:\Publications\2026-10-Symmetry-Entropy\code
 .\.venv\Scripts\python.exe -m experiments.export_mvtec_ad_csv --inverted
 .\.venv\Scripts\python.exe -m experiments.preprocess_kolektorsdd2
 .\.venv\Scripts\python.exe -m experiments.preprocess_kolektorsdd2 --inverted
+.\.venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv
+.\.venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv --inverted
 
 # 3. Post-run visual validations
 .\.venv\Scripts\python.exe understanding/08_verify_mvtec_preprocessing/verify.py
 .\.venv\Scripts\python.exe understanding/09_verify_mvtec_csv/verify.py
 .\.venv\Scripts\python.exe understanding/10_verify_kolektorsdd2/verify.py
+.\.venv\Scripts\python.exe understanding/11_verify_kolektorsdd2_csv/verify.py
+.\.venv\Scripts\python.exe understanding/11_verify_kolektorsdd2_csv/verify.py --inverted
 
 # 4. Pedagogical lab tests
 .\.venv\Scripts\python.exe understanding/03_entropy_benchmark/test_entropy.py
@@ -171,15 +177,16 @@ Set-Location D:\Publications\2026-10-Symmetry-Entropy\code
 
 ```text
 configs/base.toml
-configs/preprocessing/{mvtec_ad.toml, mvtec_ad_csv.toml, kolektorsdd2.toml}
+configs/preprocessing/{mvtec_ad.toml, kolektorsdd2.toml}
+configs/csv/{mvtec_ad.toml, kolektorsdd2.toml}
 configs/logging.py
 
 src/preprocessing/{letterbox.py, mvtec_ad.py, kolektorsdd2.py}
-src/datasets/mvtec_ad_csv.py
+src/datasets/{mvtec_ad_csv.py, kolektorsdd2_csv.py}
 
-experiments/{preprocess_mvtec_ad.py, export_mvtec_ad_csv.py, preprocess_kolektorsdd2.py}
+experiments/{preprocess_mvtec_ad.py, export_mvtec_ad_csv.py, preprocess_kolektorsdd2.py, export_kolektorsdd2_csv.py}
 
-tests/{test_environment.py, test_preprocessing.py, test_kolektorsdd2.py, test_csv_export.py}
+tests/{test_environment.py, test_preprocessing.py, test_kolektorsdd2.py, test_csv_export.py, test_kolektorsdd2_csv_export.py}
 
 understanding/01_patch_partition/patch_partition.py
 understanding/02_histogram_benchmark/histogram_benchmark.py
@@ -195,4 +202,5 @@ understanding/07_descriptor_behavior/{run_all.py, experiments.py, compare_descri
 understanding/08_verify_mvtec_preprocessing/verify.py
 understanding/09_verify_mvtec_csv/verify.py
 understanding/10_verify_kolektorsdd2/verify.py
+understanding/11_verify_kolektorsdd2_csv/verify.py
 ```
