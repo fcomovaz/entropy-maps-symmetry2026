@@ -1,0 +1,30 @@
+# Region entropy feature extraction configuration for preprocessed MVTec-AD CSV.
+# Dataset source and output CSV paths are resolved via configs/base.toml [datasets.mvtecad];
+# target image size is loaded from configs/preprocessing/mvtec_ad.toml [preprocessing].target_size.
+
+[entropy_maps]
+base_config = "configs/base.toml"
+dataset_key = "mvtecad"
+preprocessing_config = "configs/preprocessing/mvtec_ad.toml"
+inverted = false
+overwrite = false
+
+[entropy_maps.regions]
+grid_levels = [1, 2, 4, 8]
+bins = 16
+
+[entropy_maps.source]
+pixel_column_prefix = "px_"
+metadata_columns = ["object_name", "split", "type", "defect_name", "file_name"]
+size_columns = ["width", "height"]
+
+[entropy_maps.output]
+feature_name_template = "E_{g}x{g}_r{r}_c{c}"
+float_precision = 8
+write_sidecar = true
+bins_column = "bins"
+levels_column = "grid_levels"
+levels_separator = "|"
+
+[entropy_maps.runtime]
+chunk_size = 256

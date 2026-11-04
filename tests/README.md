@@ -16,13 +16,19 @@ Suites de pruebas automáticas, unitarias y de integración del proyecto.
 
 # 3. Pruebas de exportación CSV (esquema tabular, streaming y atomicidad)
 .\.venv\Scripts\python.exe -m unittest tests/test_csv_export.py
+.\.venv\Scripts\python.exe -m unittest tests/test_kolektorsdd2_csv_export.py
 
-# 4. Pruebas pedagógicas de laboratorios locales
+# 4. Pruebas de mapas de entropía y características regionales (x85)
+.\.venv\Scripts\python.exe -m unittest tests/test_entropy_maps.py
+.\.venv\Scripts\python.exe -m unittest tests/test_entropy_csv.py
+
+# 5. Pruebas pedagógicas de laboratorios locales
 .\.venv\Scripts\python.exe understanding/03_entropy_benchmark/test_entropy.py
 .\.venv\Scripts\python.exe understanding/04_lightweight_cnns/tests/test_models.py
 .\.venv\Scripts\python.exe understanding/05_symmetry_features/test_symmetry.py
 .\.venv\Scripts\python.exe understanding/06_entropy_pyramid_descriptor/test_descriptor.py
 .\.venv\Scripts\python.exe understanding/07_descriptor_behavior/test_behavior.py
+.\.venv\Scripts\python.exe understanding/07_entropy_maps_vectorized/explain_entropy_maps.py
 ```
 
 ---
@@ -34,7 +40,10 @@ Suites de pruebas automáticas, unitarias y de integración del proyecto.
 | `test_environment.py` | Imports, asignación/transferencia CUDA, matmul GPU y forward de red mínima | Entorno local y GPU NVIDIA (Pascal/GTX 1050); falla sin CUDA real |
 | `test_preprocessing.py` | Letterbox centrado, conversión a grises, preservación binaria de máscaras (`{0, 255}`), inversión y orquestación CLI | Cobertura integral de `src/preprocessing/mvtec_ad.py` |
 | `test_kolektorsdd2.py` | Emparejamiento `_GT`, descarte de huérfanos/copias, clasificación binaria, letterbox 128x128, grises, inversión y CLI | Cobertura integral de `src/preprocessing/kolektorsdd2.py` |
-| `test_csv_export.py` | Lectura de TOML, nombres de columnas, aplanado row-major, streaming temporal seguro, conteos y CLI | Cobertura integral de `src/datasets/mvtec_ad_csv.py` |
+| `test_csv_export.py` | Lectura de TOML, nombres de columnas (16391 cols), aplanado row-major, streaming temporal seguro, conteos y CLI | Cobertura integral de `src/datasets/mvtec_ad_csv.py` |
+| `test_kolektorsdd2_csv_export.py` | Lectura de TOML, nombres de columnas (16389 cols), aplanado row-major, streaming temporal seguro, conteos y CLI | Cobertura integral de `src/datasets/kolektorsdd2_csv.py` |
+| `test_entropy_maps.py` | Validación de niveles/bins, cotas $[0, 1]$, determinismo, partición espacial y paridad exacta con oráculo `06` ($< 10^{-12}$) | Cobertura matemática de `src/features/entropy_maps.py` |
+| `test_entropy_csv.py` | Carga TOML, validación de cabecera, preservación de metadatos, escritura atómica `.tmp`, sidecar y CLI | Cobertura integral de `src/features/entropy_csv.py` y CLI |
 | `03/test_entropy.py` | 5 tests: formulaciones Shannon E1–E5, cotas, LUTs y rankings | Utiliza artefactos cacheados de 01 |
 | `04/tests/test_models.py` | 8 tests: shapes, backward/Adam, parámetros y capas depthwise en 7 CNNs | CPU obligatorio, CUDA probado en hardware compatible |
 | `05/test_symmetry.py` | 20 tests: simetrías LR/TB/R180, desigualdades y rangos de asimetría | Verificación matemática de residuos espaciales |

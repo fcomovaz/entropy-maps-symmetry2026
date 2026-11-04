@@ -150,7 +150,7 @@ Set-Location D:\Publications\2026-10-Symmetry-Entropy\code
 
 Serializa cada imagen preprocesada de KolektorSDD2 (`128x128` en escala de grises) en una fila dentro de un archivo CSV plano (`data/csv/kolektorsdd2.csv` o `data/csv/kolektorsdd2-inverted.csv`), conteniendo metadatos de partición y tipo (`split, type, file_name`), vector de intensidades de píxeles (`px_00000...px_16383`) y dimensiones espaciales (`width, height`).
 
-### Esquema de columnas (16387 columnas)
+### Esquema de columnas (16389 columnas)
 
 1. `split`: partición (`train` o `test`).
 2. `type`: clasificación binaria de la muestra (`good` o `defect`).
@@ -158,6 +158,8 @@ Serializa cada imagen preprocesada de KolektorSDD2 (`128x128` en escala de grise
 4. `px_00000` a `px_16383`: intensidades de píxel uint8 en orden row-major (`row * 128 + col`).
 5. `width`: ancho en píxeles (`128`).
 6. `height`: alto en píxeles (`128`).
+
+Total: 3 metadatos + 16384 intensidades de píxeles + 2 dimensiones = 16389 columnas.
 
 ### Comandos de ejecución manual (PowerShell desde carpeta `code/`)
 
@@ -185,4 +187,57 @@ Serializa cada imagen preprocesada de KolektorSDD2 (`128x128` en escala de grise
 .\.venv\Scripts\python.exe understanding/11_verify_kolektorsdd2_csv/verify.py
 .\.venv\Scripts\python.exe understanding/11_verify_kolektorsdd2_csv/verify.py --inverted
 ```
+
+---
+
+## Experimento 05: Extracción de mapas de entropía visual por regiones ($\mathbf{x}_{85}$)
+
+Extrae descriptores de entropía visual espacial multiescala a partir de los archivos CSV con píxeles aplanados (`mvtec-ad.csv`, `kolektorsdd2.csv` o sus variantes invertidas), dividiendo cada imagen en particiones regulares de $g \times g$ regiones para cada escala configurada (por defecto $g \in \{1, 2, 4, 8\}$, sumando $1 + 4 + 16 + 64 = 85$ características normalizadas de Shannon).
+
+### Esquema de salida
+
+Las columnas de píxeles (`px_*`) y dimensiones (`width`, `height`) son reemplazadas por:
+1. **Metadatos originales preservados intactos**:
+   - MVTec-AD: `object_name, split, type, defect_name, file_name` (5 columnas).
+   - KolektorSDD2: `split, type, file_name` (3 columnas).
+2. **Columnas de trazabilidad de configuración**:
+   - `bins`: número entero de contenedores de histograma (ej. `16`).
+   - `grid_levels`: niveles de partición concatenados con separador configurable (ej. `1|2|4|8`).
+3. **Características de entropía regional normalizada**:
+   - Columnas `E_{g}x{g}_r{r}_c{c}` (ej. `E_1x1_r0_c0` ... `E_8x8_r7_c7`) con valores en $[0.0, 1.0]$ formateados a la precisión decimal configurada.
+4. **Sidecar de reproducibilidad**:
+   - Archivo `.json` adyacente que registra la ruta origen, niveles, contenedores, tiempo medido de cómputo y versión de NumPy.
+
+### Comandos de ejecución manual (PowerShell desde carpeta `code/`)
+
+```powershell
+# 1. Ejecutar tests matemáticos y de integración del pipeline de entropía
+.\.venv\Scripts\python.exe -m unittest tests/test_entropy_maps.py
+.\.venv\Scripts\python.exe -m unittest tests/test_entropy_csv.py
+
+# 2. Ejecutar script pedagógico de comprensión paso a paso con gráfico
+.\.venv\Scripts\python.exe understanding/07_entropy_maps_vectorized/explain_entropy_maps.py
+
+# 3. Dry-run de MVTec-AD (valida esquema y dimensiones sin escribir)
+.\.venv\Scripts\python.exe -m experiments.export_entropy_maps --config configs/entropy/mvtec_ad.toml --dry-run
+
+# 4. Dry-run de KolektorSDD2 (valida esquema y dimensiones sin escribir)
+.\.venv\Scripts\python.exe -m experiments.export_entropy_maps --config configs/entropy/kolektorsdd2.toml --dry-run
+
+# 5. Exportar mapas de entropía MVTec-AD (genera data/csv/mvtec-ad-entropy.csv)
+.\.venv\Scripts\python.exe -m experiments.export_entropy_maps --config configs/entropy/mvtec_ad.toml
+
+# 6. Exportar mapas de entropía MVTec-AD invertido (genera data/csv/mvtec-ad-inverted-entropy.csv)
+.\.venv\Scripts\python.exe -m experiments.export_entropy_maps --config configs/entropy/mvtec_ad.toml --inverted
+
+# 7. Exportar mapas de entropía KolektorSDD2 (genera data/csv/kolektorsdd2-entropy.csv)
+.\.venv\Scripts\python.exe -m experiments.export_entropy_maps --config configs/entropy/kolektorsdd2.toml
+
+# 8. Exportar mapas de entropía KolektorSDD2 invertido (genera data/csv/kolektorsdd2-inverted-entropy.csv)
+.\.venv\Scripts\python.exe -m experiments.export_entropy_maps --config configs/entropy/kolektorsdd2.toml --inverted
+
+# 9. Forzar sobrescritura en caso de existir previamente (--overwrite)
+.\.venv\Scripts\python.exe -m experiments.export_entropy_maps --config configs/entropy/mvtec_ad.toml --overwrite
+```
+
 
