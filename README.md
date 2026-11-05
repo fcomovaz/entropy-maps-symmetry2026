@@ -239,6 +239,32 @@ Aplana las imágenes preprocesadas de KolektorSDD2 en formato tabular (un regist
 - Parámetros de exportación: `configs/csv/kolektorsdd2.toml`.
 - Archivos de salida: `data/csv/kolektorsdd2.csv` y `data/csv/kolektorsdd2-inverted.csv`.
 
+## Anexado de asimetrías de entropía multiescala ($\mathbf{x}_{85} \rightarrow \mathbf{x}_{94}$)
+
+Calcula los 9 residuos espaciales de asimetría multiescala (`asym_lr_2x2`, `asym_tb_2x2`, `asym_rot180_2x2`, `asym_lr_4x4`, `asym_tb_4x4`, `asym_rot180_4x4`, `asym_lr_8x8`, `asym_tb_8x8`, `asym_rot180_8x8`) directamente sobre las columnas de entropía de los archivos CSV planos (`data/csv/*-entropy.csv`) y los anexa al final de la tabla para generar los descriptores completos `x94-v1` (`data/csv/*-entropy-full.csv`), preservando metadatos y valores originales byte a byte y actualizando el sidecar JSON.
+
+### Comandos de ejecución manual (PowerShell desde carpeta `code/`)
+
+```powershell
+# 1. Pruebas unitarias y de integración de asimetría
+.\code\.venv\Scripts\python.exe -m unittest tests/test_asymmetry_maps.py
+.\code\.venv\Scripts\python.exe -m unittest tests/test_asymmetry_csv.py
+
+# 2. Conteo previo (dry-run, sin escribir archivos)
+.\code\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/kolektorsdd2.toml --dry-run
+.\code\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/mvtec_ad.toml --dry-run
+
+# 3. Procesamiento completo estándar e invertido
+.\code\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/kolektorsdd2.toml
+.\code\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/kolektorsdd2.toml --inverted
+.\code\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/mvtec_ad.toml
+.\code\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/mvtec_ad.toml --inverted
+
+# 4. Procesamiento masivo de todos los datasets y variantes
+.\code\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --all
+```
+
+
 
 
 

@@ -1,0 +1,33 @@
+# Multiscale spatial entropy asymmetry feature extraction configuration for KolektorSDD2.
+# Dataset source and output paths are resolved via configs/base.toml [datasets.kolektorsdd2];
+# source entropy feature templates are read from configs/entropy/kolektorsdd2.toml.
+
+[asymmetry_features]
+base_config = "configs/base.toml"
+entropy_config = "configs/entropy/kolektorsdd2.toml"
+dataset_key = "kolektorsdd2"
+inverted = false
+overwrite = false
+schema = "x94-v1"
+
+[asymmetry_features.regions]
+scales = [2, 4, 8]
+kinds = ["lr", "tb", "rot180"]
+
+[asymmetry_features.source]
+feature_name_template = "E_{g}x{g}_r{r}_c{c}"
+global_scale = 1
+bins_column = "bins"
+levels_column = "grid_levels"
+levels_separator = "|"
+
+[asymmetry_features.output]
+suffix = "-full"
+column_templates = { lr = "asym_lr_{g}x{g}", tb = "asym_tb_{g}x{g}", rot180 = "asym_rot180_{g}x{g}" }
+float_precision = 8
+value_tolerance = 1e-6
+write_sidecar = true
+sidecar_timing_metric = "T_feature_extraction_asymmetry"
+
+[asymmetry_features.runtime]
+chunk_size = 1024

@@ -63,6 +63,19 @@ Extracción modular y vectorizada de características visuales y descriptores de
   - `load_entropy_config(config_path, project_root)`: carga y validación inmutable (`EntropyCsvConfig`) anclada dinámicamente al raíz del proyecto.
   - `validate_header(header, cfg)`: validación estricta de metadatos, dimensiones y contigüidad de columnas de píxeles.
   - `export_entropy_csv(cfg, dry_run=False)`: escritor streaming en bloques (`chunk_size`), reemplazo atómico seguro (`.tmp` -> `.csv`) y emisión de sidecar JSON con metadata de reproducibilidad y tiempo de extracción.
+- `asymmetry_maps.py`:
+  - `validate_scales(scales, global_scale=1)`: validación estricta de escalas espaciales $g \ge 2$ sin duplicados y exclusión de escala global.
+  - `validate_kinds(kinds)`: comprobación defensiva de medidas canónicas (`"lr"`, `"tb"`, `"rot180"`).
+  - `asymmetry_column_names(scales, kinds, templates)`: formateo ordenado según contrato `schema x94-v1`.
+  - `entropy_column_names(scale, template)`: nombres de columnas de entropía en orden row-major.
+  - `reconstruct_grids(flat_values, g)`: reconstrucción vectorizada de matrices 2D a partir de filas de características planas.
+  - `validate_entropy_values(values, tolerance=1e-6)`: verificación de números finitos en $[0, 1 + \epsilon]$ sin truncado ni clipping.
+  - `compute_asymmetry_for_grid(grids, kinds, tolerance)`: cálculo vectorizado sobre NumPy de residuos medios absolutos LR, TB y R180.
+  - `compute_asymmetry_features(entropy_by_scale, scales, kinds, tolerance)`: ensamblado concatenado determinista (9 características espaciales).
+- `asymmetry_csv.py`:
+  - `load_asymmetry_config(config_path, project_root)`: carga y validación inmutable (`AsymmetryCsvConfig`) anclada dinámicamente al raíz del proyecto.
+  - `validate_header(header, cfg)`: validación de presencia de columnas de entropía de entrada y prevención estricta de colisión / doble anexado.
+  - `append_asymmetry_csv(cfg, dry_run=False)`: procesamiento streaming por bloques con copia byte a byte de metadatos originales, reemplazo atómico seguro (`.tmp` -> `<nombre>-full.csv`) y actualización de sidecar JSON.
 
 ---
 

@@ -1,6 +1,25 @@
 """Feature extraction modules for informative regions, visual entropy, and descriptors."""
 from __future__ import annotations
 
+from src.features.asymmetry_csv import (
+    AsymmetryCsvConfig,
+    AsymmetryExportSummary,
+    append_asymmetry_csv,
+    load_asymmetry_config,
+    validate_header as validate_asymmetry_header,
+)
+from src.features.asymmetry_maps import (
+    ALLOWED_ASYMMETRY_KINDS,
+    DEFAULT_ASYMMETRY_TEMPLATES,
+    asymmetry_column_names,
+    compute_asymmetry_features,
+    compute_asymmetry_for_grid,
+    entropy_column_names,
+    reconstruct_grids,
+    validate_entropy_values,
+    validate_kinds,
+    validate_scales,
+)
 from src.features.entropy_csv import (
     EntropyCsvConfig,
     EntropyExportSummary,
@@ -25,22 +44,37 @@ from src.features.entropy_maps import (
 )
 
 __all__ = [
+    "ALLOWED_ASYMMETRY_KINDS",
+    "AsymmetryCsvConfig",
+    "AsymmetryExportSummary",
+    "DEFAULT_ASYMMETRY_TEMPLATES",
     "EntropyCsvConfig",
     "EntropyExportSummary",
     "EntropyPlan",
     "RegionSpec",
+    "append_asymmetry_csv",
+    "asymmetry_column_names",
     "build_entropy_plan",
     "build_quantization_lut",
     "build_shannon_term_lut",
+    "compute_asymmetry_features",
+    "compute_asymmetry_for_grid",
     "compute_entropy_features",
+    "entropy_column_names",
     "export_entropy_csv",
     "feature_names",
+    "load_asymmetry_config",
     "load_entropy_config",
     "normalized_entropy",
     "quantize_pixels",
+    "reconstruct_grids",
     "region_edges",
     "region_histograms",
+    "validate_asymmetry_header",
     "validate_bins",
+    "validate_entropy_values",
     "validate_grid_levels",
     "validate_header",
+    "validate_kinds",
+    "validate_scales",
 ]

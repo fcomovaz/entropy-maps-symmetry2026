@@ -240,4 +240,60 @@ Las columnas de píxeles (`px_*`) y dimensiones (`width`, `height`) son reemplaz
 .\.venv\Scripts\python.exe -m experiments.export_entropy_maps --config configs/entropy/mvtec_ad.toml --overwrite
 ```
 
+---
+
+## Experimento 06: Anexado de asimetrías de entropía multiescala ($\mathbf{x}_{85} \rightarrow \mathbf{x}_{94}$)
+
+Calcula las 9 medidas de asimetría espacial multiescala ($\mathbf{x}_9$) directamente a partir de las columnas de entropía de los archivos CSV planos existentes (sin releer imágenes ni recalcular histogramas) y las anexa al final de la tabla para producir el descriptor completo $\mathbf{x}_{94}$ bajo el contrato determinista `schema x94-v1`.
+
+### Esquema y estructura matemática
+
+1. **Reconstrucción espacial**:
+   - Para cada escala $g \in \{2, 4, 8\}$, reconstruye la matriz $2\text{D}$ row-major $E^{(g)} \in \mathbb{R}^{g \times g}$.
+   - La celda $1 \times 1$ global se preserva en los metadatos pero se excluye del cálculo de asimetría (residuos idénticos a 0).
+2. **Residuos absolutos de asimetría**:
+   - $A_{\mathrm{LR}}^{(g)} = \frac{1}{g^2} \sum_{r,c} |E_{r,c}^{(g)} - E_{r,g-1-c}^{(g)}|$ (reflexión izquierda-derecha)
+   - $A_{\mathrm{TB}}^{(g)} = \frac{1}{g^2} \sum_{r,c} |E_{r,c}^{(g)} - E_{g-1-r,c}^{(g)}|$ (reflexión arriba-abajo)
+   - $A_{\mathrm{R180}}^{(g)} = \frac{1}{g^2} \sum_{r,c} |E_{r,c}^{(g)} - E_{g-1-r,g-1-c}^{(g)}|$ (rotación central 180°)
+3. **Orden canónico de columnas anexadas (9 columnas)**:
+   - `asym_lr_2x2, asym_tb_2x2, asym_rot180_2x2`
+   - `asym_lr_4x4, asym_tb_4x4, asym_rot180_4x4`
+   - `asym_lr_8x8, asym_tb_8x8, asym_rot180_8x8`
+4. **Archivos de salida**:
+   - Genera `<nombre>-full.csv` y su sidecar `<nombre>-full.json` junto al archivo de entrada.
+   - Las columnas de metadatos y las 85 características de entropía originales se copian byte a byte sin alteración de formato.
+
+### Comandos de ejecución manual (PowerShell desde carpeta `code/`)
+
+```powershell
+# 1. Ejecutar pruebas unitarias y de integración de asimetría
+.\.venv\Scripts\python.exe -m unittest tests/test_asymmetry_maps.py
+.\.venv\Scripts\python.exe -m unittest tests/test_asymmetry_csv.py
+
+# 2. Dry-run de validación sobre KolektorSDD2 (no escribe archivos)
+.\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/kolektorsdd2.toml --dry-run
+
+# 3. Anexar asimetrías a KolektorSDD2 estándar (genera data/csv/kolektorsdd2-entropy-full.csv)
+.\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/kolektorsdd2.toml
+
+# 4. Anexar asimetrías a KolektorSDD2 invertido (genera data/csv/kolektorsdd2-inverted-entropy-full.csv)
+.\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/kolektorsdd2.toml --inverted
+
+# 5. Dry-run de validación sobre MVTec-AD (no escribe archivos)
+.\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/mvtec_ad.toml --dry-run
+
+# 6. Anexar asimetrías a MVTec-AD estándar (genera data/csv/mvtec-ad-entropy-full.csv)
+.\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/mvtec_ad.toml
+
+# 7. Anexar asimetrías a MVTec-AD invertido (genera data/csv/mvtec-ad-inverted-entropy-full.csv)
+.\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/mvtec_ad.toml --inverted
+
+# 8. Ejecución masiva de todas las variantes configuradas
+.\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --all
+
+# 9. Forzar sobrescritura en caso de existir previamente (--overwrite)
+.\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/mvtec_ad.toml --overwrite
+```
+
+
 
