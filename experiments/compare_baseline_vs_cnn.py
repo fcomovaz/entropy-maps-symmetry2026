@@ -149,21 +149,45 @@ def _collect_metrics(
         if filter_obj is not None and obj_name != filter_obj:
             continue
 
-        model_name = data.get("model_name") or data.get("classifier_name") or summary_path.parent.name
-        metrics = data.get("metrics", {})
-        timing = data.get("timing", {})
+        raw_model = (
+            data.get("model_name")
+            or data.get("classifier")
+            or data.get("classifier_name")
+            or summary_path.parent.name
+        )
+        raw_str = str(raw_model).lower()
+        if raw_str.startswith("full_"):
+            raw_str = raw_str.replace("full_", "")
+
+        if family == "ml":
+            model_name = f"{raw_str} (x94)"
+        else:
+            model_name = raw_str
+
+        metrics = data.get("metrics") or data.get("active_subset_metrics", {})
+        timing = data.get("timing") or data.get("timings", {})
         profile = data.get("model_profile", {})
 
-        # Classical baseline records might place timing at root
-        t_train = timing.get("train_elapsed_s", data.get("train_elapsed_s", 0.0))
-        t_inf_ms = timing.get(
-            "inference_ms_per_sample", data.get("inference_ms_per_sample", 0.0)
+        # Classical baseline records might place timing at root or in timings
+        t_train = timing.get(
+            "train_elapsed_s",
+            timing.get("T_model_train_s", data.get("train_elapsed_s", 0.0)),
         )
-        params = profile.get("parameters", data.get("n_features", 0))
+        t_inf_ms = timing.get(
+            "inference_ms_per_sample",
+            timing.get(
+                "T_model_inference_s",
+                data.get("inference_ms_per_sample", 0.0),
+            ),
+        )
+        params = profile.get(
+            "parameters",
+            metrics.get("n_features", data.get("n_features", 94 if family == "ml" else 0)),
+        )
         flops = profile.get("flops", 0)
 
         record = {
-            "model": str(model_name).lower(),
+            "model": model_name,
             "family": family,
             "object_name": obj_name if obj_name else "full",
             "seed": data.get("seed", 42),
