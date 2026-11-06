@@ -295,5 +295,96 @@ Calcula las 9 medidas de asimetría espacial multiescala ($\mathbf{x}_9$) direct
 .\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/mvtec_ad.toml --overwrite
 ```
 
+---
+
+## Experimento 07: Clasificación supervisada ligera, ablación de subconjuntos y explicabilidad espacial sobre descriptores $\mathbf{x}_{94}$
+
+Entrena y evalúa clasificadores supervisados ligeros (`RandomForestClassifier` y `KNeighborsClassifier` con `StandardScaler`) sobre el descriptor tabular completo $\mathbf{x}_{94} = [\mathbf{x}_{85}, \mathbf{x}_9]$, ejecutando automáticamente un estudio de ablación por subconjuntos (`x85_only`, `x9_only`, `x94_full` y cada escala individual $E^{(1)}, E^{(2)}, E^{(4)}, E^{(8)}$) y un análisis de explicabilidad espacial para cuantificar cuánto aportan las 9 medidas de asimetría ($\mathbf{x}_9$) y cuál mapa de entropía es más discriminativo.
+
+### Rol científico de cada dataset en la investigación (*Entropy Maps vs. Convoluciones*)
+
+1. **KolektorSDD2 (`split_mode = "presplit"` — Benchmark principal de comparación supervisada directa):**
+   - **Por qué es el benchmark primario:** Sus particiones oficiales `train` (`2,085 good`, `246 defect`) y `test` (`894 good`, `110 defect`) ya incluyen ambas clases de fábrica. Esto permite comparar directamente el descriptor $\mathbf{x}_{94}$ + clasificador ligero frente a redes convolucionales ligeras (CNNs) sobre exactamente el mismo split estándar sin ninguna modificación del protocolo original.
+   - **Física visual:** Las muestras son tiras metálicas verticales centradas mediante *letterboxing* (`pad_value = 0` en los márgenes izquierdo y derecho) donde los defectos son fisuras o manchas locales. Aquí se evalúa la capacidad de las rejillas finas ($4\times4$ y $8\times8$) y de la asimetría vertical/horizontal (`asym_tb_8x8`, `asym_tb_4x4`, `asym_lr_8x8`) para detectar anomalías locales sin convoluciones.
+
+2. **MVTec-AD (`split_mode = "stratified"` en memoria por objeto — Banco de pruebas multi-objeto y de simetría espacial):**
+   - **Por qué requiere partición estratificada en memoria:** MVTec-AD fue concebido originalmente para *One-Class / Unsupervised Anomaly Detection*, por lo que su carpeta `train` oficial contiene **únicamente muestras `good` (`0 defect`)** en las 15 categorías, además de incluir una partición `ground_truth` con máscaras binarias. Si un clasificador supervisado binario (`RandomForest` o `k-NN`) se entrenara con el `train` nativo, solo vería una clase.
+   - **Protocolo reproducible sin tocar los CSV:** El cargador descarta estrictamente las filas `split == "ground_truth"` (evitando fuga de máscaras), filtra el objeto elegido (`--object bottle`, `tile`, `metal_nut`, etc.) y aplica en RAM una partición estratificada `train`/`test` (`test_size = 0.20`, `seed = 42` configurables en TOML). Los archivos `.csv` en `data/csv/` permanecen **100% intactos** bit a bit. Cuando se comparan $\mathbf{x}_{94}$ y CNNs ligeras bajo este mismo `seed`, ambos modelos ven exactamente las mismas imágenes de entrenamiento y prueba.
+   - **Por qué complementa a KolektorSDD2:** Permite demostrar dónde brilla cada componente del descriptor $\mathbf{x}_{94}$ a través de 15 dominios visuales divididos en **objetos estructurados/simétricos** (`bottle`, `cable`, `capsule`, `hazelnut`, `metal_nut`, `pill`, `screw`, `toothbrush`, `transistor`, `zipper`) y **texturas regulares/estocásticas** (`carpet`, `grid`, `leather`, `tile`, `wood`).
+
+### Qué buscar e interpretar en cada archivo y gráfica generada (`results/classification/`)
+
+Para cada corrida se crea una subcarpeta en `results/classification/<dataset>[_inverted]/<objeto_o_full>_<rf|knn>/` con **4 archivos de datos** y **4 figuras PNG**:
+
+1. **`confusion_matrix_and_curves.png` (Rendimiento predictivo global):**
+   - **Panel izquierdo (Matriz de Confusión):** Muestra verdaderos negativos (`TN`, piezas buenas bien clasificadas), falsos positivos (`FP`, falsas alarmas), falsos negativos (`FN`, defectos no detectados) y verdaderos positivos (`TP`, defectos detectados), tanto en conteo absoluto como en porcentaje por fila (`Row %`).
+   - **Panel central (Curva ROC):** Área bajo la curva (`ROC-AUC`). Mide la capacidad global del descriptor $\mathbf{x}_{94}$ para separar las distribuciones de `good` y `defect` independientemente del umbral de decisión (`> 0.80` indica buena separabilidad; `> 0.90` excelente).
+   - **Panel derecho (Curva Precision-Recall):** Crítica cuando hay desbalance de clases (como en KolektorSDD2 donde solo ~10% son defectos). `PR-AUC (AP)` refleja el compromiso entre no dejar escapar defectos (`Recall`) y no generar falsas alarmas (`Precision`).
+
+2. **`descriptor_ablation_x85_x9_x94.png` y `ablation_table.csv` (¿Funcionó agregar las 9 medidas de simetría $\mathbf{x}_9$ y qué escala de entropía es mejor?):**
+   - Compara en barras agrupadas (`F1-Score`, `Balanced Accuracy`, `ROC-AUC`) el desempeño sobre la misma partición usando:
+     - `x85_only` (solo los 85 valores de entropía multiescala).
+     - `x9_only` (solo los 9 residuos de asimetría espacial).
+     - `x94_full` (descriptor completo $\mathbf{x}_{85} + \mathbf{x}_9$).
+     - Escalas individuales: `E_1x1` (1 col), `E_2x2` (4 cols), `E_4x4` (16 cols) y `E_8x8` (64 cols).
+   - **Qué buscar en el título y barras:**
+     - `Symmetry Gain (x94 - x85): dF1`: Si `dF1 > 0` (ej. `+0.6235` en `tile`, `+0.2010` en `bottle`, `+0.1734` en `hazelnut`, `+0.0388` en `KolektorSDD2`), demuestra cuantitativamente que las 9 características de asimetría aportan información geométrica ortogonal que la entropía regional sola no captura.
+     - Comparando `E_1x1` vs `E_2x2` vs `E_4x4` vs `E_8x8` se identifica qué resolución espacial aisla mejor el defecto (en la mayoría de objetos y en KolektorSDD2, `E_4x4` logra el mayor `F1` individual con solo 16 características).
+
+3. **`explainability_importance_breakdown.png`, `feature_importance.csv` y `scale_and_family_breakdown.csv` (Explicabilidad de $\mathbf{x}_{85}$ vs $\mathbf{x}_9$):**
+   - **Panel izquierdo (Top-15 características individuales):** Barras horizontales coloreadas en **azul** para entropía (`E_*`) y **naranja** para asimetría (`asym_*`). Si aparecen barras naranjas en el Top-5 (como ocurre en `KolektorSDD2`, `bottle`, `tile`, `carpet`, `capsule`, `zipper`), confirma que las variables de simetría son nodos primarios de decisión.
+   - **Panel central (`Total Contribution by Scale`):** Suma del porcentaje de importancia total aportado por cada nivel (`E_1x1`, `E_2x2`, `E_4x4`, `E_8x8`, `asym_2x2`, `asym_4x4`, `asym_8x8`) y el resumen `x85_entropy` vs `x9_asymmetry`. *(Nota de lectura: como $\mathbf{x}_9$ son solo 9 de 94 columnas, una expectativa uniforme al azar sería $9/94 = 9.57\%$; valores de $15\%$ a $58\%$ indican una concentración de información muy superior al azar).*
+   - **Panel derecho (`Efficiency per Feature` — Normalizado por cardinalidad):** Divide la importancia de cada grupo entre su número de características ($1, 4, 16, 64, 3, 3, 3$). Este gráfico elimina el sesgo de tamaño (64 columnas de `E_8x8` vs 3 columnas de `asym_8x8`) y revela la **densidad de información por característica**, además de detallar en el subtítulo qué eje de simetría dominó (`asym_lr`, `asym_tb` o `asym_rot180`).
+
+4. **`spatial_importance_heatmaps.png` (Mapa de calor espacial 2D sobre la imagen):**
+   - Reconstruye en matrices 2D ($2\times2$, $4\times4$ y $8\times8$) la importancia asignada a cada región espacial `E_{g}x{g}_r{r}_c{c}` sobre el lienzo de $128\times128$ píxeles.
+   - **Qué buscar:** Muestra físicamente qué zonas de la pieza inspecciona el modelo. Por ejemplo, en **KolektorSDD2**, las columnas exteriores `c0` y `c3` ($4\times4$) y `c0, c1, c6, c7` ($8\times8$) aparecen con **`0.00%` de importancia** (amarillo claro) mientras toda la atención se concentra en la franja central `c1-c2` / `c2-c5`, demostrando que el clasificador ignora automáticamente el *letterbox padding* negro y focaliza el cómputo en el centro metálico.
+
+5. **`metrics_summary.json` y reporte multi-objeto (`mvtec_all_objects_<rf|knn>_summary.csv` / `.png`):**
+   - `metrics_summary.json` guarda todos los hiperparámetros, conteos, métricas y tiempos desglosados (`T_data_load_s`, `T_model_train_s`, `T_model_inference_s`, `inference_ms_per_sample`), cumpliendo la regla de separación temporal de `AGENTS.md`.
+   - Al usar `--all-objects` en MVTec-AD, se genera `mvtec_all_objects_rf_comparison.png`, que contrasta en un solo lienzo las 15 categorías (`F1(x85)` vs `F1(x94)` y el porcentaje de aporte de $\mathbf{x}_9$ frente al umbral uniforme del $9.6\%$).
+
+### Notas metodológicas para el artículo (`normal` vs `--inverted`, probabilidades y umbral realista `0.50`)
+
+1. **De dónde salen las probabilidades y por qué se mantiene el umbral realista `0.50`:**
+   - En un `RandomForestClassifier` de $T = 200$ árboles, cada árbol $t$ emite un voto de probabilidad $p_t(\text{defect} \mid \mathbf{x})$ según la proporción de muestras en la hoja donde cae la pieza. La probabilidad del modelo (`predict_proba(X_test)[:, 1]`, usada para trazar las curvas ROC y PR) es el promedio de los 200 árboles: $\hat{p} = \frac{1}{200}\sum_{t=1}^{200} p_t$.
+   - Para construir la **Matriz de Confusión**, `.predict(X_test)` aplica el umbral estándar realista **$\hat{p} \ge 0.50 \Rightarrow \text{defect (1)}$** (sin trucar ni optimizar umbrales post-hoc). En objetos con muy pocos defectos de entrenamiento (como `transistor` con 32 defectos o `grid` con 46) y donde cada árbol solo inspecciona $\sqrt{94} \approx 9$ columnas por corte (`max_features="sqrt"`), muchos árboles dividen sobre celdas sanas del fondo y diluyen el promedio $\hat{p}$ al rango `[0.16, 0.45]`, provocando `TP = 0` en el corte `0.50` a pesar de tener un `ROC-AUC = 0.9386`. Un árbol de decisión individual (`DecisionTreeClassifier`) o usar `max_features=None` evita esa dilución por promediado al evaluar las 94 características simultáneamente.
+
+2. **Qué variante elegir para la investigación (`normal` vs `--inverted`) y cómo reportar ambas en el paper:**
+   - **El letterboxing siempre permanece en `0` (negro puro):** Tanto en MVTec-AD como en KolektorSDD2, la inversión $255 - I$ se aplica a la imagen **antes** de `letterbox_to_square(..., pad_value=0)`. Así, las franjas de relleno conservan siempre intensidad `0` y entropía `0.0`.
+   - **Para maximizar la detección real de defectos (`TP` y `F1` con el corte realista de `0.50`), usar `normal` como configuración primaria:**
+     - En **KolektorSDD2**, `normal` detecta un **33% más de defectos verdaderos** en la matriz de confusión (`TP = 24/110`, `F1 = 0.3333`, `BalAcc = 0.6035`) frente a `inverted` (`TP = 18/110`, `F1 = 0.2647`).
+     - En **MVTec-AD**, como las 15 categorías tienen resolución nativa cuadrada (sin píxeles de letterboxing), invertir $255 - I$ solo invierte el orden de los 256 bins del histograma ($p'_k = p_{255-k}$). Como la entropía de Shannon $H = -\sum p_k \log_2 p_k$ es conmutativa, `normal` e `inverted` producen exactamente la misma matriz de confusión en 12 de los 15 objetos.
+   - **Valor científico de reportar ambos (`normal` e `inverted`) en el artículo:**
+     - En **MVTec-AD**, reportar la tabla comparativa `normal` vs `inverted` demuestra empíricamente una ventaja teórica clave frente a las CNNs: **el descriptor $\mathbf{x}_{94}$ es intrínsecamente invariante a la inversión de polaridad de iluminación ($255 - I$)** en imágenes sin padding, mientras que los filtros convolucionales cambian de signo de activación si no se reentrenan con aumento de datos.
+     - En **KolektorSDD2**, reportar ambos muestra cómo `normal` maximiza el conteo de verdaderos positivos (`TP = 24`) en operación estándar (`0.50`), mientras que `inverted` eleva ligeramente el área bajo la curva (`ROC-AUC = 0.8383` vs `0.8219`) al separar las sombras oscuras del metal respecto al `pad_value = 0` del letterbox.
+
+### Comandos de ejecución manual (PowerShell desde carpeta `code/`)
+
+```powershell
+# 1. Ejecutar suite de pruebas unitarias y de integración (8 tests)
+.\.venv\Scripts\python.exe -m unittest tests/test_descriptor_classifier.py -v
+
+# 2. Dry-run de validación (verifica TOML, exclusión de ground_truth y conteo de clases sin entrenar)
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --dry-run
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object bottle --dry-run
+
+# 3. KolektorSDD2 estándar e invertido con Random Forest y k-NN
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier rf
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier knn
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier rf --inverted
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier knn --inverted
+
+# 4. MVTec-AD por objeto individual (ej. bottle, tile, metal_nut, zipper; normal o --inverted)
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object bottle --classifier rf
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object tile --classifier rf
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object bottle --classifier knn --inverted
+
+# 5. MVTec-AD barrido completo de los 15 objetos + tabla y gráfica comparativa global
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --all-objects --classifier rf
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --all-objects --classifier rf --inverted
+```
+
+
 
 

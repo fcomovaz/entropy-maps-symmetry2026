@@ -1,0 +1,60 @@
+# Baseline supervised classification & explainability configuration for KolektorSDD2 (x94-v1).
+# Dataset paths are resolved via configs/base.toml [datasets.kolektorsdd2];
+# feature naming templates are inherited from configs/asymmetry/kolektorsdd2.toml.
+
+[classification]
+base_config = "configs/base.toml"
+asymmetry_config = "configs/asymmetry/kolektorsdd2.toml"
+dataset_key = "kolektorsdd2"
+inverted = false
+overwrite = true
+seed = 42
+default_classifier = "rf"
+
+[classification.data]
+split_column = "split"
+label_column = "type"
+object_column = ""
+positive_label = "defect"
+negative_label = "good"
+allowed_splits = ["train", "test"]
+split_mode = "presplit"
+train_split_name = "train"
+test_split_name = "test"
+test_size = 0.20
+
+[classification.subsets]
+active = "x94_full"
+compare_subsets = [
+    "x85_only",
+    "x9_only",
+    "x94_full",
+    "E_1x1",
+    "E_2x2",
+    "E_4x4",
+    "E_8x8",
+]
+
+[classification.models.rf]
+n_estimators = 100
+max_depth = 6
+min_samples_leaf = 2
+class_weight = "balanced"
+n_jobs = -1
+
+[classification.models.knn]
+n_neighbors = 5
+weights = "distance"
+metric = "minkowski"
+p = 2
+scale_features = true
+
+[classification.explainability]
+enabled = true
+permutation_repeats = 10
+top_k_features = 15
+
+[classification.output]
+results_dir = "results/classification"
+dpi = 160
+float_precision = 6

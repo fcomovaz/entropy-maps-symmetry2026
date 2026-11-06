@@ -67,11 +67,11 @@ El diagnóstico, la evidencia del intento original y las limitaciones están en 
 
 Las rutas de esta lista son relativas a `code/`. Los comandos de este documento se ejecutan desde la raíz del proyecto.
 
-- [src/](src/README.md): módulos formales reutilizables (`src/preprocessing/` para letterbox, MVTec-AD y KolektorSDD2; `src/datasets/` para exportación tabular CSV de MVTec-AD y KolektorSDD2).
-- [experiments/](experiments/README.md): puntos de entrada CLI para experimentos del pipeline (`preprocess_mvtec_ad.py`, `export_mvtec_ad_csv.py`, `preprocess_kolektorsdd2.py`, `export_kolektorsdd2_csv.py`).
+- [src/](src/README.md): módulos formales reutilizables (`src/preprocessing/` para letterbox, MVTec-AD y KolektorSDD2; `src/datasets/` para exportación tabular CSV y anexado de asimetría; `src/features/` para residuos de asimetría multiescala; `src/models/` para clasificadores ligeros, ablación y explicabilidad de descriptores).
+- [experiments/](experiments/README.md): puntos de entrada CLI para experimentos del pipeline (`preprocess_mvtec_ad.py`, `export_mvtec_ad_csv.py`, `preprocess_kolektorsdd2.py`, `export_kolektorsdd2_csv.py`, `append_asymmetry_features.py`, `evaluate_descriptors.py`).
 - [understanding/](understanding/README.md): once laboratorios pedagógicos (`01_patch_partition/` a `11_verify_kolektorsdd2_csv/`).
-- [tests/](tests/README.md): verificación del entorno CUDA, suites de preprocesamiento (MVTec-AD y KolektorSDD2), suites de exportación CSV (MVTec-AD y KolektorSDD2) y tests de laboratorios.
-- [results/](results/README.md): diagnóstico, logs y registro de revisión. Los resultados de cada laboratorio viven dentro de él.
+- [tests/](tests/README.md): verificación del entorno CUDA, suites de preprocesamiento, exportación CSV, asimetría multiescala (`test_asymmetry_maps.py`, `test_asymmetry_csv.py`), clasificación supervisada (`test_descriptor_classifier.py`) y tests de laboratorios.
+- [results/](results/README.md): diagnóstico, logs, salidas de clasificación (`results/classification/`) y registro de revisión. Los resultados de cada laboratorio viven dentro de él.
 
 `notebooks/` se retiró porque solo contenía `.gitkeep`. Jupyter permanece instalado, pero no hay notebooks que ejecutar. No se cambiaron paquetes por esta limpieza.
 
@@ -268,6 +268,41 @@ Calcula los 9 residuos espaciales de asimetría multiescala (`asym_lr_2x2`, `asy
 
 
 
+
+## Clasificación supervisada, ablación y explicabilidad de descriptores ($\mathbf{x}_{94} = [\mathbf{x}_{85}, \mathbf{x}_9]$)
+
+Evalúa la capacidad discriminativa supervisada (`good = 0`, `defect = 1`) del descriptor tabular compacto de 94 dimensiones mediante clasificadores ligeros (`RandomForestClassifier` y `KNeighborsClassifier`), comparando la contribución de las 85 características de entropía multiescala ($\mathbf{x}_{85}$) frente a las 9 de asimetría espacial ($\mathbf{x}_9$) y desglosando la importancia por escala piramidal ($1\times1$, $2\times2$, $4\times4$, $8\times8$) y celda espacial 2D.
+
+- En **KolektorSDD2** (`configs/classification/kolektorsdd2.toml`), utiliza el split oficial `train`/`test` (`split_mode = "presplit"`).
+- En **MVTec-AD** (`configs/classification/mvtec_ad.toml`), filtra en memoria las filas `split == "ground_truth"` y aplica una partición estratificada en memoria (`split_mode = "stratified"`, `test_size = 0.20`, `seed = 42`) por categoría de objeto, **sin modificar los CSV en disco**.
+
+### Comandos de ejecución manual (PowerShell desde carpeta `code/`)
+
+```powershell
+# 1. Pruebas unitarias y de integración del clasificador y motor de explicabilidad
+.\.venv\Scripts\python.exe -m unittest tests/test_descriptor_classifier.py -v
+
+# 2. Validación previa (dry-run, sin entrenar ni escribir artefactos)
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --dry-run
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object bottle --dry-run
+
+# 3. KolektorSDD2 (normal e invertido, Random Forest y k-NN)
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier rf
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier knn
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier rf --inverted
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier knn --inverted
+
+# 4. MVTec-AD por objeto individual (ej. bottle o tile, normal e invertido)
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object bottle --classifier rf
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object tile --classifier rf
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object bottle --classifier knn --inverted
+
+# 5. MVTec-AD barrido completo de las 15 categorías de objetos
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --all-objects --classifier rf
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --all-objects --classifier rf --inverted
+```
+
+La guía detallada de interpretación científica de cada gráfica y tabla generada en `results/classification/` se encuentra en [experiments/README.md](experiments/README.md) y en [tasks/task_06A.md](tasks/task_06A.md).
 
 La [guía de CNN](understanding/04_lightweight_cnns/README.md) incluye inspección,
 entrenamiento, inferencia y benchmark desde la raíz, con salidas por corrida.

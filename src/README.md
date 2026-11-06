@@ -77,6 +77,26 @@ Extracción modular y vectorizada de características visuales y descriptores de
   - `validate_header(header, cfg)`: validación de presencia de columnas de entropía de entrada y prevención estricta de colisión / doble anexado.
   - `append_asymmetry_csv(cfg, dry_run=False)`: procesamiento streaming por bloques con copia byte a byte de metadatos originales, reemplazo atómico seguro (`.tmp` -> `<nombre>-full.csv`) y actualización de sidecar JSON.
 
+### 4. `src/models/`
+
+Clasificación supervisada ligera, ablación de subconjuntos y explicabilidad espacial sobre descriptores $\mathbf{x}_{94}$:
+
+- `descriptor_classifier.py`:
+  - `load_classification_config(config_path, project_root)`: carga y validación inmutable (`ClassificationConfig`) anclada a `configs/base.toml` y `configs/asymmetry/*.toml`.
+  - `resolve_feature_groups(header, cfg)`: validación y resolución determinista de subconjuntos (`x94_full`, `x85_only`, `x9_only`, `E_1x1..E_8x8`, `asym_2x2..asym_8x8`, `asym_lr`, `asym_tb`, `asym_rot180`).
+  - `load_and_split_descriptors(cfg, object_name=None, subset_name=None)`: filtrado en memoria de particiones permitidas (excluyendo estrictamente `ground_truth`), selección de objeto en MVTec-AD y partición `presplit` (KolektorSDD2) o `stratified` reproducible en memoria (MVTec-AD) sin mutar los archivos CSV en disco.
+  - `build_classifier(classifier_name, cfg)`: construcción de `RandomForestClassifier` o `Pipeline(StandardScaler + KNeighborsClassifier)`.
+  - `train_and_evaluate(partition, classifier_name, cfg, subset_name=None)`: entrenamiento, evaluación de métricas (`Accuracy`, `Balanced Accuracy`, `Precision`, `Recall`, `F1`, `ROC-AUC`, `PR-AUC`, matriz de confusión) y separación de tiempos (`T_model_train`, `T_model_inference`, `ms/sample`).
+  - `run_subset_ablation(cfg, object_name, classifier_name, base_partition=None)`: evaluación comparativa de subconjuntos sobre la misma partición exacta para cuantificar la ganancia de simetría $\Delta\text{F1}(\mathbf{x}_{94} - \mathbf{x}_{85})$ y la escala de entropía óptima.
+  - `compute_explainability(model, partition, cfg)`: motor de explicabilidad (impureza Gini MDI para Random Forest; importancia por permutación en test o distancia discriminante de Fisher para k-NN) con desglose por familia ($\mathbf{x}_{85}$ vs $\mathbf{x}_9$), por escala ($1\times1, 2\times2, 4\times4, 8\times8$), por eje de simetría (`lr`, `tb`, `rot180`) y reconstrucción de mapas de calor espaciales 2D ($2\times2, 4\times4, 8\times8$).
+  - `run_evaluation_pipeline(cfg, classifier_name=None, object_name=None, dry_run=False)`: orquestación completa y exportación de tablas CSV, resumen JSON y figuras diagnósticas.
+- `classification_plots.py`:
+  - `plot_confusion_and_curves(metrics, title_prefix, out_path, dpi)`: matriz de confusión (conteos y %), curva ROC y curva Precision-Recall.
+  - `plot_subset_ablation(ablation_metrics, title_prefix, out_path, dpi)`: gráfico comparativo de `x85_only`, `x9_only`, `x94_full` y escalas individuales `E_1x1..E_8x8`.
+  - `plot_explainability_breakdown(report, title_prefix, out_path, dpi)`: Top-$K$ características individuales, aporte porcentual total por escala y eficiencia media por característica normalizada por tamaño de grupo.
+  - `plot_spatial_importance_heatmaps(report, title_prefix, out_path, dpi)`: mapas de calor espaciales 2D ($2\times2, 4\times4, 8\times8$) de importancia regional de entropía.
+  - `plot_all_objects_summary(summary_rows, title_prefix, out_path, dpi)`: comparativa multi-objeto para las 15 categorías de MVTec-AD.
+
 ---
 
 ## Principios de diseño
