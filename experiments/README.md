@@ -387,6 +387,81 @@ Para cada corrida se crea una subcarpeta en `results/classification/<dataset>[_i
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --all-objects --classifier rf --inverted
 ```
 
+---
+
+## Experimento 08: Entrenamiento, evaluación y benchmarking de CNNs ligeras y comparación contra el baseline
+
+Entrena y evalúa las 7 arquitecturas convolucionales ligeras (`ultra_tiny`, `ds_cnn`, `tiny_cnn`, `mobilenet_like`, `tiny_resnet`, `small_cnn`, `torchvision_mobilenet`) sobre imágenes en escala de grises de $128\times128$ (`mode 'L'`) procedentes directamente de `data/preprocessed/`, respetando estrictamente el protocolo y particiones idénticas a la clasificación de descriptores (task_06A). Además, el módulo de comparación cruzada mide la latencia de extracción del descriptor ($T_{\text{descriptor}}$) para contrastar el tiempo total de extremo a extremo ($T_{\text{total}} = T_{\text{descriptor}} + T_{\text{model}}$) con la inferencia de la red convolucional sobre píxeles directos.
+
+### Modelos evaluados
+
+| Modelo | Parámetros | Tamaño MB | Características |
+|---|---|---|---|
+| `ultra_tiny` | 1,154 | 0.0046 | Bloques separables con reducción temprana (TinyML) |
+| `ds_cnn` | 12,866 | 0.0515 | Depthwise-Separable Convolutions (MobileNetV1 style) |
+| `tiny_cnn` | 23,538 | 0.0942 | 3 etapas Conv-BN-ReLU-MaxPool con global average pooling |
+| `mobilenet_like` | 70,786 | 0.2831 | Bloques separables escalonados sin expansión invertida |
+| `tiny_resnet` | 77,234 | 0.3089 | 3 bloques residuales con shortcuts identidad y proyección |
+| `small_cnn` | 97,650 | 0.3906 | 4 etapas convolucionales con mayor capacidad |
+| `torchvision_mobilenet` | 1,519,618 | 6.0785 | MobileNetV3-Small oficial (pesos aleatorios, sin descargas) |
+
+### Calibración del umbral de decisión (*Threshold Calibration*) y desbalance de clases
+
+Al entrenar redes neuronales con pérdida ponderada (`class_weighting = "balanced"`), el cociente de pesos $w_1 / w_0$ introduce un sesgo aditivo en los logits:
+$$z_1 - z_0 \approx \log \left(\frac{P(Y=1 \mid X)}{P(Y=0 \mid X)}\right) + \log \left(\frac{w_1}{w_0}\right)$$
+
+En datasets con fuerte desbalance como KolektorSDD2 ($\sim 11\,\%$ defectos, $w_1 / w_0 \approx 8.47$), aplicar a ciegas el umbral $\tau = 0.50$ sobre la probabilidad Softmax equivale en el espacio posterior a clasificar como defecto cualquier muestra con $P(Y=1 \mid X) \ge 10.5\,\%$. Esto puede inflar drásticamente los falsos positivos en semillas con distribuciones suaves, desplomando la Accuracy y el F1 a pesar de que el ranking del modelo sea óptimo ($\text{ROC-AUC} \ge 0.90$, $\text{PR-AUC} \ge 0.75$).
+
+Para garantizar rigor científico y evitar fuga de datos (*zero data leakage*):
+1. **`--threshold-mode val_f1` (Por defecto)**: Calibra el umbral óptimo $\tau^*$ evaluando exclusivamente la partición de validación (`X_val, y_val`), maximizando F1 sin ver el conjunto de prueba.
+2. **`--threshold-mode fixed_05`**: Aplica el corte rígido clásico $\tau = 0.50$ para comparabilidad con modelos previos.
+3. **`--threshold-mode val_bal_acc`**: Calibra el umbral optimizando la exactitud balanceada (estadístico J de Youden) en validación.
+4. **`--threshold <float>`**: Permite fijar un umbral explícito manual (ej. `--threshold 0.72`).
+
+El reporte generado en `metrics_summary.json` registra tanto el desempeño en el umbral calibrado como en $\tau = 0.50$ y el óptimo oráculo de prueba.
+
+### Comandos de ejecución manual (PowerShell desde carpeta `code/`)
+
+```powershell
+# 1. Pruebas unitarias y de integración de CNNs
+.\.venv\Scripts\python.exe -m unittest tests/test_cnn_architectures.py -v
+.\.venv\Scripts\python.exe -m unittest tests/test_cnn_config.py -v
+.\.venv\Scripts\python.exe -m unittest tests/test_cnn_data.py -v
+.\.venv\Scripts\python.exe -m unittest tests/test_cnn_train.py -v
+.\.venv\Scripts\python.exe -m unittest tests/test_cnn_evaluate.py -v
+.\.venv\Scripts\python.exe -m unittest tests/test_cnn_cli.py -v
+
+# O ejecutar toda la suite de tests del proyecto
+.\.venv\Scripts\python.exe -m unittest discover tests -v
+
+# 2. Dry-run de validación (verifica TOML, split counts y forward pass sin entrenar)
+.\.venv\Scripts\python.exe -m experiments.evaluate_cnn --config configs/cnn/kolektorsdd2.toml --dry-run
+.\.venv\Scripts\python.exe -m experiments.evaluate_cnn --config configs/cnn/mvtec_ad.toml --object bottle --dry-run
+
+# 3. KolektorSDD2 con umbral calibrado en validación (por defecto, F1 recuperado)
+.\.venv\Scripts\python.exe -m experiments.evaluate_cnn --config configs/cnn/kolektorsdd2.toml --model ds_cnn --overwrite
+.\.venv\Scripts\python.exe -m experiments.evaluate_cnn --config configs/cnn/kolektorsdd2.toml --model ds_cnn --inverted --overwrite
+
+# Opcional: Ejecutar con umbral fijo 0.50 para observar el efecto del sesgo de pesos
+.\.venv\Scripts\python.exe -m experiments.evaluate_cnn --config configs/cnn/kolektorsdd2.toml --model ds_cnn --threshold-mode fixed_05 --overwrite
+
+# Otras arquitecturas representativas en KolektorSDD2
+.\.venv\Scripts\python.exe -m experiments.evaluate_cnn --config configs/cnn/kolektorsdd2.toml --model tiny_cnn --overwrite
+.\.venv\Scripts\python.exe -m experiments.evaluate_cnn --config configs/cnn/kolektorsdd2.toml --model tiny_resnet --overwrite
+
+# 4. MVTec-AD por objeto individual (ej. bottle, tile, metal_nut, screw)
+.\.venv\Scripts\python.exe -m experiments.evaluate_cnn --config configs/cnn/mvtec_ad.toml --object bottle --model ds_cnn --overwrite
+.\.venv\Scripts\python.exe -m experiments.evaluate_cnn --config configs/cnn/mvtec_ad.toml --object tile --model ds_cnn --overwrite
+
+# 5. MVTec-AD barrido multi-objeto
+.\.venv\Scripts\python.exe -m experiments.evaluate_cnn --config configs/cnn/mvtec_ad.toml --all-objects --model ds_cnn --overwrite
+
+# 6. Comparación cruzada justa entre Baseline (x94 ML) y CNNs ligeras (mide T_descriptor + T_model)
+.\.venv\Scripts\python.exe -m experiments.compare_baseline_vs_cnn --dataset kolektorsdd2
+.\.venv\Scripts\python.exe -m experiments.compare_baseline_vs_cnn --dataset kolektorsdd2 --inverted
+.\.venv\Scripts\python.exe -m experiments.compare_baseline_vs_cnn --dataset mvtecad --object bottle
+```
+
 
 
 
