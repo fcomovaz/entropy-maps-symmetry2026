@@ -4,6 +4,9 @@ Siete clasificadores grayscale para leer, ejecutar y comparar. No son modelos
 entrenados para defectos reales ni forman parte del pipeline del paper.
 Todo el código, tests y resultados de este laboratorio vive aquí.
 
+> [!NOTE]
+> Para el pipeline formal de entrenamiento reproducible, evaluación científica en KolektorSDD2 y MVTec-AD, y comparativa cruzada frente al descriptor de entropía y simetría $\mathbf{x}_{94}$, consultar los módulos en `src/models/cnn/`, las configuraciones en `configs/cnn/` y los ejecutables en `experiments/evaluate_cnn.py` y `experiments/compare_baseline_vs_cnn.py`.
+
 | Model | Main idea | Approx params (2 clases) | Intended use |
 |---|---|---:|---|
 | `tiny_cnn` / TinyCNN | 3 Conv–BN–ReLU, 2 MaxPool | 23,538 | Baseline clásico |

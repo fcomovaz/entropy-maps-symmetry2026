@@ -29,7 +29,15 @@ Suites de pruebas automáticas, unitarias y de integración del proyecto.
 # 6. Pruebas de clasificación supervisada, ablación y explicabilidad (x94)
 .\.venv\Scripts\python.exe -m unittest tests/test_descriptor_classifier.py
 
-# 7. Pruebas pedagógicas de laboratorios locales
+# 7. Pruebas de redes convolucionales ligeras (CNNs) y comparación
+.\.venv\Scripts\python.exe -m unittest tests/test_cnn_architectures.py
+.\.venv\Scripts\python.exe -m unittest tests/test_cnn_config.py
+.\.venv\Scripts\python.exe -m unittest tests/test_cnn_data.py
+.\.venv\Scripts\python.exe -m unittest tests/test_cnn_train.py
+.\.venv\Scripts\python.exe -m unittest tests/test_cnn_evaluate.py
+.\.venv\Scripts\python.exe -m unittest tests/test_cnn_cli.py
+
+# 8. Pruebas pedagógicas de laboratorios locales
 .\.venv\Scripts\python.exe understanding/03_entropy_benchmark/test_entropy.py
 .\.venv\Scripts\python.exe understanding/04_lightweight_cnns/tests/test_models.py
 .\.venv\Scripts\python.exe understanding/05_symmetry_features/test_symmetry.py
@@ -54,6 +62,12 @@ Suites de pruebas automáticas, unitarias y de integración del proyecto.
 | `test_asymmetry_maps.py` | Validación de escalas/tipos, cotas $[0, 1]$, invariancia simétrica, desigualdades triangulares y paridad con oráculo `05` ($< 10^{-12}$) | Cobertura matemática de `src/features/asymmetry_maps.py` |
 | `test_asymmetry_csv.py` | Carga TOML, validación de cabecera, copia byte a byte de metadatos, atomicidad `.tmp`, sidecar y CLI | Cobertura integral de `src/features/asymmetry_csv.py` y CLI |
 | `test_descriptor_classifier.py` | Carga TOML, exclusión de `ground_truth`, partición `presplit` vs `stratified` sin mutar CSVs, RF y k-NN (`StandardScaler`), ablación `x85/x9/x94`, explicabilidad 2D y CLI | Cobertura integral de `src/models/` y `experiments/evaluate_descriptors.py` |
+| `test_cnn_architectures.py` | Verificación exacta de parámetros en 7 CNNs, salida `[B, 2]`, resolución multiescala (32/64/128) y backward | Cobertura de `src/models/cnn/architectures/` |
+| `test_cnn_config.py` | Carga TOML de KolektorSDD2 y MVTec-AD, validación de claves requeridas y resolución dinámica de rutas | Cobertura de `src/models/cnn/config.py` |
+| `test_cnn_data.py` | Ingesta directa de PNGs, exclusión de `ground_truth`, paridad de split con baseline y validación de 128x128 | Cobertura de `src/models/cnn/data.py` |
+| `test_cnn_train.py` | Smoke test de entrenamiento (convergencia de pérdida), determinismo de semillas y early stopping | Cobertura de `src/models/cnn/train.py` |
+| `test_cnn_evaluate.py` | Cálculo de métricas compatibles con `ClassificationMetrics` (Acc, BalAcc, F1, ROC, PR) y probabilidades | Cobertura de `src/models/cnn/evaluate.py` |
+| `test_cnn_cli.py` | Validación CLI dry-run para ambos datasets, manejo de errores y reporte comparativo | Cobertura de `experiments/evaluate_cnn.py` y `compare_baseline_vs_cnn.py` |
 | `03/test_entropy.py` | 5 tests: formulaciones Shannon E1–E5, cotas, LUTs y rankings | Utiliza artefactos cacheados de 01 |
 | `04/tests/test_models.py` | 8 tests: shapes, backward/Adam, parámetros y capas depthwise en 7 CNNs | CPU obligatorio, CUDA probado en hardware compatible |
 | `05/test_symmetry.py` | 20 tests: simetrías LR/TB/R180, desigualdades y rangos de asimetría | Verificación matemática de residuos espaciales |

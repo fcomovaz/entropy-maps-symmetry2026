@@ -97,6 +97,29 @@ Clasificación supervisada ligera, ablación de subconjuntos y explicabilidad es
   - `plot_spatial_importance_heatmaps(report, title_prefix, out_path, dpi)`: mapas de calor espaciales 2D ($2\times2, 4\times4, 8\times8$) de importancia regional de entropía.
   - `plot_all_objects_summary(summary_rows, title_prefix, out_path, dpi)`: comparativa multi-objeto para las 15 categorías de MVTec-AD.
 
+### 5. `src/models/cnn/`
+
+Entrenamiento, evaluación y benchmarking de arquitecturas convolucionales ligeras:
+
+- `architectures/`:
+  - Zoo de modelos convolucionales ligeros para imágenes grayscale: `UltraTinyCNN` (1.1k params), `DepthwiseSeparableCNN` (12.8k params), `TinyCNN` (23.5k params), `MobileNetLikeCNN` (70.7k params), `TinyResidualCNN` (77.2k params), `SmallCNN` (97.6k params) y `TorchvisionMobileNet` (1.5M params).
+  - `registry.py`: catálogo centralizado `create_model(name, num_classes)` y `model_names()`.
+  - `common.py`: utilidades compartidas de semillas deterministas (`seed_everything`), selección de hardware (`select_device`) y conteo de parámetros (`model_stats`).
+- `config.py`:
+  - `load_cnn_config(config_path, project_root)`: carga y validación inmutable de parámetros de entrenamiento, datos, benchmarking y exportación en `CnnConfig`.
+- `data.py`:
+  - `load_cnn_partition(cfg, object_name=None, seed=None)`: cargador streaming en memoria directamente desde imágenes PNG preprocesadas en `data/preprocessed/`, asegurando paridad de splits e índices con el baseline clásico mediante ordenamiento indexado por metadatos.
+  - `InMemCnnDataset`: dataset PyTorch con soporte para aumento de datos simétrico (horizontal flip).
+- `train.py`:
+  - `train_model(model, partition, cfg, seed, device)`: ciclo de entrenamiento con cross-entropy ponderado por clases desbalanceadas, optimizador AdamW, programación de tasa de aprendizaje por coseno y early stopping sobre PR-AUC de validación.
+- `evaluate.py`:
+  - `predict_proba(model, images, device)`: cómputo vectorizado de probabilidades con softmax bajo `torch.inference_mode()`.
+  - `evaluate_cnn(model, partition, cfg, model_name, train_elapsed_s, device)`: cálculo de métricas estándar compatibles bit a bit con `ClassificationMetrics` y medición aislada de latencia de inferencia `T_inf`.
+- `benchmark.py`:
+  - `run_benchmark(model, model_name, cfg, device, batch_size)`: protocolo de medición de latencia con warm-up, iteraciones sincronizadas en GPU, cálculo de media/mediana/IQR, estimación de FLOPs/MACs y consumo pico de VRAM.
+- `report.py`:
+  - `save_metrics_summary(...)`, `save_training_history(...)`, `save_checkpoint(...)`, `plot_confusion_and_curves(...)` y `plot_training_curves(...)`.
+
 ---
 
 ## Principios de diseño

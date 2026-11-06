@@ -1,0 +1,75 @@
+# Lightweight CNN training and benchmarking configuration for Google Colab environments.
+# Uses relative paths anchored to the project root in Google Drive or /content.
+
+[cnn]
+base_config = "configs/base.toml"
+dataset_key = "kolektorsdd2"
+seed = 42
+seeds = [42, 43, 44]
+inverted = false
+overwrite = true
+default_model = "ds_cnn"
+default_object = "bottle"
+models = [
+    "ultra_tiny",
+    "ds_cnn",
+    "tiny_cnn",
+    "mobilenet_like",
+    "tiny_resnet",
+    "small_cnn",
+    "torchvision_mobilenet",
+]
+
+[cnn.data]
+split_column = "split"
+label_column = "type"
+object_column = ""
+positive_label = "defect"
+negative_label = "good"
+split_mode = "presplit"
+train_split_name = "train"
+test_split_name = "test"
+test_size = 0.20
+val_size = 0.15
+image_size = 128
+normalize_mean = 0.5
+normalize_std = 0.5
+use_metadata_index = true
+metadata_csv_key = "full_csv_path"
+metadata_csv_key_inverted = "full_csv_path_inverted"
+allowed_splits = ["train", "test"]
+
+[cnn.training]
+epochs = 40
+batch_size = 64
+learning_rate = 1e-3
+weight_decay = 1e-4
+optimizer = "adamw"
+scheduler = "cosine"
+early_stopping_patience = 8
+class_weighting = "balanced"
+threshold_mode = "val_f1"
+num_workers = 2
+device = "cuda"
+amp = false
+deterministic = true
+
+[cnn.augmentation]
+hflip = true
+vflip = false
+rotate_deg = 0
+brightness = 0.0
+
+[cnn.benchmark]
+warmup_iters = 10
+timed_iters = 50
+batch_sizes = [1, 32]
+devices = ["cuda"]
+threads = 1
+measure_flops = true
+
+[cnn.output]
+results_dir = "results/cnn"
+dpi = 160
+float_precision = 6
+save_checkpoints = true
