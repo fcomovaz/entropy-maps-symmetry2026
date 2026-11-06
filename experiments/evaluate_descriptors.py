@@ -68,9 +68,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--classifier",
         type=str,
-        choices=["rf", "knn", "dt", "lr"],
+        choices=["rf", "knn", "dt", "lr", "all"],
         default=None,
-        help="Classifier to evaluate: 'lr' (LogisticRegression) or 'rf' (RandomForest) or 'knn' (KNeighbors) or 'dt' (DecisionTree). Defaults to TOML setting.",
+        help="Classifier to evaluate: 'lr', 'rf', 'knn', 'dt', or 'all' to evaluate all available classifiers in sequence. Defaults to TOML setting.",
     )
     parser.add_argument(
         "--inverted",
@@ -290,16 +290,24 @@ def main(argv: list[str] | None = None, project_root: Path = PROJECT_ROOT) -> in
         if args.overwrite:
             cfg = replace(cfg, overwrite=True)
 
-        if args.all_objects:
-            _run_all_objects(cfg, classifier_name=args.classifier, dry_run=args.dry_run)
+        active_classifiers: list[str]
+        req_cls = (args.classifier or cfg.default_classifier).lower()
+        if req_cls == "all":
+            active_classifiers = list(cfg.available_classifiers)
         else:
-            summary = run_evaluation_pipeline(
-                cfg,
-                classifier_name=args.classifier,
-                object_name=args.object_name,
-                dry_run=args.dry_run,
-            )
-            _log_summary(summary)
+            active_classifiers = [req_cls]
+
+        for cls_name in active_classifiers:
+            if args.all_objects:
+                _run_all_objects(cfg, classifier_name=cls_name, dry_run=args.dry_run)
+            else:
+                summary = run_evaluation_pipeline(
+                    cfg,
+                    classifier_name=cls_name,
+                    object_name=args.object_name,
+                    dry_run=args.dry_run,
+                )
+                _log_summary(summary)
         return 0
     except (OSError, ValueError, KeyError) as exc:
         logger.error("Classification pipeline error: %s", exc)

@@ -149,6 +149,11 @@ class ClassificationConfig:
         base_tag = self.dataset_name.lower()
         return f"{base_tag}-inverted" if self.inverted else base_tag
 
+    @property
+    def available_classifiers(self) -> tuple[str, ...]:
+        """Return tuple of supported classifier names configured in this pipeline."""
+        return ("lr", "dt", "knn", "rf")
+
     def effective_results_dir(
         self, object_name: str | None, classifier_name: str
     ) -> Path:
