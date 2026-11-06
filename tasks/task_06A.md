@@ -608,7 +608,7 @@ class_weight = "balanced"
 
 ### 2️⃣ `descriptor_classifier.py`
 
-- Create the `@dataclass(frozen=True, slots=True) DecisionTreeSpec` *(just like `RandomForestSpec`)* and read it in `load_classification_config`.
+- Create the `@dataclass(frozen=True, slots=True) DtcHyperparams` *(just like `RfHyperparams`)* and read it in `load_classification_config`.
 - Add `"dt"` to `VALID_CLASSIFIERS = ("rf", "knn", "dt")`.
 - Add the `elif normalized == "dt": return DecisionTreeClassifier(...)` in `build_classifier`.
 

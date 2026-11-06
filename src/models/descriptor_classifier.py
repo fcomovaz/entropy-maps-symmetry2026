@@ -22,6 +22,8 @@ import numpy as np
 import pandas as pd
 from sklearn.base import ClassifierMixin
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.inspection import permutation_importance
 from sklearn.metrics import (
     accuracy_score,
@@ -64,6 +66,26 @@ class RfHyperparams:
 
 
 @dataclass(frozen=True, slots=True)
+class DtHyperparams:
+    """Immutable hyperparameters for DecisionTreeClassifier."""
+
+    max_depth: int | None
+    min_samples_leaf: int
+    class_weight: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class LrHyperparams:
+    """Immutable hyperparameters for LogisticRegression."""
+
+    C: float
+    penalty: str
+    solver: str
+    class_weight: str | None
+    scale_features: bool
+
+
+@dataclass(frozen=True, slots=True)
 class KnnHyperparams:
     """Immutable hyperparameters for KNeighborsClassifier."""
 
@@ -103,6 +125,8 @@ class ClassificationConfig:
     compare_subsets: tuple[str, ...]
     rf_params: RfHyperparams
     knn_params: KnnHyperparams
+    dt_params: DtHyperparams
+    lr_params: LrHyperparams
     explainability_enabled: bool
     permutation_repeats: int
     top_k_features: int
@@ -186,9 +210,9 @@ def load_classification_config(
         raise ValueError("'overwrite' in [classification] must be a boolean")
     if isinstance(seed_raw, bool) or not isinstance(seed_raw, int):
         raise ValueError("'seed' in [classification] must be an integer")
-    if default_classifier not in {"rf", "knn"}:
+    if default_classifier not in {"rf", "knn", "dt", "lr"}:
         raise ValueError(
-            f"'default_classifier' must be 'rf' or 'knn', got '{default_classifier}'"
+            f"'default_classifier' must be 'rf', 'knn', 'dt', or 'lr', got '{default_classifier}'"
         )
 
     # Data section
@@ -254,6 +278,63 @@ def load_classification_config(
     if not isinstance(models_table_obj, dict):
         raise ValueError("[classification.models] must be a table")
 
+    # LR section (optional)
+    lr_table_obj = models_table_obj.get("lr")
+    if lr_table_obj is not None:
+        if not isinstance(lr_table_obj, dict):
+            raise ValueError("[classification.models.lr] must be a table")
+        C = float(_require(lr_table_obj, "C", "[classification.models.lr]"))
+        penalty = str(_require(lr_table_obj, "penalty", "[classification.models.lr]"))
+        solver = str(_require(lr_table_obj, "solver", "[classification.models.lr]"))
+        class_weight_raw = str(
+            _require(lr_table_obj, "class_weight", "[classification.models.lr]")
+        )
+        scale_features = bool(
+            _require(lr_table_obj, "scale_features", "[classification.models.lr]")
+        )
+        lr_params = LrHyperparams(
+            C=C,
+            penalty=penalty,
+            solver=solver,
+            class_weight=class_weight_raw,
+            scale_features=scale_features,
+        )
+    else:
+        lr_params = LrHyperparams(
+            C=1.0,
+            penalty="l2",
+            solver="liblinear",
+            class_weight="balanced",
+            scale_features=True,
+        )
+
+    # DT section (optional)
+    dt_table_obj = models_table_obj.get("dt")
+    if dt_table_obj is not None:
+        if not isinstance(dt_table_obj, dict):
+            raise ValueError("[classification.models.dt] must be a table")
+        max_depth = int(_require(dt_table_obj, "max_depth", "[classification.models.dt]"))
+        min_samples_leaf = int(
+            _require(dt_table_obj, "min_samples_leaf", "[classification.models.dt]")
+        )
+        class_weight_raw = str(
+            _require(dt_table_obj, "class_weight", "[classification.models.dt]")
+        )
+        if max_depth < 1 or min_samples_leaf < 1:
+            raise ValueError("DT max_depth and min_samples_leaf must be >= 1")
+        dt_params = DtHyperparams(
+            max_depth=max_depth,
+            min_samples_leaf=min_samples_leaf,
+            class_weight=class_weight_raw,
+        )
+    else:
+        dt_params = DtHyperparams(
+            max_depth=12,
+            min_samples_leaf=2,
+            class_weight="balanced",
+        )
+
+    # RF section
     rf_table_obj = _require(models_table_obj, "rf", "[classification.models]")
     if not isinstance(rf_table_obj, dict):
         raise ValueError("[classification.models.rf] must be a table")
@@ -280,6 +361,7 @@ def load_classification_config(
         n_jobs=n_jobs,
     )
 
+    # KNN section
     knn_table_obj = _require(models_table_obj, "knn", "[classification.models]")
     if not isinstance(knn_table_obj, dict):
         raise ValueError("[classification.models.knn] must be a table")
@@ -433,6 +515,8 @@ def load_classification_config(
         compare_subsets=compare_subsets,
         rf_params=rf_params,
         knn_params=knn_params,
+        dt_params=dt_params,
+        lr_params=lr_params,
         explainability_enabled=explainability_enabled,
         permutation_repeats=permutation_repeats,
         top_k_features=top_k_features,
@@ -718,6 +802,23 @@ def build_classifier(
             random_state=cfg.seed,
             n_jobs=rf.n_jobs,
         )
+    if cls_key == "dt":
+        dt = cfg.dt_params
+        return DecisionTreeClassifier(
+            max_depth=dt.max_depth,
+            min_samples_leaf=dt.min_samples_leaf,
+            class_weight=dt.class_weight,
+        )
+    if cls_key == "lr":
+        estimator = LogisticRegression(
+            C=cfg.lr_params.C,
+            penalty=cfg.lr_params.penalty,
+            solver=cfg.lr_params.solver,
+            class_weight=cfg.lr_params.class_weight,
+        )
+        if cfg.lr_params.scale_features:
+            return Pipeline([("scaler", StandardScaler()), ("lr", estimator)])
+        return estimator
     if cls_key == "knn":
         knn = cfg.knn_params
         estimator = KNeighborsClassifier(
@@ -731,7 +832,7 @@ def build_classifier(
             return Pipeline([("scaler", StandardScaler()), ("knn", estimator)])
         return estimator
     raise ValueError(
-        f"Unsupported classifier '{classifier_name}'. Choose 'rf' or 'knn'."
+        f"Unsupported classifier '{classifier_name}'. Choose 'rf' or 'knn' or 'dt' or 'lr'."
     )
 
 

@@ -482,6 +482,19 @@ class TestClassifierAndAblation(unittest.TestCase):
             self.assertIn("knn", model_knn.named_steps)
             self.assertGreaterEqual(metrics_knn.accuracy, 0.5)
 
+            # Decision Tree
+            model_dt, metrics_dt = train_and_evaluate(part_k, "dt", cfg_k)
+            self.assertEqual(metrics_dt.classifier_name, "dt")
+            self.assertGreaterEqual(metrics_dt.accuracy, 0.5)
+
+            # Logistic Regression (with StandardScaler inside Pipeline)
+            model_lr, metrics_lr = train_and_evaluate(part_k, "lr", cfg_k)
+            self.assertEqual(metrics_lr.classifier_name, "lr")
+            self.assertTrue(hasattr(model_lr, "named_steps"))
+            self.assertIn("scaler", model_lr.named_steps)
+            self.assertIn("lr", model_lr.named_steps)
+            self.assertGreaterEqual(metrics_lr.accuracy, 0.5)
+
             # Invalid classifier name
             with self.assertRaises(ValueError):
                 build_classifier("svm_unknown", cfg_k)

@@ -299,7 +299,7 @@ Calcula las 9 medidas de asimetría espacial multiescala ($\mathbf{x}_9$) direct
 
 ## Experimento 07: Clasificación supervisada ligera, ablación de subconjuntos y explicabilidad espacial sobre descriptores $\mathbf{x}_{94}$
 
-Entrena y evalúa clasificadores supervisados ligeros (`RandomForestClassifier` y `KNeighborsClassifier` con `StandardScaler`) sobre el descriptor tabular completo $\mathbf{x}_{94} = [\mathbf{x}_{85}, \mathbf{x}_9]$, ejecutando automáticamente un estudio de ablación por subconjuntos (`x85_only`, `x9_only`, `x94_full` y cada escala individual $E^{(1)}, E^{(2)}, E^{(4)}, E^{(8)}$) y un análisis de explicabilidad espacial para cuantificar cuánto aportan las 9 medidas de asimetría ($\mathbf{x}_9$) y cuál mapa de entropía es más discriminativo.
+Entrena y evalúa clasificadores supervisados ligeros (`RandomForestClassifier`, `KNeighborsClassifier`, `DecisionTreeClassifier` y `LogisticRegression` con `StandardScaler`) sobre el descriptor tabular completo $\mathbf{x}_{94} = [\mathbf{x}_{85}, \mathbf{x}_9]$, ejecutando automáticamente un estudio de ablación por subconjuntos (`x85_only`, `x9_only`, `x94_full` y cada escala individual $E^{(1)}, E^{(2)}, E^{(4)}, E^{(8)}$) y un análisis de explicabilidad espacial para cuantificar cuánto aportan las 9 medidas de asimetría ($\mathbf{x}_9$) y cuál mapa de entropía es más discriminativo.
 
 ### Rol científico de cada dataset en la investigación (*Entropy Maps vs. Convoluciones*)
 
@@ -369,14 +369,16 @@ Para cada corrida se crea una subcarpeta en `results/classification/<dataset>[_i
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --dry-run
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object bottle --dry-run
 
-# 3. KolektorSDD2 estándar e invertido con Random Forest y k-NN
+# 3. KolektorSDD2 estándar e invertido con clasificadores ligeros (RF, k-NN, Decision Tree, Logistic Regression)
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier rf
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier knn
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier dt
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier lr
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier rf --inverted
-.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier knn --inverted
 
 # 4. MVTec-AD por objeto individual (ej. bottle, tile, metal_nut, zipper; normal o --inverted)
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object bottle --classifier rf
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object bottle --classifier dt
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object tile --classifier rf
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object bottle --classifier knn --inverted
 

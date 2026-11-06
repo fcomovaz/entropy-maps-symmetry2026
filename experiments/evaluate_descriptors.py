@@ -30,6 +30,7 @@ Manual execution commands (PowerShell from repository 'code/' directory):
     # 4. MVTec-AD all 15 objects batch evaluation + summary chart:
     .\\.venv\\Scripts\\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --all-objects --classifier rf
 """
+
 from __future__ import annotations
 
 import argparse
@@ -67,9 +68,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--classifier",
         type=str,
-        choices=["rf", "knn"],
+        choices=["rf", "knn", "dt", "lr"],
         default=None,
-        help="Classifier to evaluate: 'rf' (RandomForest) or 'knn' (KNeighbors). Defaults to TOML setting.",
+        help="Classifier to evaluate: 'lr' (LogisticRegression) or 'rf' (RandomForest) or 'knn' (KNeighbors) or 'dt' (DecisionTree). Defaults to TOML setting.",
     )
     parser.add_argument(
         "--inverted",
@@ -133,14 +134,14 @@ def _log_summary(summary: EvaluationRunSummary) -> None:
     fam_map = {g.group_name: g for g in summary.explainability.family_breakdown}
     x85_pct = fam_map["x85_entropy"].share_pct if "x85_entropy" in fam_map else 0.0
     x9_pct = fam_map["x9_asymmetry"].share_pct if "x9_asymmetry" in fam_map else 0.0
-    top3 = [
+    top5 = [
         f"{summary.explainability.feature_names[i]} ({summary.explainability.importances[i]*100:.1f}%)"
-        for i in summary.explainability.top_k_indices[:3]
+        for i in summary.explainability.top_k_indices[:5]
     ]
 
     logger.info(
         "Completed %s%s%s [%s]: Acc=%.4f | BalAcc=%.4f | F1=%.4f | ROC-AUC=%.4f | PR-AUC=%.4f | "
-        "dF1(x94-x85)=%+.4f | Share(x85=%.1f%%, x9=%.1f%%) | Top-3=%s | "
+        "dF1(x94-x85)=%+.4f | Share(x85=%.1f%%, x9=%.1f%%) | Top-5=%s | "
         "T_train=%.4fs, T_inf=%.4fs (%.3f ms/sample) -> %s",
         summary.dataset_name,
         inv_tag,
@@ -154,7 +155,7 @@ def _log_summary(summary: EvaluationRunSummary) -> None:
         df1,
         x85_pct,
         x9_pct,
-        ", ".join(top3),
+        ", ".join(top5),
         m.train_elapsed_s,
         m.inference_elapsed_s,
         m.inference_ms_per_sample,
@@ -191,7 +192,9 @@ def _run_all_objects(
         assert summary.explainability is not None
         by_sub = {m.subset_name: m for m in summary.ablation_metrics}
         fam_map = {g.group_name: g for g in summary.explainability.family_breakdown}
-        scale_candidates = [m for m in summary.ablation_metrics if m.subset_name.startswith("E_")]
+        scale_candidates = [
+            m for m in summary.ablation_metrics if m.subset_name.startswith("E_")
+        ]
         best_scale = (
             max(scale_candidates, key=lambda m: (m.f1, m.roc_auc)).subset_name
             if scale_candidates
@@ -202,7 +205,9 @@ def _run_all_objects(
 
         f1_x85 = by_sub["x85_only"].f1 if "x85_only" in by_sub else 0.0
         f1_x9 = by_sub["x9_only"].f1 if "x9_only" in by_sub else 0.0
-        f1_x94 = by_sub["x94_full"].f1 if "x94_full" in by_sub else summary.active_metrics.f1
+        f1_x94 = (
+            by_sub["x94_full"].f1 if "x94_full" in by_sub else summary.active_metrics.f1
+        )
 
         summary_rows.append(
             {
@@ -222,8 +227,16 @@ def _run_all_objects(
                 "roc_auc_x94_full": summary.active_metrics.roc_auc,
                 "pr_auc_x94_full": summary.active_metrics.pr_auc,
                 "best_single_entropy_scale": best_scale,
-                "x85_share_pct": fam_map["x85_entropy"].share_pct if "x85_entropy" in fam_map else 0.0,
-                "x9_share_pct": fam_map["x9_asymmetry"].share_pct if "x9_asymmetry" in fam_map else 0.0,
+                "x85_share_pct": (
+                    fam_map["x85_entropy"].share_pct
+                    if "x85_entropy" in fam_map
+                    else 0.0
+                ),
+                "x9_share_pct": (
+                    fam_map["x9_asymmetry"].share_pct
+                    if "x9_asymmetry" in fam_map
+                    else 0.0
+                ),
                 "top1_feature": top1_name,
                 "train_elapsed_s": summary.active_metrics.train_elapsed_s,
                 "inference_ms_per_sample": summary.active_metrics.inference_ms_per_sample,
@@ -250,7 +263,9 @@ def _run_all_objects(
 
     title_prefix = f"{cfg.dataset_name}{' (Inverted)' if cfg.inverted else ''} [{cls_name.upper()}]"
     png_out = ds_root / f"mvtec_all_objects_{cls_name}_comparison.png"
-    plot_all_objects_summary(summary_rows, title_prefix=title_prefix, out_path=png_out, dpi=cfg.dpi)
+    plot_all_objects_summary(
+        summary_rows, title_prefix=title_prefix, out_path=png_out, dpi=cfg.dpi
+    )
     logger.info("Saved aggregate multi-object report to %s and %s", csv_out, png_out)
 
 

@@ -38,7 +38,7 @@ compare_subsets = [
 
 [classification.models.rf]
 n_estimators = 100
-max_depth = 6
+max_depth = 12
 min_samples_leaf = 2
 class_weight = "balanced"
 n_jobs = -1
@@ -48,6 +48,19 @@ n_neighbors = 5
 weights = "distance"
 metric = "minkowski"
 p = 2
+scale_features = true
+
+[classification.models.dt]
+max_depth = 3
+min_samples_leaf = 2
+class_weight = "balanced"
+
+[classification.models.lr]
+C = 1.0
+penalty = "l2"
+solver = "liblinear"
+class_weight = "balanced"
+max_iter = 10000
 scale_features = true
 
 [classification.explainability]
