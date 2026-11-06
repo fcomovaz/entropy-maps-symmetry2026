@@ -12,7 +12,7 @@ Stated claim to test: selecting informative regions / describing images with ent
 
 ## 2. Current state in one paragraph
 
-Eleven understanding labs exist under `code/understanding/` (01–11). Labs 01–04 cover exploratory primitives (patches, histograms, entropy benchmark, lightweight CNNs). Labs 05–07 establish the canonical 94-dimension descriptor `image -> x94` (schema `x94-v1`: 85 pyramid Shannon entropies + 9 asymmetry residuals) and its 15 behavior experiments. Formal pipeline modules live in `code/src/` (`src/preprocessing/` for letterbox, MVTec-AD and KolektorSDD2; `src/datasets/` for tabular CSV export). CLI experiment entry points in `code/experiments/` automate dataset standardization (`preprocess_mvtec_ad.py`, `export_mvtec_ad_csv.py`, `preprocess_kolektorsdd2.py`, `export_kolektorsdd2_csv.py`). Labs 08–11 provide visual validation and metric integrity checks for MVTec-AD (standard and inverted), its flattened CSV representation, KolektorSDD2 binary classification, and KolektorSDD2 flattened CSV representation. Formal unit tests in `code/tests/` verify environment, preprocessing, KolektorSDD2 pairing, and CSV export suites.
+Twelve understanding labs exist under `code/understanding/` (01–12). Labs 01–04 cover exploratory primitives (patches, histograms, entropy benchmark, lightweight CNNs). Labs 05–07 establish the canonical 94-dimension descriptor `image -> x94` (schema `x94-v1`: 85 pyramid Shannon entropies + 9 asymmetry residuals) and its 15 behavior experiments. Formal pipeline modules live in `code/src/` (`src/preprocessing/` for letterbox, MVTec-AD and KolektorSDD2; `src/datasets/` for tabular CSV export; `src/features/` for multiscale entropy and spatial asymmetry extraction; `src/models/` for lightweight supervised classification, subset ablation, and spatial explainability). CLI experiment entry points in `code/experiments/` automate dataset standardization (`preprocess_mvtec_ad.py`, `export_mvtec_ad_csv.py`, `preprocess_kolektorsdd2.py`, `export_kolektorsdd2_csv.py`), feature extraction (`export_entropy_maps.py`, `append_asymmetry_features.py`), and supervised evaluation (`evaluate_descriptors.py`). Labs 08–12 provide visual validation and metric integrity checks. Formal unit tests in `code/tests/` verify environment, preprocessing, CSV export, entropy/asymmetry extraction, and descriptor classification (149 tests total).
 
 ## 3. Directory map
 
@@ -22,46 +22,60 @@ README.md                     environment, install, replay protocol, dataset pip
 RESUME.md                     this file
 code/
 ├── configs/                  declarative configurations (no hardcoding in src/)
-│   ├── base.toml             dataset roots, categories, and splits
+│   ├── base.toml             dataset roots, categories, splits, and full CSV paths
 │   ├── logging.py            centralized rotating logging setup
 │   ├── preprocessing/
 │   │   ├── mvtec_ad.toml     letterbox, 128x128, LANCZOS, NEAREST for masks
 │   │   └── kolektorsdd2.toml binary mask threshold, letterbox, regex stem pairing
-│   └── csv/
-│       ├── mvtec_ad.toml     16391 columns tabular export specification
-│       └── kolektorsdd2.toml 16387 columns tabular export specification
+│   ├── csv/
+│   │   ├── mvtec_ad.toml     16391 columns tabular export specification
+│   │   └── kolektorsdd2.toml 16389 columns tabular export specification
+│   ├── entropy/
+│   │   ├── mvtec_ad.toml     multiscale entropy pyramid extraction (x85)
+│   │   └── kolektorsdd2.toml multiscale entropy pyramid extraction (x85)
+│   ├── asymmetry/
+│   │   ├── mvtec_ad.toml     spatial asymmetry residuals appender (x85 -> x94)
+│   │   └── kolektorsdd2.toml spatial asymmetry residuals appender (x85 -> x94)
+│   └── classification/
+│       ├── mvtec_ad.toml     stratified in-memory per-object classification & explainability
+│       └── kolektorsdd2.toml official presplit classification & explainability
 ├── src/                      formal pipeline modules
 │   ├── preprocessing/
 │   │   ├── letterbox.py      pure routines: letterbox_to_square, to_grayscale, invert_intensity
 │   │   ├── mvtec_ad.py       batch traversal, LANCZOS images, NEAREST masks, inverted variant
 │   │   └── kolektorsdd2.py   stem pairing, native mask defect classification, letterbox, no mask output
-│   └── datasets/
-│       ├── mvtec_ad_csv.py   streaming CSV writer (.tmp -> atomic replace), 16391 columns
-│       └── kolektorsdd2_csv.py streaming CSV writer (.tmp -> atomic replace), 16387 columns
+│   ├── datasets/
+│   │   ├── mvtec_ad_csv.py   streaming CSV writer (.tmp -> atomic replace), 16391 columns
+│   │   └── kolektorsdd2_csv.py streaming CSV writer (.tmp -> atomic replace), 16389 columns
+│   ├── features/
+│   │   ├── entropy_maps.py   multiscale Shannon entropy pyramid (1x1, 2x2, 4x4, 8x8 -> 85 features)
+│   │   ├── entropy_csv.py    streaming CSV extractor for x85 entropy descriptors
+│   │   ├── asymmetry_maps.py 2D reconstruction and 9 spatial asymmetry residuals (LR, TB, R180)
+│   │   └── asymmetry_csv.py  streaming CSV appender (x85 -> x94, schema x94-v1)
+│   └── models/
+│       ├── descriptor_classifier.py RF & k-NN classifiers, presplit/stratified loaders, ablation & explainability
+│       └── classification_plots.py  publication figures (CM+ROC/PR, ablation, importance, 2D spatial heatmaps)
 ├── experiments/              CLI experiment entry points
 │   ├── preprocess_mvtec_ad.py       MVTec-AD standardized letterboxing
 │   ├── export_mvtec_ad_csv.py       MVTec-AD row-major pixel flattening
 │   ├── preprocess_kolektorsdd2.py   KolektorSDD2 pairing, classification, letterboxing
-│   └── export_kolektorsdd2_csv.py   KolektorSDD2 row-major pixel flattening
-├── tests/                    formal test suites (runnable via unittest)
+│   ├── export_kolektorsdd2_csv.py   KolektorSDD2 row-major pixel flattening
+│   ├── export_entropy_maps.py       batch x85 multiscale entropy CSV extraction
+│   ├── append_asymmetry_features.py batch x9 spatial asymmetry CSV appender (x85 -> x94)
+│   └── evaluate_descriptors.py      supervised classification (RF, k-NN), subset ablation & explainability
+├── tests/                    formal test suites (runnable via unittest, 149 tests)
 │   ├── test_environment.py          real CUDA execution, matmul, small net forward on GTX 1050
 │   ├── test_preprocessing.py        letterbox geometry, masks preservation, inversion, CLI
 │   ├── test_kolektorsdd2.py         mask classification, copy/orphan filtering, letterbox, CLI
 │   ├── test_csv_export.py           MVTec-AD CSV schema, pixel round-trip, streaming, CLI
-│   └── test_kolektorsdd2_csv_export.py KolektorSDD2 CSV schema, pixel round-trip, streaming, CLI
-├── results/                  env diagnostics + review logs (results/README.md = review registry)
-└── understanding/            eleven pedagogical laboratories
-    ├── 01_patch_partition/          patch geometry, DROP/PARTIAL/PAD edge policies, exact reconstruction
-    ├── 02_histogram_benchmark/      8 exact histogram implementations, 35 inputs, cost study
-    ├── 03_entropy_benchmark/        Shannon E1-E5, LUTs, quantization, ranking; reference `e1`
-    ├── 04_lightweight_cnns/         7 CNN architectures, demo training/inference/benchmark (CPU/CUDA)
-    ├── 05_symmetry_features/        9 asymmetry features of entropy layouts; theory + tests
-    ├── 06_entropy_pyramid_descriptor/  CANONICAL image -> x94 extractor (schema x94-v1)
-    ├── 07_descriptor_behavior/      15 controlled behavior experiments on x94 (279 comparison rows)
-    ├── 08_verify_mvtec_preprocessing/  verification and visual comparison for letterboxed 128x128 dataset
-    ├── 09_verify_mvtec_csv/         verification and visual round-trip comparison for flattened CSV dataset
-    ├── 10_verify_kolektorsdd2/      verification and visual comparison for KolektorSDD2 128x128 good/defect
-    └── 11_verify_kolektorsdd2_csv/  verification and visual round-trip comparison for KolektorSDD2 CSV
+│   ├── test_kolektorsdd2_csv_export.py KolektorSDD2 CSV schema, pixel round-trip, streaming, CLI
+│   ├── test_entropy_maps.py         multiscale entropy math and partition bounds
+│   ├── test_entropy_csv.py          streaming entropy CSV export and sidecar metadata
+│   ├── test_asymmetry_maps.py       2D reconstruction and LR/TB/R180 asymmetry math
+│   ├── test_asymmetry_csv.py        byte-identical x85 preservation and x94 CSV appending
+│   └── test_descriptor_classifier.py RF/k-NN classification, ground_truth exclusion, ablation, explainability & CLI
+├── results/                  env diagnostics, classification summary (results/classification/README.md) & review logs
+└── understanding/            pedagogical laboratories (01_patch_partition through 12_entropy_maps)
 ```
 
 ## 4. Dependency graph (imports)

@@ -22,6 +22,7 @@ para evitar romper rutas, procedencia o hashes.
 | [09_verify_mvtec_csv](../understanding/09_verify_mvtec_csv/README.md) | Control de integridad tabular MVTec-AD (16391 cols, 6612 filas, round-trip bit a bit con diff=0) |
 | [10_verify_kolektorsdd2](../understanding/10_verify_kolektorsdd2/README.md) | Verificación de KolektorSDD2 (clasificación por máscara nativa, conteo 3335 muestras) y matriz visual |
 | [11_verify_kolektorsdd2_csv](../understanding/11_verify_kolektorsdd2_csv/README.md) | Control de integridad tabular KolektorSDD2 (16389 cols, 3335 filas, round-trip bit a bit con diff=0) |
+| [classification/README.md](classification/README.md) | Resultados medidos de clasificación supervisada (`RF` y `k-NN`), ablación $\mathbf{x}_{85}$ vs $\mathbf{x}_9$, análisis de matrices de confusión, umbrales y comparación `normal` vs `inverted` |
 
 Los checkpoints sintéticos y el fixture no son resultados de detección real.
 Los CSV/JSON de tiempos describen el equipo y protocolo registrados, no hardware

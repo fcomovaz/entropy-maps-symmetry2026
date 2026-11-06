@@ -12,6 +12,9 @@ results/*
 !results/.gitkeep
 !results/environment_debug.md
 !results/README.md
+!results/classification/
+results/classification/*
+!results/classification/README.md
 data/*
 memory/*
 !memory/.gitkeep
