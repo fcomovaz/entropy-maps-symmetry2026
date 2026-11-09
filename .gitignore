@@ -15,6 +15,14 @@ results/*
 !results/classification/
 results/classification/*
 !results/classification/README.md
+!results/comparison/
+results/comparison/*
+!results/comparison/README.md
+!results/profiling/
+results/profiling/*
+!results/profiling/*/
+results/profiling/*/*
+!results/profiling/*/README.md
 data/*
 memory/*
 !memory/.gitkeep

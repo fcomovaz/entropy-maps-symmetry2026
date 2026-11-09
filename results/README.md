@@ -23,6 +23,9 @@ para evitar romper rutas, procedencia o hashes.
 | [10_verify_kolektorsdd2](../understanding/10_verify_kolektorsdd2/README.md) | Verificación de KolektorSDD2 (clasificación por máscara nativa, conteo 3335 muestras) y matriz visual |
 | [11_verify_kolektorsdd2_csv](../understanding/11_verify_kolektorsdd2_csv/README.md) | Control de integridad tabular KolektorSDD2 (16389 cols, 3335 filas, round-trip bit a bit con diff=0) |
 | [classification/README.md](classification/README.md) | Resultados medidos de clasificación supervisada (`RF` y `k-NN`), ablación $\mathbf{x}_{85}$ vs $\mathbf{x}_9$, análisis de matrices de confusión, umbrales y comparación `normal` vs `inverted` |
+| [comparison/README.md](comparison/README.md) | **Legado `mixed-device (deprecated)`:** CSVs/PNGs históricos del Experimento 08 que mezclaban latencia CNN en CUDA con ML en CPU; conservado sin borrar |
+| `comparison_cpu/` | Comparación **100% CPU justa** (`experiments/benchmark_cpu_fair.py`): CSVs `<tag>_baseline_vs_cnn_cpu.csv`, referencia CUDA aislada `<tag>_cuda_reference.csv`, Pareto PNGs por hilos y tabla agregada `summary_all_datasets.csv` |
+| `profiling/` | Reportes de profiling científico profundo (`experiments/profile_pipelines.py`): subcarpetas `<tag>/` con `environment.json`, desgloses por etapa (`x94`) y capa (`cnn`), ATen ops, `cProfile`, pruebas Mann-Whitney U, ablación $\Delta\text{F1}/\Delta\text{ms}$, 6 figuras y `README.md` de hallazgos |
 
 Los checkpoints sintéticos y el fixture no son resultados de detección real.
 Los CSV/JSON de tiempos describen el equipo y protocolo registrados, no hardware

@@ -30,9 +30,9 @@ El proyecto se encuentra en la transición entre el análisis exploratorio a niv
    - MVTec-AD estandarizado a 128x128 en grises e invertido ([08](08_verify_mvtec_preprocessing/README.md)), y su serialización tabular de 16391 columnas con reconstrucción exacta ([09](09_verify_mvtec_csv/README.md)).
    - KolektorSDD2 preprocesado mediante clasificación por máscara nativa a 128x128 ([10](10_verify_kolektorsdd2/README.md)), y su serialización tabular de 16389 columnas con reconstrucción exacta ([11](11_verify_kolektorsdd2_csv/README.md)).
 5. **Próxima fase — Integración científica (`code/experiments/`):**
-   - Clasificación de defectos con clasificadores ligeros (SVM, RF, MLP) consumiendo `x94`.
-   - Pipeline de selección de regiones informativas (top-k / umbral) conectado a las CNN de [04](04_lightweight_cnns/README.md).
-   - Balance riguroso de costes: $T_{\text{total}} = T_{\text{selector}} + T_{\text{model}}$.
+   - Clasificación de defectos con clasificadores ligeros (RF, k-NN, DT, LR) consumiendo `x94` y comparación contra CNNs de [04](04_lightweight_cnns/README.md).
+   - Profiling granular CPU y análisis comparativo justo (`T_total = T_descriptor + T_model`), precedido por el laboratorio [12](12_profiling_stages/README.md).
+   - Pipeline de selección de regiones informativas (top-k / umbral) conectado a las CNN.
 
 ---
 
@@ -53,6 +53,7 @@ Todos los laboratorios residen en carpetas hermanas dentro de `code/understandin
 | [09_verify_mvtec_csv/](09_verify_mvtec_csv/README.md) | Control de integridad de CSV MVTec-AD | `data/csv/mvtec-ad(-inverted).csv` | Validación 16391 cols y `csv_roundtrip.png` |
 | [10_verify_kolektorsdd2/](10_verify_kolektorsdd2/README.md) | Verificación e integridad KolektorSDD2 | `data/preprocessed/KolektorSDD2(-inverted)` | Conteos good/defect y `kolektorsdd2_verification.png` |
 | [11_verify_kolektorsdd2_csv/](11_verify_kolektorsdd2_csv/README.md) | Control de integridad CSV KolektorSDD2 | `data/csv/kolektorsdd2(-inverted).csv` | Validación 16389 cols y `csv_roundtrip.png` |
+| [12_profiling_stages/](12_profiling_stages/README.md) | Profiling manual por etapa ($\mathbf{x}_{94}$) y capa (`ds_cnn`) en CPU | Sintético o PNG `128x128` | Desglose `perf_counter_ns`, `cProfile`, `torch.profiler` y figura apilada |
 
 ---
 
@@ -148,4 +149,8 @@ Para ejecutar los laboratorios individuales o sus tests manuales:
 # Verificación de preprocesamiento KolektorSDD2
 .\code\.venv\Scripts\python.exe .\code\understanding\10_verify_kolektorsdd2\verify.py
 .\code\.venv\Scripts\python.exe .\code\understanding\10_verify_kolektorsdd2\verify.py --inverted
+
+# Profiling manual paso a paso en CPU (x94 + ds_cnn, lab 12)
+.\code\.venv\Scripts\python.exe .\code\understanding\12_profiling_stages\explain_profiling_stages.py
+.\code\.venv\Scripts\python.exe .\code\understanding\12_profiling_stages\explain_profiling_stages.py --image .\code\data\preprocessed\KolektorSDD2\test\defect\10002.png
 ```

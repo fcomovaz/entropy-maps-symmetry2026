@@ -67,11 +67,11 @@ El diagnóstico, la evidencia del intento original y las limitaciones están en 
 
 Las rutas de esta lista son relativas a `code/`. Los comandos de este documento se ejecutan desde la raíz del proyecto.
 
-- [src/](src/README.md): módulos formales reutilizables (`src/preprocessing/` para letterbox, MVTec-AD y KolektorSDD2; `src/datasets/` para exportación tabular CSV y anexado de asimetría; `src/features/` para residuos de asimetría multiescala; `src/models/` para clasificadores ligeros, ablación y explicabilidad de descriptores).
-- [experiments/](experiments/README.md): puntos de entrada CLI para experimentos del pipeline (`preprocess_mvtec_ad.py`, `export_mvtec_ad_csv.py`, `preprocess_kolektorsdd2.py`, `export_kolektorsdd2_csv.py`, `append_asymmetry_features.py`, `evaluate_descriptors.py`).
-- [understanding/](understanding/README.md): once laboratorios pedagógicos (`01_patch_partition/` a `11_verify_kolektorsdd2_csv/`).
-- [tests/](tests/README.md): verificación del entorno CUDA, suites de preprocesamiento, exportación CSV, asimetría multiescala (`test_asymmetry_maps.py`, `test_asymmetry_csv.py`), clasificación supervisada (`test_descriptor_classifier.py`) y tests de laboratorios.
-- [results/](results/README.md): diagnóstico, logs, salidas de clasificación (`results/classification/`) y registro de revisión. Los resultados de cada laboratorio viven dentro de él.
+- [src/](src/README.md): módulos formales reutilizables (`src/preprocessing/`, `src/datasets/`, `src/features/`, `src/models/`, `src/models/cnn/` y `src/profiling/` para benchmarking 100 % CPU justo y perfilado granular).
+- [experiments/](experiments/README.md): puntos de entrada CLI para experimentos reproducibles (`preprocess_*.py`, `export_*.py`, `append_asymmetry_features.py`, `evaluate_descriptors.py`, `evaluate_cnn.py`, `benchmark_cpu_fair.py`, `profile_pipelines.py`).
+- [understanding/](understanding/README.md): doce laboratorios pedagógicos (`01_patch_partition/` a `12_profiling_stages/`).
+- [tests/](tests/README.md): verificación del entorno CUDA, suites de preprocesamiento, CSV, mapas/asimetría, clasificación, CNNs, profiling CPU (`test_profiling_*.py`, `test_benchmark_cpu_fair_cli.py`) y tests de laboratorios.
+- [results/](results/README.md): diagnóstico, logs, salidas de clasificación (`results/classification/`), comparación 100 % CPU (`results/comparison_cpu/`), profiling científico (`results/profiling/`) y registro histórico (`results/comparison/` marcado *deprecated*).
 
 `notebooks/` se retiró porque solo contenía `.gitkeep`. Jupyter permanece instalado, pero no hay notebooks que ejecutar. No se cambiaron paquetes por esta limpieza.
 

@@ -116,9 +116,31 @@ Entrenamiento, evaluación y benchmarking de arquitecturas convolucionales liger
   - `predict_proba(model, images, device)`: cómputo vectorizado de probabilidades con softmax bajo `torch.inference_mode()`.
   - `evaluate_cnn(model, partition, cfg, model_name, train_elapsed_s, device)`: cálculo de métricas estándar compatibles bit a bit con `ClassificationMetrics` y medición aislada de latencia de inferencia `T_inf`.
 - `benchmark.py`:
-  - `run_benchmark(model, model_name, cfg, device, batch_size)`: protocolo de medición de latencia con warm-up, iteraciones sincronizadas en GPU, cálculo de media/mediana/IQR, estimación de FLOPs/MACs y consumo pico de VRAM.
+  - `run_benchmark(model, model_name, cfg, device, batch_size, inputs=None, threads=None, warmup_iters=None, timed_iters=None, disable_gc=False)`: protocolo de medición de latencia con `perf_counter_ns()`, soporte retrocompatible para entrada aleatoria o tensores reales (`inputs`), control opcional de hilos/GC, sincronización GPU CUDA, cálculo de mediana/IQR/media/std, estimación de FLOPs/MACs (`FlopCounterMode`) y consumo pico de VRAM.
 - `report.py`:
   - `save_metrics_summary(...)`, `save_training_history(...)`, `save_checkpoint(...)`, `plot_confusion_and_curves(...)` y `plot_training_curves(...)`.
+
+### 6. `src/profiling/`
+
+Módulos formales para benchmarking justo **100% CPU**, perfilado granular por etapas y capas, estadística no paramétrica y generación de reportes científicos:
+
+- `config.py`:
+  - `load_profiling_config(config_path, project_root)`: carga y validación estricta (*fail-fast*) de configuraciones `configs/profiling/*.toml`, exigiendo `device = "cpu"` como protocolo primario y resolviendo rutas relativas ancladas al raíz del proyecto.
+  - `resolve_target_objects(...)` y `effective_variant_tag(...)`: resolución determinista de categorías MVTec-AD (`bottle`, `--objects`, `--all-objects`) y etiquetas canónicas normal/invertido.
+- `timing.py`:
+  - `disabled_gc(...)` y `thread_limits(threads)`: context managers que pauses Python GC y fijan simétricamente hilos PyTorch (`torch.set_num_threads`) y BLAS/OpenMP (`threadpoolctl`) garantizando restauración ante excepciones.
+  - `measure_indexed_latencies(...)`, `measure_callable_latencies(...)`, `summarize_latencies(...)` (mediana, IQR, p95, IC95% por bootstrap, throughput), `summarize_multi_run(...)` (CV% inter-corrida), `compare_latency_distributions(...)` (test U de Mann-Whitney) y `measure_memory_alloc(...)` (`psutil` RSS + `tracemalloc`).
+- `environment.py`:
+  - `capture_environment(project_root, seed)` y `save_environment_json(...)`: captura reproducible de CPU, núcleos físicos/lógicos, frecuencia, plan de energía, RAM, SO, commit Git, backend de threadpools y versiones exactas de PyTorch/NumPy/SciPy/sklearn/psutil.
+- `descriptor_stages.py`:
+  - `extract_x94_end_to_end(...)` y `extract_x94_staged(...)`: replicación exacta etapa por etapa importando directamente las primitivas de `src/features/` sin modificarlas, validando equivalencia numérica `< 1e-12`.
+  - `profile_descriptor_stages(...)`, `run_descriptor_cprofile(...)`, `estimate_descriptor_ops(...)` y `profile_descriptor_scalability(...)`: medición de plan/LUT inicial, latencia y memoria por etapa (`quantize_pixels`, `region_histograms`, `normalized_entropy`, ensamblado, `reconstruct_grids` + asimetrías, `StandardScaler`), cálculo de overhead de llamadas Python y barridos de escalabilidad (`image_size`, `bins`, `grid_levels`).
+- `classifier_profile.py`:
+  - `configure_classifier_threads(...)`, `count_classical_model_params(...)` (parámetros reales: nodos de árbol, suma de nodos RF, coeficientes LR, vectores kNN), `estimate_classical_inference_ops(...)` (estimación analítica separada de MACs neuronales), `profile_classifier(...)` (`predict`, `predict_proba`, `StandardScaler`, núcleo directo y overhead de despacho sklearn) y `profile_classifier_thread_scaling(...)`.
+- `cnn_layers.py`:
+  - `measure_cnn_preprocess_latency(...)`, `measure_checkpoint_cold_start(...)` (deserialización + primera inferencia vs estacionario), `profile_cnn_layers(...)` (hooks *pre/post* por módulo hoja + `torch.profiler` ATen + trazas Chrome + FLOPs/activaciones por capa + verificación de overhead de hooks) y `profile_cnn_thread_scaling(...)`.
+- `report.py`:
+  - Escritores CSV deterministas (`comparison_cpu.csv`, `summary_all_datasets.csv`, `descriptor_stage_times.csv`, `descriptor_scalability.csv`, `classifier_times.csv`, `cnn_layer_times_*.csv`, `cnn_aten_ops_*.csv`, `cnn_architectures_summary.csv`, `ablation_quality_vs_cost.csv`, `statistical_tests.csv`), frontera de Pareto (`compute_pareto_frontier_indices`), renderizado de 6 figuras científicas (`generate_profiling_figures`, `plot_cpu_comparison_pareto`) y generador del reporte `write_profiling_readme(...)`.
 
 ---
 

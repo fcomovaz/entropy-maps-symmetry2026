@@ -397,6 +397,9 @@ Para cada corrida se crea una subcarpeta en `results/classification/<dataset>[_i
 
 Entrena y evalúa las 7 arquitecturas convolucionales ligeras (`ultra_tiny`, `ds_cnn`, `tiny_cnn`, `mobilenet_like`, `tiny_resnet`, `small_cnn`, `torchvision_mobilenet`) sobre imágenes en escala de grises de $128\times128$ (`mode 'L'`) procedentes directamente de `data/preprocessed/`, respetando estrictamente el protocolo y particiones idénticas a la clasificación de descriptores (task_06A). Además, el módulo de comparación cruzada mide la latencia de extracción del descriptor ($T_{\text{descriptor}}$) para contrastar el tiempo total de extremo a extremo ($T_{\text{total}} = T_{\text{descriptor}} + T_{\text{model}}$) con la inferencia de la red convolucional sobre píxeles directos.
 
+> [!WARNING]
+> **Nota metodológica sobre `results/comparison/` (`mixed-device (deprecated)`):** La comparación cruzada histórica generada por `experiments.compare_baseline_vs_cnn` mezclaba inferencia CNN en GPU CUDA (`device = "auto"`) con descriptores y modelos clásicos ejecutados en CPU (además de RF con `n_jobs = -1` y `params = 94` como número de características). **No usar sus latencias para comparaciones de velocidad en CPU.** Para una comparación justa **100 % CPU** y profiling granular, utilizar el **Experimento 09** (`benchmark_cpu_fair.py` y `profile_pipelines.py`). Los archivos en `results/comparison/` se conservan intactos como registro histórico.
+
 ### Modelos evaluados
 
 | Modelo | Parámetros | Tamaño MB | Características |
@@ -464,12 +467,90 @@ El reporte generado en `metrics_summary.json` registra tanto el desempeño en el
 # 5. MVTec-AD barrido multi-objeto
 .\.venv\Scripts\python.exe -m experiments.evaluate_cnn --config configs/cnn/mvtec_ad.toml --all-objects --model ds_cnn --overwrite
 
-# 6. Comparación cruzada justa entre Baseline (x94 ML) y CNNs ligeras (mide T_descriptor + T_model)
+# 6. Comparación cruzada histórica (OBSOLETA para latencia en CPU: mixed-device GPU CNN vs CPU ML)
 .\.venv\Scripts\python.exe -m experiments.compare_baseline_vs_cnn --dataset kolektorsdd2
 .\.venv\Scripts\python.exe -m experiments.compare_baseline_vs_cnn --dataset kolektorsdd2 --inverted
 .\.venv\Scripts\python.exe -m experiments.compare_baseline_vs_cnn --dataset mvtecad --object bottle
 ```
 
+---
 
+## Experimento 09: Benchmarking 100 % CPU Justo (`benchmark_cpu_fair.py`) y Profiling Científico Detallado (`profile_pipelines.py`)
+
+Corrige el sesgo *mixed-device* de `results/comparison/` midiendo el pipeline tabular **$\mathbf{x}_{94}$ + clasificadores clásicos** (`dt`, `knn`, `lr`, `rf`) y las **7 arquitecturas CNN ligeras** bajo un protocolo homogéneo **100 % CPU** (`task_08`), además de descomponer dónde se invierte el tiempo y la memoria en cada etapa y capa.
+
+### Protocolo científico y decisiones metodológicas
+
+1. **Paridad estricta de hardware (`--device cpu`):**
+   - `benchmark_cpu_fair.py` impone `device = "cpu"` como comparación primaria (pasar `--device cuda` falla inmediatamente). Si hay GPU disponible, cualquier referencia CUDA opcional se guarda **aislada** en `<tag>_cuda_reference.csv` sin mezclarse en la tabla ni en las gráficas principales.
+2. **Hilos y tamaño de lote (`threads=1`, `batch=1` como referencia primaria):**
+   - El perfil principal fija **`threads = 1`** (comparable a ejecución embebida/mono-hilo) imponiendo simétricamente `torch.set_num_threads(threads)`, `threadpoolctl` (OMP/MKL/BLAS) y `n_jobs = threads` en Scikit-learn (`rf`, `knn`). El escalado multihilo (`threads ∈ {2, 4, physical_cores}`) y `batch = 32` (*throughput*) se reportan como análisis secundario separado.
+   - `batch = 1` sobre **200 imágenes reales del split `test`** (semilla fija `42`) mide latencia real extremo a extremo; nunca se usa `np.random` ni tensores aleatorios para el reporte principal.
+3. **Separación de tiempos (`T_total = T_prep_or_desc + T_model`) y cronómetro robusto:**
+   - **ML clásico ($\mathbf{x}_{94}$):** `T_total = T_descriptor + T_model` (`t_preprocess = 0`, el preprocesamiento vive en `T_descriptor`).
+   - **CNNs:** `T_total = T_preprocess + T_model`, incluyendo explícitamente la normalización `uint8 -> [B, 1, 128, 128]` en `T_preprocess`.
+   - Cronómetro `time.perf_counter_ns()` con recolector de basura deshabilitado (`gc.disable()`), `warmup_iters = 20`, `timed_iters = 200` (`50` para `batch = 32`), `repeats = 3` (variabilidad inter-corrida `CV%`) y resumen por **mediana, IQR, p95, media, std e IC 95 % por *bootstrap* (1000 remuestreos)**.
+4. **Reutilización de checkpoints GPU y verificación de paridad CPU:**
+   - Por decisión metodológica (`task_08` §10), los modelos CNN **no se reentrenan en CPU**: se cargan los `checkpoint.pt` ya entrenados en GPU (`results/cnn/.../checkpoint.pt`), se re-evalúan en CPU para verificar equivalencia numérica de métricas (`metrics_tolerance = 1e-5` respecto a `metrics_summary.json`) y se cronometran exclusivamente en CPU.
+   - Si faltan checkpoints en algún objeto objetivo (p. ej., `mvtec-ad/bottle` o `mvtec-ad-inverted/bottle`), el CLI falla rápido indicando el comando exacto de `experiments.evaluate_cnn` a ejecutar antes.
+5. **Parámetros reales y operaciones analíticas separadas de PyTorch `FlopCounterMode`:**
+   - `params_model` registra parámetros reales del clasificador (`dt`: número de nodos, `rf`: suma de nodos de los árboles, `lr`: coeficientes + intercepto, `knn`: `N_train * n_features`), separados de `params_descriptor` (94 características).
+   - `ops_basis` distingue explícitamente `analytical_estimate` (operaciones analíticas del descriptor + profunidades/productos escalares de ML) frente a `torch_flop_counter_mode` en CNNs.
+6. **Variantes invertidas (`--inverted`):**
+   - `benchmark_cpu_fair.py` ejecuta la comparación 100 % CPU completa en variantes normales e invertidas (`kolektorsdd2`, `kolektorsdd2-inverted`, `mvtec-ad_bottle`, `mvtec-ad-bottle-inverted`), consolidando todas las corridas en `results/comparison_cpu/summary_all_datasets.csv`.
+   - En `profile_pipelines.py`, por configuración (`run_full_profiling_on_inverted = false`), las variantes `--inverted` ejecutan automáticamente la verificación corta del descriptor (`--short-descriptor-check`) sin repetir el profiling redundante de todas las capas CNN (salvo que se pase `--full-inverted`).
+
+### Salidas generadas
+
+- **Fase A (`results/comparison_cpu/`):**
+  - `<tag>_baseline_vs_cnn_cpu.csv` y (opcional) `<tag>_cuda_reference.csv`.
+  - `summary_all_datasets.csv` (tabla agregada de mediana `t_total` y `F1` entre datasets/objetos).
+  - `pareto_cpu_t1.png` (y por cada conteo de hilos): frontera de Pareto (`F1`, `ROC-AUC`, `Throughput`).
+- **Fase B (`results/profiling/<tag>/`):**
+  - `environment.json` (CPU, núcleos físicos/lógicos, frecuencia, plan de energía Windows, RAM, Git commit, versiones, `parallel_info`).
+  - `descriptor_stage_times.csv`, `cprofile_descriptor.txt`, `descriptor_scalability.csv` (barrido `image_size`, `bins`, `grid_levels`).
+  - `classifier_times.csv`, `classifier_thread_scaling.csv`.
+  - `cnn_layer_times_<model>.csv`, `cnn_aten_ops_<model>.csv`, `chrome_trace_<model>.json`, `cnn_architectures_summary.csv`, `cnn_thread_scaling.csv` (incluyendo *cold start* de checkpoint + primera inferencia y verificación de overhead de *hooks* `<= 15 %`).
+  - `ablation_quality_vs_cost.csv` ($\Delta\text{F1} / \Delta\text{ms}$ entre `x85_only`, `x9_only` y `x94_full`) y `statistical_tests.csv` (test U de Mann-Whitney).
+  - 6 figuras PNG (`01_x94_stage_breakdown.png` ... `06_throughput_batch32.png`) y reporte `README.md` poblado automáticamente con los números medidos.
+
+### Comandos de ejecución manual (PowerShell desde carpeta `code/`)
+
+```powershell
+# 1. Instalar/sincronizar psutil==7.2.2 si falta y verificar tests de profiling
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m unittest tests/test_profiling_config.py tests/test_profiling_timing.py tests/test_profiling_descriptor_stages.py tests/test_profiling_cnn_layers.py tests/test_benchmark_cpu_fair_cli.py -v
+.\.venv\Scripts\python.exe -m unittest discover tests -v
+
+# 2. Laboratorio previo (understanding-first) para 1 imagen en CPU
+.\.venv\Scripts\python.exe understanding/12_profiling_stages/explain_profiling_stages.py
+.\.venv\Scripts\python.exe understanding/12_profiling_stages/explain_profiling_stages.py
+.\.venv\Scripts\python.exe understanding/12_profiling_stages/explain_profiling_stages.py --image data/preprocessed/KolektorSDD2/test/defect/10002.png
+
+# 3. Solo si faltan checkpoints CNN para MVTec-AD bottle (normal e invertido):
+.\.venv\Scripts\python.exe -m experiments.evaluate_cnn --config configs/cnn/mvtec_ad.toml --object bottle --model all --overwrite
+.\.venv\Scripts\python.exe -m experiments.evaluate_cnn --config configs/cnn/mvtec_ad.toml --object bottle --model all --inverted --overwrite
+
+# 4. Validación previa (--dry-run) de Fase A y Fase B sin ejecutar benchmarks
+.\.venv\Scripts\python.exe -m experiments.benchmark_cpu_fair --config configs/profiling/kolektorsdd2.toml --dry-run
+.\.venv\Scripts\python.exe -m experiments.benchmark_cpu_fair --config configs/profiling/mvtec_ad.toml --objects bottle --dry-run
+.\.venv\Scripts\python.exe -m experiments.profile_pipelines --config configs/profiling/kolektorsdd2.toml --dry-run
+.\.venv\Scripts\python.exe -m experiments.profile_pipelines --config configs/profiling/mvtec_ad.toml --objects bottle --dry-run
+
+# 5. Fase A: Comparación 100 % CPU justa (orden recomendado)
+.\.venv\Scripts\python.exe -m experiments.benchmark_cpu_fair --config configs/profiling/kolektorsdd2.toml
+.\.venv\Scripts\python.exe -m experiments.benchmark_cpu_fair --config configs/profiling/kolektorsdd2.toml --inverted
+.\.venv\Scripts\python.exe -m experiments.benchmark_cpu_fair --config configs/profiling/mvtec_ad.toml --objects bottle
+.\.venv\Scripts\python.exe -m experiments.benchmark_cpu_fair --config configs/profiling/mvtec_ad.toml --objects bottle --inverted
+
+# Opcional MVTec-AD multi-objeto (--objects a b o --all-objects):
+.\.venv\Scripts\python.exe -m experiments.benchmark_cpu_fair --config configs/profiling/mvtec_ad.toml --objects bottle metal_nut tile
+
+# 6. Fase B: Profiling científico profundo (normales completo; invertidos verificación corta)
+.\.venv\Scripts\python.exe -m experiments.profile_pipelines --config configs/profiling/kolektorsdd2.toml
+.\.venv\Scripts\python.exe -m experiments.profile_pipelines --config configs/profiling/mvtec_ad.toml --objects bottle
+.\.venv\Scripts\python.exe -m experiments.profile_pipelines --config configs/profiling/kolektorsdd2.toml --inverted
+.\.venv\Scripts\python.exe -m experiments.profile_pipelines --config configs/profiling/mvtec_ad.toml --objects bottle --inverted
+```
 
 

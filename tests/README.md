@@ -37,7 +37,14 @@ Suites de pruebas automáticas, unitarias y de integración del proyecto.
 .\.venv\Scripts\python.exe -m unittest tests/test_cnn_evaluate.py
 .\.venv\Scripts\python.exe -m unittest tests/test_cnn_cli.py
 
-# 8. Pruebas pedagógicas de laboratorios locales
+# 8. Pruebas de comparación 100 % CPU justa y profiling científico (task_08)
+.\.venv\Scripts\python.exe -m unittest tests/test_profiling_config.py
+.\.venv\Scripts\python.exe -m unittest tests/test_profiling_timing.py
+.\.venv\Scripts\python.exe -m unittest tests/test_profiling_descriptor_stages.py
+.\.venv\Scripts\python.exe -m unittest tests/test_profiling_cnn_layers.py
+.\.venv\Scripts\python.exe -m unittest tests/test_benchmark_cpu_fair_cli.py
+
+# 9. Pruebas pedagógicas de laboratorios locales
 .\.venv\Scripts\python.exe understanding/03_entropy_benchmark/test_entropy.py
 .\.venv\Scripts\python.exe understanding/04_lightweight_cnns/tests/test_models.py
 .\.venv\Scripts\python.exe understanding/05_symmetry_features/test_symmetry.py
@@ -68,6 +75,11 @@ Suites de pruebas automáticas, unitarias y de integración del proyecto.
 | `test_cnn_train.py` | Smoke test de entrenamiento (convergencia de pérdida), determinismo de semillas y early stopping | Cobertura de `src/models/cnn/train.py` |
 | `test_cnn_evaluate.py` | Cálculo de métricas compatibles con `ClassificationMetrics` (Acc, BalAcc, F1, ROC, PR) y probabilidades | Cobertura de `src/models/cnn/evaluate.py` |
 | `test_cnn_cli.py` | Validación CLI dry-run para ambos datasets, manejo de errores y reporte comparativo | Cobertura de `experiments/evaluate_cnn.py` y `compare_baseline_vs_cnn.py` |
+| `test_profiling_config.py` | Carga TOML de profiling, validación fail-fast ante claves faltantes/dispositivo `cuda`, resolución dinámica de rutas y listado de objetos | Cobertura de `src/profiling/config.py` |
+| `test_profiling_timing.py` | Mediana/IQR/p95/IC95% con datos conocidos, medición no negativa, restauración garantizada de `gc` y pinning de hilos (`torch`/`threadpoolctl`) | Cobertura de `src/profiling/timing.py` |
+| `test_profiling_descriptor_stages.py` | Equivalencia numérica exacta ($< 10^{-12}$) por etapas frente a `src/features/`, suma porcentual $\approx 100\,\%$, forma `[N, 94]` y escalabilidad | Cobertura de `src/profiling/descriptor_stages.py` |
+| `test_profiling_cnn_layers.py` | Reporte completo de módulos hoja en CNN sintética en CPU sin CUDA, overhead de *hooks* acotado, `torch.profiler` ATen y *cold start* | Cobertura de `src/profiling/cnn_layers.py` |
+| `test_benchmark_cpu_fair_cli.py` | Ejecución `--dry-run` de Fase A/B (código `0`), imposición estricta de `device=cpu`, rechazo fail-fast de `--device cuda` y errores por checkpoints faltantes | Cobertura CLI de `benchmark_cpu_fair.py` y `profile_pipelines.py` |
 | `03/test_entropy.py` | 5 tests: formulaciones Shannon E1–E5, cotas, LUTs y rankings | Utiliza artefactos cacheados de 01 |
 | `04/tests/test_models.py` | 8 tests: shapes, backward/Adam, parámetros y capas depthwise en 7 CNNs | CPU obligatorio, CUDA probado en hardware compatible |
 | `05/test_symmetry.py` | 20 tests: simetrías LR/TB/R180, desigualdades y rangos de asimetría | Verificación matemática de residuos espaciales |
