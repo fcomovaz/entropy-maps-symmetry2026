@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import gc
 from importlib.util import find_spec
 import logging
 import statistics
@@ -104,6 +105,42 @@ def estimate_flops(model: nn.Module, input_size: int = 128) -> int:
     return flops
 
 
+def _prepare_input_batches(
+    inputs: torch.Tensor | None,
+    batch_size: int,
+    image_size: int,
+    device: torch.device,
+) -> list[torch.Tensor]:
+    """Prepare contiguous device-resident input batches of shape [batch_size, 1, H, W].
+
+    When `inputs` is supplied, validates shape `[N, 1, H, W]` (`N >= 1`) and cycles across real
+    samples outside the timed region. Falls back to synthetic standard-normal noise when `None`.
+    """
+    if inputs is None:
+        return [torch.randn(batch_size, 1, image_size, image_size, device=device)]
+
+    if inputs.ndim != 4 or inputs.shape[0] < 1 or tuple(inputs.shape[1:]) != (1, image_size, image_size):
+        raise ValueError(
+            f"Expected inputs shape [N>=1, 1, {image_size}, {image_size}], got {tuple(inputs.shape)}"
+        )
+
+    n_samples = int(inputs.shape[0])
+    host_cpu = inputs.detach().to(dtype=torch.float32)
+    batches: list[torch.Tensor] = []
+
+    if batch_size == 1:
+        for idx in range(n_samples):
+            batches.append(host_cpu[idx : idx + 1].contiguous().to(device))
+        return batches
+
+    n_full_batches = (n_samples + batch_size - 1) // batch_size
+    for b_idx in range(n_full_batches):
+        start = (b_idx * batch_size) % n_samples
+        indices = torch.arange(start, start + batch_size, dtype=torch.long) % n_samples
+        batches.append(host_cpu.index_select(0, indices).contiguous().to(device))
+    return batches
+
+
 def benchmark_model_latency(
     model: nn.Module,
     device: torch.device,
@@ -112,6 +149,8 @@ def benchmark_model_latency(
     warmup_iters: int = 10,
     timed_iters: int = 50,
     threads: int = 1,
+    inputs: torch.Tensor | None = None,
+    disable_gc: bool = False,
 ) -> tuple[list[float], float | None]:
     """Measure raw forward latency distributions under strict isolation.
 
@@ -123,6 +162,9 @@ def benchmark_model_latency(
         warmup_iters: Warmup forwards prior to timing.
         timed_iters: Timed forward iterations.
         threads: Number of CPU threads (when running on CPU).
+        inputs: Optional real input tensor of shape `[N, 1, image_size, image_size]`.
+            When omitted, synthetic standard normal input is used for compatibility.
+        disable_gc: When True, temporarily disables Python GC during measurement.
 
     Returns:
         Tuple of (list_of_latencies_ms, peak_vram_mb_or_none).
@@ -131,27 +173,42 @@ def benchmark_model_latency(
         torch.set_num_threads(threads)
 
     model = model.to(device).eval()
-    dummy_input = torch.randn(batch_size, 1, image_size, image_size, device=device)
+    batches = _prepare_input_batches(
+        inputs=inputs,
+        batch_size=batch_size,
+        image_size=image_size,
+        device=device,
+    )
+    n_batches = len(batches)
 
-    # Warmup
-    with torch.inference_mode():
-        for _ in range(warmup_iters):
-            model(dummy_input)
-
-    if device.type == "cuda":
-        torch.cuda.reset_peak_memory_stats(device)
-        torch.cuda.synchronize(device)
+    gc_was_enabled = gc.isenabled()
+    if disable_gc and gc_was_enabled:
+        gc.disable()
 
     samples_ms: list[float] = []
-    with torch.inference_mode():
-        for _ in range(timed_iters):
-            if device.type == "cuda":
-                torch.cuda.synchronize(device)
-            t0 = time.perf_counter()
-            model(dummy_input)
-            if device.type == "cuda":
-                torch.cuda.synchronize(device)
-            samples_ms.append((time.perf_counter() - t0) * 1000.0)
+    try:
+        # Warmup
+        with torch.inference_mode():
+            for i in range(warmup_iters):
+                _ = model(batches[i % n_batches])
+
+        if device.type == "cuda":
+            torch.cuda.reset_peak_memory_stats(device)
+            torch.cuda.synchronize(device)
+
+        with torch.inference_mode():
+            for i in range(timed_iters):
+                batch = batches[i % n_batches]
+                if device.type == "cuda":
+                    torch.cuda.synchronize(device)
+                t0_ns = time.perf_counter_ns()
+                _ = model(batch)
+                if device.type == "cuda":
+                    torch.cuda.synchronize(device)
+                samples_ms.append((time.perf_counter_ns() - t0_ns) / 1e6)
+    finally:
+        if disable_gc and gc_was_enabled:
+            gc.enable()
 
     peak_vram_mb: float | None = None
     if device.type == "cuda":
@@ -167,6 +224,11 @@ def run_benchmark(
     cfg: CnnConfig,
     device: torch.device,
     batch_size: int = 1,
+    inputs: torch.Tensor | None = None,
+    threads: int | None = None,
+    warmup_iters: int | None = None,
+    timed_iters: int | None = None,
+    disable_gc: bool = False,
 ) -> BenchmarkRecord:
     """Run full benchmarking suite for a single model, batch size, and device.
 
@@ -176,6 +238,11 @@ def run_benchmark(
         cfg: Validated CnnConfig instance.
         device: Target device.
         batch_size: Batch size for latency test.
+        inputs: Optional real tensor `[N, 1, H, W]` instead of synthetic `randn`.
+        threads: Optional CPU thread override (defaults to `cfg.benchmark.threads`).
+        warmup_iters: Optional warmup override (defaults to `cfg.benchmark.warmup_iters`).
+        timed_iters: Optional timed iterations override (defaults to `cfg.benchmark.timed_iters`).
+        disable_gc: Whether to disable Python GC during timing.
 
     Returns:
         Populated BenchmarkRecord.
@@ -183,14 +250,20 @@ def run_benchmark(
     params, trainable, size_mb = model_stats(model)
     flops = estimate_flops(model, cfg.data.image_size)
 
+    eff_threads = cfg.benchmark.threads if threads is None else int(threads)
+    eff_warmup = cfg.benchmark.warmup_iters if warmup_iters is None else int(warmup_iters)
+    eff_timed = cfg.benchmark.timed_iters if timed_iters is None else int(timed_iters)
+
     samples_ms, peak_vram = benchmark_model_latency(
         model=model,
         device=device,
         batch_size=batch_size,
         image_size=cfg.data.image_size,
-        warmup_iters=cfg.benchmark.warmup_iters,
-        timed_iters=cfg.benchmark.timed_iters,
-        threads=cfg.benchmark.threads,
+        warmup_iters=eff_warmup,
+        timed_iters=eff_timed,
+        threads=eff_threads,
+        inputs=inputs,
+        disable_gc=disable_gc,
     )
 
     med_ms = float(statistics.median(samples_ms))

@@ -1,0 +1,73 @@
+# CPU-fair cross-paradigm benchmarking and detailed pipeline profiling configuration for MVTec-AD.
+# Extend 'objects' (e.g. ["bottle", "metal_nut", "tile"]) or use --all-objects / --objects via CLI.
+
+[profiling]
+base_config = "configs/base.toml"
+classification_config = "configs/classification/mvtec_ad.toml"
+cnn_config = "configs/cnn/mvtec_ad.toml"
+entropy_config = "configs/entropy/mvtec_ad.toml"
+asymmetry_config = "configs/asymmetry/mvtec_ad.toml"
+dataset_key = "mvtecad"
+inverted = false
+overwrite = true
+seed = 42
+objects = ["bottle"]
+default_object = "bottle"
+classifiers = ["dt", "knn", "lr", "rf"]
+models = [
+    "ultra_tiny",
+    "ds_cnn",
+    "tiny_cnn",
+    "mobilenet_like",
+    "tiny_resnet",
+    "small_cnn",
+    "torchvision_mobilenet",
+]
+
+[profiling.protocol]
+device = "cpu"
+include_cuda_reference = true
+primary_threads = 1
+threads_list = [1, 2, 4]
+include_physical_cores = true
+primary_batch_size = 1
+batch_sizes = [1, 32]
+warmup_iters = 20
+timed_iters = 200
+batch_timed_iters = 50
+repeats = 3
+n_real_samples = 200
+disable_gc = true
+
+[profiling.descriptor]
+image_size = 128
+grid_levels = [1, 2, 4, 8]
+bins = 16
+asymmetry_scales = [2, 4, 8]
+asymmetry_kinds = ["lr", "tb", "rot180"]
+scalability_image_sizes = [64, 128, 256]
+scalability_bins = [8, 16, 32]
+scalability_grid_levels = [[1, 2], [1, 2, 4], [1, 2, 4, 8]]
+cprofile_top_n = 30
+
+[profiling.cnn]
+torch_profiler_warmup = 3
+torch_profiler_active = 10
+hook_overhead_warn_pct = 15.0
+metrics_tolerance = 1e-5
+include_checkpoint_load_and_cold_start = true
+
+[profiling.statistics]
+bootstrap_resamples = 1000
+confidence_level = 0.95
+mann_whitney_alpha = 0.05
+ml_baseline_models = ["dt", "lr", "rf"]
+cnn_reference_models = ["ds_cnn", "ultra_tiny"]
+ablation_subsets = ["x85_only", "x9_only", "x94_full"]
+
+[profiling.output]
+comparison_cpu_dir = "results/comparison_cpu"
+profiling_dir = "results/profiling"
+dpi = 160
+float_precision = 6
+run_full_profiling_on_inverted = false
