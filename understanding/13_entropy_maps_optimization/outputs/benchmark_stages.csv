@@ -1,0 +1,5 @@
+variant,quantize_ms,histogram_ms,pyramid_sum_ms,entropy_ms,sum_stages_ms,e2e_median_ms,dispatch_gap_ms,quant_fused_into_hist
+V0_baseline,0.04805,0.89375,0.0,1.19955,2.14135,2.2282,-0.08685,False
+V1_numpy_finest_pyramid,0.0442,0.10545,0.0201,0.0791,0.24885,0.2371,0.01175,False
+V2_numpy_fused_entropy,0.0446,0.10815,0.0244,0.04255,0.2197,0.2125,0.0072,False
+V3_c_single_pass,0.0,0.0209,0.0065,0.0083,0.0357,0.02405,0.01165,True

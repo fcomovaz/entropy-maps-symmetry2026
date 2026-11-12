@@ -1,0 +1,73 @@
+{
+  "timestamp_utc": "2026-11-12T00:47:08+00:00",
+  "git_commit": "bdbb961",
+  "seed": 42,
+  "dry_run": false,
+  "config_path": "D:\\Publications\\2026-10-Symmetry-Entropy\\code\\configs\\optimization\\entropy_maps.toml",
+  "entropy_config_path": "D:\\Publications\\2026-10-Symmetry-Entropy\\code\\configs\\entropy\\mvtec_ad.toml",
+  "base_config_path": "D:\\Publications\\2026-10-Symmetry-Entropy\\code\\configs\\base.toml",
+  "cnn_config_path": "D:\\Publications\\2026-10-Symmetry-Entropy\\code\\configs\\cnn\\mvtec_ad.toml",
+  "classification_config_path": "D:\\Publications\\2026-10-Symmetry-Entropy\\code\\configs\\classification\\mvtec_ad.toml",
+  "data_source": "real:mvtec-ad",
+  "n_images_loaded": 200,
+  "image_size": 128,
+  "grid_levels": [
+    1,
+    2,
+    4,
+    8
+  ],
+  "bins": 16,
+  "threads": 1,
+  "batch_sizes": [
+    1,
+    8,
+    32,
+    256
+  ],
+  "warmup_iters": 20,
+  "timed_iters": 200,
+  "batch_timed_iters": 50,
+  "repeats": 3,
+  "disable_gc": true,
+  "tolerance_abs": 1e-12,
+  "active_variants": [
+    "V0_baseline",
+    "V1_numpy_finest_pyramid",
+    "V2_numpy_fused_entropy",
+    "V3_c_single_pass"
+  ],
+  "unverified_items": [],
+  "native_dll_path": "D:\\Publications\\2026-10-Symmetry-Entropy\\code\\understanding\\13_entropy_maps_optimization\\native\\build\\entropy_pyramid.dll",
+  "native_build_info": {
+    "built_at_utc": "2026-11-12T00:46:00+00:00",
+    "dll_path": "D:\\Publications\\2026-10-Symmetry-Entropy\\code\\understanding\\13_entropy_maps_optimization\\native\\build\\entropy_pyramid.dll",
+    "implib_path": "D:\\Publications\\2026-10-Symmetry-Entropy\\code\\understanding\\13_entropy_maps_optimization\\native\\build\\entropy_pyramid.lib",
+    "build_info_path": "D:\\Publications\\2026-10-Symmetry-Entropy\\code\\understanding\\13_entropy_maps_optimization\\native\\build\\build_info.json",
+    "source_files": [
+      "D:\\Publications\\2026-10-Symmetry-Entropy\\code\\understanding\\13_entropy_maps_optimization\\native\\entropy_pyramid.c"
+    ],
+    "compiler_path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\18\\BuildTools\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
+    "compiler_version": "Microsoft (R) C/C++ Optimizing Compiler Version 19.51.36244 for x64",
+    "compiler_flags": [
+      "/O2",
+      "/LD",
+      "/arch:AVX2",
+      "/fp:precise"
+    ],
+    "vcvars64_path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\18\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat",
+    "compiler_stdout": "entropy_pyramid.c\n   Creando biblioteca D:\\Publications\\2026-10-Symmetry-Entropy\\code\\understanding\\13_entropy_maps_optimization\\native\\build\\entropy_pyramid.lib y objeto D:\\Publications\\2026-10-Symmetry-Entropy\\code\\understanding\\13_entropy_maps_optimization\\native\\build\\entropy_pyramid.exp",
+    "compiler_stderr": ""
+  },
+  "library_versions": {
+    "python": "3.11.9",
+    "numpy": "2.2.6",
+    "scipy": "1.16.2",
+    "sklearn": "1.7.2",
+    "pandas": "2.3.3",
+    "torch": "2.14.0+cu126",
+    "psutil": "7.2.2",
+    "threadpoolctl": "3.7.0"
+  },
+  "latency_rows_count": 18
+}
