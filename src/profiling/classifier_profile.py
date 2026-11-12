@@ -16,6 +16,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 
+from src.models.descriptor_classifier import LinearDotCoreClassifier
+
 from .timing import (
     LatencyStats,
     measure_indexed_latencies,
@@ -103,6 +105,10 @@ def count_classical_model_params(model: ClassifierMixin | Pipeline) -> Classifie
         inter_sz = int(core.intercept_.size)
         total = coef_sz + inter_sz
         note = f"LR coef({coef_sz})+intercept({inter_sz}); scaler_params={scaler_params}"
+    elif isinstance(core, LinearDotCoreClassifier):
+        coef_sz = int(core.w_eff_.size)
+        total = coef_sz + 1
+        note = f"LinearDotCore w_eff({coef_sz})+b_eff(1); scaler folded at fit (scaler_params=0)"
     elif isinstance(core, DecisionTreeClassifier):
         nodes = int(core.tree_.node_count)
         leaves = int(core.tree_.n_leaves)
@@ -165,6 +171,10 @@ def estimate_classical_inference_ops(
             f"Analytical estimate: dot product ({macs} MACs)"
             + (f" + StandardScaler ({scaler_ops} ops)" if scaler_ops > 0 else "")
         )
+    elif isinstance(core, LinearDotCoreClassifier):
+        macs = int(core.w_eff_.size)
+        flops = 2 * macs
+        basis = f"Analytical estimate: folded dot product ({macs} MACs, scaler folded at fit)"
     elif isinstance(core, DecisionTreeClassifier):
         avg_cmp = max(1.0, _mean_expected_tree_depth(core.tree_))
         macs = 0
@@ -317,6 +327,23 @@ def profile_classifier(
             b_vec = np.ascontiguousarray(core.intercept_)
             dir_ms = measure_indexed_latencies(
                 fn=lambda idx: src_batches[idx % n_batches] @ w_t + b_vec,
+                warmup_iters=warmup_iters,
+                timed_iters=timed_iters,
+                disable_gc=disable_gc,
+            )
+            direct_stats = summarize_latencies(
+                dir_ms,
+                per_sample_divisor=batch_size,
+                bootstrap_resamples=bootstrap_resamples,
+                confidence_level=confidence_level,
+                seed=seed,
+            )
+        elif isinstance(core, LinearDotCoreClassifier):
+            w_vec = np.ascontiguousarray(core.w_eff_, dtype=np.float64)
+            b_val = float(core.b_eff_)
+            c0, c1 = core.classes_[0], core.classes_[1]
+            dir_ms = measure_indexed_latencies(
+                fn=lambda idx: np.where((batches[idx % n_batches] @ w_vec + b_val) > 0.0, c1, c0),
                 warmup_iters=warmup_iters,
                 timed_iters=timed_iters,
                 disable_gc=disable_gc,

@@ -23,9 +23,12 @@ from src.features.entropy_maps import (
     build_entropy_plan,
     compute_entropy_features,
     feature_names,
+    resolve_entropy_backend,
     validate_bins,
+    validate_entropy_backend,
     validate_grid_levels,
 )
+from src.features.native_entropy import load_native_config
 
 logger = logging.getLogger("research")
 
@@ -53,6 +56,8 @@ class EntropyCsvConfig:
     chunk_size: int
     inverted: bool
     overwrite: bool
+    entropy_backend: str = "auto"
+    native_dll_path: Path | None = None
 
     @property
     def effective_input_csv(self) -> Path:
@@ -77,6 +82,8 @@ class EntropyExportSummary:
     bytes_written: int
     elapsed_s: float
     dry_run: bool
+    entropy_backend: str = "auto"
+    resolved_entropy_backend: str = "numpy_baseline"
 
 
 def _require(table: dict[str, object], key: str, where: str) -> object:
@@ -161,6 +168,12 @@ def load_entropy_config(config_path: Path, project_root: Path) -> EntropyCsvConf
     if not isinstance(runtime_table_obj, dict):
         raise ValueError("[entropy_maps.runtime] must be a table")
     chunk_size = int(_require(runtime_table_obj, "chunk_size", "[entropy_maps.runtime]"))
+    entropy_backend = validate_entropy_backend(str(runtime_table_obj.get("backend", "auto")))
+    native_dll_path: Path | None = None
+    raw_native_cfg = runtime_table_obj.get("native_config")
+    if raw_native_cfg is not None and str(raw_native_cfg).strip():
+        native_cfg = load_native_config(Path(str(raw_native_cfg).strip()), project_root=project_root)
+        native_dll_path = native_cfg.dll_path
 
     if chunk_size < 1:
         raise ValueError(f"chunk_size must be >= 1, got {chunk_size}")
@@ -248,6 +261,8 @@ def load_entropy_config(config_path: Path, project_root: Path) -> EntropyCsvConf
         chunk_size=chunk_size,
         inverted=inverted,
         overwrite=overwrite,
+        entropy_backend=entropy_backend,
+        native_dll_path=native_dll_path,
     )
 
     if cfg.effective_input_csv == cfg.effective_output_csv:
@@ -352,6 +367,14 @@ def export_entropy_csv(cfg: EntropyCsvConfig, dry_run: bool = False) -> EntropyE
     total_rows = 0
     bytes_written = 0
 
+    resolved_backend = resolve_entropy_backend(
+        cfg.entropy_backend,
+        cfg.image_size,
+        cfg.grid_levels,
+        cfg.bins,
+        dll_path=cfg.native_dll_path,
+    )
+
     if dry_run:
         logger.info("Executing dry-run validation for %s", cfg.effective_input_csv)
         with pd.read_csv(
@@ -378,9 +401,17 @@ def export_entropy_csv(cfg: EntropyCsvConfig, dry_run: bool = False) -> EntropyE
             bytes_written=0,
             elapsed_s=elapsed_s,
             dry_run=True,
+            entropy_backend=cfg.entropy_backend,
+            resolved_entropy_backend=resolved_backend,
         )
 
-    entropy_plan = build_entropy_plan(cfg.image_size, cfg.grid_levels, cfg.bins)
+    entropy_plan = build_entropy_plan(
+        cfg.image_size,
+        cfg.grid_levels,
+        cfg.bins,
+        backend=cfg.entropy_backend,
+        dll_path=cfg.native_dll_path,
+    )
     static_cols = [bins_val_str, levels_val_str]
     tmp_output = cfg.effective_output_csv.with_suffix(".csv.tmp")
     tmp_output.parent.mkdir(parents=True, exist_ok=True)
@@ -446,6 +477,8 @@ def export_entropy_csv(cfg: EntropyCsvConfig, dry_run: bool = False) -> EntropyE
             "float_precision": cfg.float_precision,
             "elapsed_seconds": round(elapsed_s, 4),
             "numpy_version": np.__version__,
+            "entropy_backend": cfg.entropy_backend,
+            "resolved_entropy_backend": entropy_plan.resolved_backend,
             "timing_metric": "T_feature_extraction_entropy",
         }
         with sidecar_path.open("w", encoding="utf-8") as f_sidecar:
@@ -460,4 +493,6 @@ def export_entropy_csv(cfg: EntropyCsvConfig, dry_run: bool = False) -> EntropyE
         bytes_written=bytes_written,
         elapsed_s=elapsed_s,
         dry_run=False,
+        entropy_backend=cfg.entropy_backend,
+        resolved_entropy_backend=entropy_plan.resolved_backend,
     )

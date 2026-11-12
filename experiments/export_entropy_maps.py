@@ -35,6 +35,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from configs.logging import configure_logging, logger
 from src.features.entropy_csv import export_entropy_csv, load_entropy_config
+from src.features.entropy_maps import ENTROPY_BACKENDS
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -67,6 +68,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=False,
         help="Validate source CSV, headers, and image dimensions without creating output files.",
     )
+    parser.add_argument(
+        "--backend",
+        choices=list(ENTROPY_BACKENDS),
+        default=None,
+        help="Override configured entropy extraction backend (default: TOML setting or 'auto').",
+    )
     return parser
 
 
@@ -90,12 +97,15 @@ def main(argv: list[str] | None = None, project_root: Path = PROJECT_ROOT) -> in
             cfg = replace(cfg, overwrite=True)
         if args.inverted:
             cfg = replace(cfg, inverted=True)
+        if args.backend is not None:
+            cfg = replace(cfg, entropy_backend=args.backend)
 
         logger.info("Starting visual region entropy extraction pipeline")
         logger.info("Input CSV:             %s", cfg.effective_input_csv)
         logger.info("Output CSV:            %s", cfg.effective_output_csv)
         logger.info("Inverted variant:      %s", cfg.inverted)
         logger.info("Overwrite active:      %s", cfg.overwrite)
+        logger.info("Entropy backend:       %s", cfg.entropy_backend)
         logger.info("Image size:            %dx%d", cfg.image_size, cfg.image_size)
         logger.info("Grid levels:           %s", list(cfg.grid_levels))
         logger.info("Histogram bins:        %d", cfg.bins)
@@ -104,9 +114,16 @@ def main(argv: list[str] | None = None, project_root: Path = PROJECT_ROOT) -> in
         summary = export_entropy_csv(cfg, dry_run=args.dry_run)
 
         if args.dry_run:
-            logger.info("Dry-run completed successfully. Validated %d rows.", summary.rows)
+            logger.info(
+                "Dry-run completed successfully. Validated %d rows (resolved_backend=%s).",
+                summary.rows,
+                summary.resolved_entropy_backend,
+            )
         else:
-            logger.info("Entropy extraction completed successfully.")
+            logger.info(
+                "Entropy extraction completed successfully (resolved_backend=%s).",
+                summary.resolved_entropy_backend,
+            )
             logger.info("Wrote %d rows with %d columns (%d entropy features).", summary.rows, summary.columns, summary.n_features)
             logger.info("Output file size:      %.2f MB", summary.bytes_written / (1024 * 1024))
             logger.info("Elapsed execution time: %.2f seconds", summary.elapsed_s)

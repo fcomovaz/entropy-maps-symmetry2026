@@ -39,13 +39,20 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from configs.logging import configure_logging, logger
 from src.features.asymmetry_maps import compute_asymmetry_features
-from src.features.entropy_maps import compute_entropy_features
+from src.features.entropy_maps import (
+    ENTROPY_BACKENDS,
+    EntropyPlan,
+    build_entropy_plan,
+    compute_entropy_features,
+)
 
 
 def measure_descriptor_latency_ms(
     image_size: int = 128,
     n_samples: int = 32,
     warmup: int = 5,
+    backend: str = "auto",
+    plan: EntropyPlan | None = None,
 ) -> float:
     """Measure mean CPU time in ms required to extract the x94 descriptor per 128x128 image.
 
@@ -56,10 +63,22 @@ def measure_descriptor_latency_ms(
     grid_levels = (1, 2, 4, 8)
     asym_scales = (2, 4, 8)
     bins = 16
+    active_plan = (
+        plan
+        if plan is not None
+        else build_entropy_plan(
+            image_size=image_size,
+            grid_levels=grid_levels,
+            bins=bins,
+            backend=backend,
+        )
+    )
 
     # Warmup
     for _ in range(warmup):
-        e_feats = compute_entropy_features(sample_images[:4], grid_levels=grid_levels, bins=bins)
+        e_feats = compute_entropy_features(
+            sample_images[:4], grid_levels=grid_levels, bins=bins, plan=active_plan
+        )
         e_by_scale = {}
         offset = 0
         for g in grid_levels:
@@ -70,7 +89,9 @@ def measure_descriptor_latency_ms(
 
     # Timed run
     t0 = time.perf_counter()
-    e_feats = compute_entropy_features(sample_images, grid_levels=grid_levels, bins=bins)
+    e_feats = compute_entropy_features(
+        sample_images, grid_levels=grid_levels, bins=bins, plan=active_plan
+    )
     e_by_scale = {}
     offset = 0
     for g in grid_levels:
@@ -126,6 +147,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("results/comparison"),
         help="Directory to save comparison table and figures.",
+    )
+    parser.add_argument(
+        "--backend",
+        choices=list(ENTROPY_BACKENDS),
+        default="auto",
+        help="Entropy extraction backend used to benchmark T_descriptor (default: 'auto').",
     )
     return parser
 
@@ -358,8 +385,22 @@ def main(argv: list[str] | None = None, project_root: Path = PROJECT_ROOT) -> in
         tag_name = f"{tag_name}-inverted"
 
     # 1. Measure descriptor extraction latency for fair total timing
-    logger.info("Benchmarking x94 descriptor extraction latency per 128x128 image...")
-    t_desc_ms = measure_descriptor_latency_ms(image_size=128)
+    desc_plan = build_entropy_plan(
+        image_size=128,
+        grid_levels=(1, 2, 4, 8),
+        bins=16,
+        backend=args.backend,
+    )
+    logger.info(
+        "Benchmarking x94 descriptor extraction latency per 128x128 image (backend=%s, resolved=%s)...",
+        args.backend,
+        desc_plan.resolved_backend,
+    )
+    t_desc_ms = measure_descriptor_latency_ms(
+        image_size=128,
+        backend=args.backend,
+        plan=desc_plan,
+    )
     logger.info("Measured T_descriptor = %.4f ms/sample on host CPU", t_desc_ms)
 
     # 2. Collect classification baseline results
