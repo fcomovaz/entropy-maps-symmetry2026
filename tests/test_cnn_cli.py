@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import sys
+import tempfile
 import unittest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -76,14 +77,18 @@ class TestCnnCli(unittest.TestCase):
 
     def test_compare_baseline_vs_cnn_cli_help(self) -> None:
         """Verify compare_baseline_vs_cnn executes cleanly with valid dataset flag."""
-        argv = [
-            "--dataset",
-            "kolektorsdd2",
-            "--output-dir",
-            "results/comparison",
-        ]
-        exit_code = compare_main(argv, project_root=PROJECT_ROOT)
-        self.assertEqual(exit_code, 0)
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            argv = [
+                "--dataset",
+                "kolektorsdd2",
+                "--output-dir",
+                tmp_dir,
+            ]
+            exit_code = compare_main(argv, project_root=PROJECT_ROOT)
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(
+                (Path(tmp_dir) / "kolektorsdd2_baseline_vs_cnn.csv").exists()
+            )
 
 
 if __name__ == "__main__":
