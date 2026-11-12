@@ -1,19 +1,22 @@
 # Entorno y guía de ejecución
 
-Todos los comandos de esta página se ejecutan desde `D:\Publications\2026-10-Symmetry-Entropy` en PowerShell. Usar siempre `.\code\.venv\Scripts\python.exe`; la activación es opcional. Si el entorno ya existe y pasa las pruebas, no reinstalarlo.
+La documentación de síntesis científica e hipótesis vive en [HYPOTHESIS.md](HYPOTHESIS.md) y la auditoría metodológica profunda en [REVIEW_01.md](REVIEW_01.md).
+
+Salvo los bloques de instalación inicial y réplica temporal desde `D:\Publications\2026-10-Symmetry-Entropy`, los comandos de módulos (`-m src.*`, `-m experiments.*`, `-m unittest`) se ejecutan desde `D:\Publications\2026-10-Symmetry-Entropy\code` en PowerShell usando `.\.venv\Scripts\python.exe`; la activación es opcional. Si el entorno ya existe y pasa las pruebas, no reinstalarlo.
 
 ## Comprobación al retomar
 
 ```powershell
-Set-Location D:\Publications\2026-10-Symmetry-Entropy
-.\code\.venv\Scripts\python.exe .\code\tests\test_environment.py
-.\code\.venv\Scripts\python.exe -m pip check
-.\code\.venv\Scripts\python.exe -m unittest .\code\tests\test_preprocessing.py .\code\tests\test_kolektorsdd2.py .\code\tests\test_csv_export.py .\code\tests\test_kolektorsdd2_csv_export.py
-.\code\.venv\Scripts\python.exe .\code\understanding\03_entropy_benchmark\test_entropy.py
-.\code\.venv\Scripts\python.exe .\code\understanding\04_lightweight_cnns\tests\test_models.py
+Set-Location D:\Publications\2026-10-Symmetry-Entropy\code
+.\.venv\Scripts\python.exe tests/test_environment.py
+.\.venv\Scripts\python.exe -m pip check
+.\.venv\Scripts\python.exe -m unittest discover tests -v
+.\.venv\Scripts\python.exe understanding/03_entropy_benchmark/test_entropy.py
+.\.venv\Scripts\python.exe understanding/04_lightweight_cnns/tests/test_models.py
+.\.venv\Scripts\python.exe -m unittest understanding/13_entropy_maps_optimization/tests/test_entropy_variants.py -v
 ```
 
-Resultado esperado: `Environment verification: PASS`, `No broken requirements found.`, cinco tests de entropía y ocho tests de CNN correctos. En este equipo los tests CUDA deben ejecutarse, no omitirse. La suite de CNN incluye CPU y CUDA, pero por sí sola permite omitir CUDA en otros equipos; el test del entorno lo exige. Los tests locales se invocan por ruta porque un único discovery en `code/tests/` no recorre los laboratorios.
+Resultado esperado: `Environment verification: PASS`, `No broken requirements found.`, 208 tests formales en `tests/` (`tests/README.md`), cinco tests de entropía (`03`), ocho suites de CNN (`04`) y trece tests de variantes piramidales (`13`) correctos. En este equipo los tests CUDA deben ejecutarse, no omitirse. La suite de CNN incluye CPU y CUDA, pero por sí sola permite omitir CUDA en otros equipos; el test del entorno lo exige. Los tests de laboratorio se invocan explícitamente porque un único `discover tests` no recorre `understanding/` (ver detalles en [tests/README.md](tests/README.md), incluyendo el ajuste `PYTHONPATH` para el Lab 07).
 
 Los tests de entropía necesitan las salidas de 01, ya conservadas. Si faltan, ejecutar primero `patch_partition.py --patch-size 64`. Los comandos no necesitan pytest, Jupyter ni descargas de pesos.
 
@@ -65,15 +68,15 @@ El diagnóstico, la evidencia del intento original y las limitaciones están en 
 
 ## Carpetas
 
-Las rutas de esta lista son relativas a `code/`. Los comandos de este documento se ejecutan desde la raíz del proyecto.
+Las rutas de esta lista son relativas a `code/`. Documentos clave de síntesis en `code/`: [HYPOTHESIS.md](HYPOTHESIS.md) (verificación de hipótesis y análisis pre-MCU Python vs C99 vs CNNs), [REVIEW_01.md](REVIEW_01.md) (auditoría forense) y [RESUME.md](RESUME.md) (estado técnico actual).
 
-- [src/](src/README.md): módulos formales reutilizables (`src/preprocessing/`, `src/datasets/`, `src/features/`, `src/models/`, `src/models/cnn/` y `src/profiling/` para benchmarking 100 % CPU justo y perfilado granular).
-- [experiments/](experiments/README.md): puntos de entrada CLI para experimentos reproducibles (`preprocess_*.py`, `export_*.py`, `append_asymmetry_features.py`, `evaluate_descriptors.py`, `evaluate_cnn.py`, `benchmark_cpu_fair.py`, `profile_pipelines.py`).
-- [understanding/](understanding/README.md): doce laboratorios pedagógicos (`01_patch_partition/` a `12_profiling_stages/`).
-- [tests/](tests/README.md): verificación del entorno CUDA, suites de preprocesamiento, CSV, mapas/asimetría, clasificación, CNNs, profiling CPU (`test_profiling_*.py`, `test_benchmark_cpu_fair_cli.py`) y tests de laboratorios.
-- [results/](results/README.md): diagnóstico, logs, salidas de clasificación (`results/classification/`), comparación 100 % CPU (`results/comparison_cpu/`), profiling científico (`results/profiling/`) y registro histórico (`results/comparison/` marcado *deprecated*).
+- [src/](src/README.md): módulos formales reutilizables (`src/preprocessing/`, `src/datasets/`, `src/features/` con backend C99 `entropy_pyramid` y `native_entropy.py`, `src/models/` incl. `LinearDotCoreClassifier` y `src/models/cnn/`, y `src/profiling/` para benchmarking 100 % CPU justo y perfilado granular).
+- [experiments/](experiments/README.md): puntos de entrada CLI para experimentos reproducibles (`preprocess_*.py`, `export_*.py`, `export_entropy_maps.py`, `append_asymmetry_features.py`, `evaluate_descriptors.py`, `evaluate_cnn.py`, `compare_baseline_vs_cnn.py`, `benchmark_cpu_fair.py`, `profile_pipelines.py`).
+- [understanding/](understanding/README.md): trece laboratorios pedagógicos (`01_patch_partition/` a `13_entropy_maps_optimization/`).
+- [tests/](tests/README.md): verificación del entorno CUDA, suites de preprocesamiento, CSV, mapas/asimetría, backend nativo C99 (`test_native_entropy.py`), clasificación, CNNs, profiling CPU (`test_profiling_*.py`, `test_benchmark_cpu_fair_cli.py`) y tests de laboratorios.
+- [results/](results/README.md): diagnóstico, logs, clasificación (`results/classification/`), checkpoints CNN (`results/cnn/`), comparación 100 % CPU con C99 (`results/comparison_cpu/`), comparación pre-MCU puro Python (`results/comparison_cpu_python/`, local ignorado por Git), profiling científico (`results/profiling/`) y registro histórico (`results/comparison/` marcado *deprecated*).
 
-`notebooks/` se retiró porque solo contenía `.gitkeep`. Jupyter permanece instalado, pero no hay notebooks que ejecutar. No se cambiaron paquetes por esta limpieza.
+`notebooks/` se retiró porque solo contenía `.gitkeep`. Jupyter permanece instalado, pero no hay notebooks que ejecutar en esta rama. No se cambiaron paquetes por esta limpieza.
 
 ## Repetir 01-03 sin sobrescribir evidencia
 
@@ -128,20 +131,20 @@ sobrescribe sus archivos fijos; los README históricos no se actualizan solos.
 
 El preprocesamiento estandariza las imágenes a escala de grises (`mode 'L'`) y tamaño `128x128` mediante letterboxing/padding centrado con valor `0` (negro), conservando la relación de aspecto original sin distorsiones geométricas.
 
-### Comandos de ejecución
+### Comandos de ejecución (PowerShell desde `code/`)
 
 ```powershell
 # 1. Pruebas unitarias y de integración
-.\code\.venv\Scripts\python.exe -m unittest tests/test_preprocessing.py
+.\.venv\Scripts\python.exe -m unittest tests/test_preprocessing.py
 
 # 2. Conteo previo (dry-run, sin escribir archivos)
-.\code\.venv\Scripts\python.exe -m experiments.preprocess_mvtec_ad --dry-run
+.\.venv\Scripts\python.exe -m experiments.preprocess_mvtec_ad --dry-run
 
 # 3. Procesamiento completo
-.\code\.venv\Scripts\python.exe -m experiments.preprocess_mvtec_ad
+.\.venv\Scripts\python.exe -m experiments.preprocess_mvtec_ad
 
 # 4. Verificación de integridad y visualización comparativa
-.\code\.venv\Scripts\python.exe understanding/08_verify_mvtec_preprocessing/verify.py
+.\.venv\Scripts\python.exe understanding/08_verify_mvtec_preprocessing/verify.py
 ```
 
 ### Configuración y salida
@@ -158,46 +161,46 @@ El preprocesamiento estandariza las imágenes a escala de grises (`mode 'L'`) y 
 
 Aplana las imágenes preprocesadas en formato tabular (un registro por fila con 16391 columnas) almacenado en `data/csv/mvtec-ad.csv` (y `data/csv/mvtec-ad-inverted.csv`), con metadatos de procedencia y píxeles en orden row-major (`px_00000...px_16383`).
 
-### Comandos de ejecución
+### Comandos de ejecución (PowerShell desde `code/`)
 
 ```powershell
 # 1. Pruebas unitarias y de integración de exportación CSV
-.\code\.venv\Scripts\python.exe -m unittest tests/test_csv_export.py
+.\.venv\Scripts\python.exe -m unittest tests/test_csv_export.py
 
 # 2. Conteo previo (dry-run, sin escribir archivos)
-.\code\.venv\Scripts\python.exe -m experiments.export_mvtec_ad_csv --dry-run
-.\code\.venv\Scripts\python.exe -m experiments.export_mvtec_ad_csv --inverted --dry-run
+.\.venv\Scripts\python.exe -m experiments.export_mvtec_ad_csv --dry-run
+.\.venv\Scripts\python.exe -m experiments.export_mvtec_ad_csv --inverted --dry-run
 
 # 3. Exportación completa estándar e invertida
-.\code\.venv\Scripts\python.exe -m experiments.export_mvtec_ad_csv
-.\code\.venv\Scripts\python.exe -m experiments.export_mvtec_ad_csv --inverted
+.\.venv\Scripts\python.exe -m experiments.export_mvtec_ad_csv
+.\.venv\Scripts\python.exe -m experiments.export_mvtec_ad_csv --inverted
 
 # 4. Verificación de integridad y reconstrucción píxel a píxel
-.\code\.venv\Scripts\python.exe code/understanding/09_verify_mvtec_csv/verify.py
-.\code\.venv\Scripts\python.exe code/understanding/09_verify_mvtec_csv/verify.py --inverted
+.\.venv\Scripts\python.exe understanding/09_verify_mvtec_csv/verify.py
+.\.venv\Scripts\python.exe understanding/09_verify_mvtec_csv/verify.py --inverted
 ```
 
 ## Preprocesamiento y clasificación de datasets (KolektorSDD2)
 
 Clasifica las muestras en `train/good`, `train/defect`, `test/good` y `test/defect` inspeccionando la máscara binaria nativa `_GT` (`mask.max() > 0`), estandarizando a escala de grises (`mode 'L'`) y tamaño cuadrado `128x128` mediante letterboxing centrado con valor `0`. Las máscaras de defectos no se almacenan en la salida procesada.
 
-### Comandos de ejecución
+### Comandos de ejecución (PowerShell desde `code/`)
 
 ```powershell
 # 1. Pruebas unitarias y de integración de KolektorSDD2
-.\code\.venv\Scripts\python.exe -m unittest tests/test_kolektorsdd2.py
+.\.venv\Scripts\python.exe -m unittest tests/test_kolektorsdd2.py
 
 # 2. Conteo previo (dry-run, sin escribir archivos)
-.\code\.venv\Scripts\python.exe -m experiments.preprocess_kolektorsdd2 --dry-run
-.\code\.venv\Scripts\python.exe -m experiments.preprocess_kolektorsdd2 --inverted --dry-run
+.\.venv\Scripts\python.exe -m experiments.preprocess_kolektorsdd2 --dry-run
+.\.venv\Scripts\python.exe -m experiments.preprocess_kolektorsdd2 --inverted --dry-run
 
 # 3. Procesamiento completo estándar e invertido
-.\code\.venv\Scripts\python.exe -m experiments.preprocess_kolektorsdd2
-.\code\.venv\Scripts\python.exe -m experiments.preprocess_kolektorsdd2 --inverted
+.\.venv\Scripts\python.exe -m experiments.preprocess_kolektorsdd2
+.\.venv\Scripts\python.exe -m experiments.preprocess_kolektorsdd2 --inverted
 
 # 4. Verificación de integridad, conteos y visualización comparativa
-.\code\.venv\Scripts\python.exe code/understanding/10_verify_kolektorsdd2/verify.py
-.\code\.venv\Scripts\python.exe code/understanding/10_verify_kolektorsdd2/verify.py --inverted
+.\.venv\Scripts\python.exe understanding/10_verify_kolektorsdd2/verify.py
+.\.venv\Scripts\python.exe understanding/10_verify_kolektorsdd2/verify.py --inverted
 ```
 
 ### Configuración y salida
@@ -214,23 +217,23 @@ Clasifica las muestras en `train/good`, `train/defect`, `test/good` y `test/defe
 
 Aplana las imágenes preprocesadas de KolektorSDD2 en formato tabular (un registro por fila con 16389 columnas) almacenado en `data/csv/kolektorsdd2.csv` (y `data/csv/kolektorsdd2-inverted.csv`), con metadatos de procedencia (`split, type, file_name`), vector de intensidades de píxeles en orden row-major (`px_00000...px_16383`) y dimensiones espaciales (`width, height`).
 
-### Comandos de ejecución
+### Comandos de ejecución (PowerShell desde `code/`)
 
 ```powershell
 # 1. Pruebas unitarias y de integración de exportación CSV KolektorSDD2
-.\code\.venv\Scripts\python.exe -m unittest tests/test_kolektorsdd2_csv_export.py
+.\.venv\Scripts\python.exe -m unittest tests/test_kolektorsdd2_csv_export.py
 
 # 2. Conteo previo (dry-run, sin escribir archivos)
-.\code\.venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv --dry-run
-.\code\.venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv --inverted --dry-run
+.\.venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv --dry-run
+.\.venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv --inverted --dry-run
 
 # 3. Exportación completa estándar e invertida
-.\code\.venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv
-.\code\.venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv --inverted
+.\.venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv
+.\.venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv --inverted
 
 # 4. Verificación de integridad y reconstrucción píxel a píxel
-.\code\.venv\Scripts\python.exe code/understanding/11_verify_kolektorsdd2_csv/verify.py
-.\code\.venv\Scripts\python.exe code/understanding/11_verify_kolektorsdd2_csv/verify.py --inverted
+.\.venv\Scripts\python.exe understanding/11_verify_kolektorsdd2_csv/verify.py
+.\.venv\Scripts\python.exe understanding/11_verify_kolektorsdd2_csv/verify.py --inverted
 ```
 
 ### Configuración y salida
@@ -247,31 +250,26 @@ Calcula los 9 residuos espaciales de asimetría multiescala (`asym_lr_2x2`, `asy
 
 ```powershell
 # 1. Pruebas unitarias y de integración de asimetría
-.\code\.venv\Scripts\python.exe -m unittest tests/test_asymmetry_maps.py
-.\code\.venv\Scripts\python.exe -m unittest tests/test_asymmetry_csv.py
+.\.venv\Scripts\python.exe -m unittest tests/test_asymmetry_maps.py
+.\.venv\Scripts\python.exe -m unittest tests/test_asymmetry_csv.py
 
 # 2. Conteo previo (dry-run, sin escribir archivos)
-.\code\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/kolektorsdd2.toml --dry-run
-.\code\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/mvtec_ad.toml --dry-run
+.\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/kolektorsdd2.toml --dry-run
+.\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/mvtec_ad.toml --dry-run
 
 # 3. Procesamiento completo estándar e invertido
-.\code\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/kolektorsdd2.toml
-.\code\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/kolektorsdd2.toml --inverted
-.\code\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/mvtec_ad.toml
-.\code\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/mvtec_ad.toml --inverted
+.\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/kolektorsdd2.toml
+.\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/kolektorsdd2.toml --inverted
+.\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/mvtec_ad.toml
+.\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --config configs/asymmetry/mvtec_ad.toml --inverted
 
 # 4. Procesamiento masivo de todos los datasets y variantes
-.\code\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --all
+.\.venv\Scripts\python.exe -m experiments.append_asymmetry_features --all
 ```
-
-
-
-
-
 
 ## Clasificación supervisada, ablación y explicabilidad de descriptores ($\mathbf{x}_{94} = [\mathbf{x}_{85}, \mathbf{x}_9]$)
 
-Evalúa la capacidad discriminativa supervisada (`good = 0`, `defect = 1`) del descriptor tabular compacto de 94 dimensiones mediante clasificadores ligeros (`RandomForestClassifier` y `KNeighborsClassifier`), comparando la contribución de las 85 características de entropía multiescala ($\mathbf{x}_{85}$) frente a las 9 de asimetría espacial ($\mathbf{x}_9$) y desglosando la importancia por escala piramidal ($1\times1$, $2\times2$, $4\times4$, $8\times8$) y celda espacial 2D.
+Evalúa la capacidad discriminativa supervisada (`good = 0`, `defect = 1`) del descriptor tabular compacto de 94 dimensiones mediante clasificadores ligeros (`dt`, `knn`, `lr`, `lr_dot` con kernel lineal plegado `LinearDotCoreClassifier`, y `rf`), comparando la contribución de las 85 características de entropía multiescala ($\mathbf{x}_{85}$) frente a las 9 de asimetría espacial ($\mathbf{x}_9$) y desglosando la importancia por escala piramidal ($1\times1$, $2\times2$, $4\times4$, $8\times8$) y celda espacial 2D.
 
 - En **KolektorSDD2** (`configs/classification/kolektorsdd2.toml`), utiliza el split oficial `train`/`test` (`split_mode = "presplit"`).
 - En **MVTec-AD** (`configs/classification/mvtec_ad.toml`), filtra en memoria las filas `split == "ground_truth"` y aplica una partición estratificada en memoria (`split_mode = "stratified"`, `test_size = 0.20`, `seed = 42`) por categoría de objeto, **sin modificar los CSV en disco**.
@@ -286,27 +284,32 @@ Evalúa la capacidad discriminativa supervisada (`good = 0`, `defect = 1`) del d
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --dry-run
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object bottle --dry-run
 
-# 3. KolektorSDD2 (normal e invertido, Random Forest y k-NN)
-.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier rf
-.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier knn
-.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier rf --inverted
-.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier knn --inverted
+# 3. Evaluación completa de los 5 clasificadores (dt, knn, lr, lr_dot, rf)
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier all --overwrite
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier all --inverted --overwrite
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object bottle --classifier all --overwrite
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object bottle --classifier all --inverted --overwrite
 
-# 4. MVTec-AD por objeto individual (ej. bottle o tile, normal e invertido)
-.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object bottle --classifier rf
-.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object tile --classifier rf
-.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object bottle --classifier knn --inverted
-
-# 5. MVTec-AD barrido completo de las 15 categorías de objetos
+# 4. MVTec-AD barrido completo de las 15 categorías de objetos
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --all-objects --classifier rf
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --all-objects --classifier rf --inverted
 ```
 
-La guía detallada de interpretación científica de cada gráfica y tabla generada en `results/classification/` se encuentra en [experiments/README.md](experiments/README.md) y en [tasks/task_06A.md](tasks/task_06A.md).
+## Backend nativo C99, benchmark 100 % CPU y profiling (`x94` vs CNNs)
+
+Para compilar la librería compartida C99 de pirámide de entropía (`src/features/native/build/entropy_pyramid.dll`) y ejecutar las comparaciones justas 100 % CPU (`benchmark_cpu_fair` y `profile_pipelines`) tanto con backend `auto` (`c_single_pass`) como en modo puro Python (`--entropy-backend numpy_finest_pyramid` / `numpy_baseline`):
+
+```powershell
+Set-Location D:\Publications\2026-10-Symmetry-Entropy\code
+.\.venv\Scripts\python.exe -m src.features.build_native --config configs/features/native_entropy.toml --clean
+.\.venv\Scripts\python.exe -m unittest tests/test_native_entropy.py -v
+```
+
+La guía detallada de parámetros CLI para `export_entropy_maps.py`, `evaluate_descriptors.py`, `evaluate_cnn.py`, `benchmark_cpu_fair.py` y `profile_pipelines.py` se encuentra en [experiments/README.md](experiments/README.md), y los resultados consolidados en [HYPOTHESIS.md](HYPOTHESIS.md).
 
 La [guía de CNN](understanding/04_lightweight_cnns/README.md) incluye inspección,
 entrenamiento, inferencia y benchmark desde la raíz, con salidas por corrida.
-Para abrir Jupyter opcionalmente:
+Para abrir Jupyter opcionalmente (desde `D:\Publications\2026-10-Symmetry-Entropy`):
 
 ```powershell
 .\code\.venv\Scripts\jupyter.exe lab

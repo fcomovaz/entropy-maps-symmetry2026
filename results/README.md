@@ -1,13 +1,13 @@
 # Evidencia y registro de revisión
 
-Esta carpeta conserva diagnósticos generales del proyecto. Los resultados
-científicos/pedagógicos actuales siguen junto a cada laboratorio: no se movieron
-para evitar romper rutas, procedencia o hashes.
+Esta carpeta conserva diagnósticos y resultados del proyecto. Para la síntesis científica de hipótesis y la comparativa pre-MCU ver [../HYPOTHESIS.md](../HYPOTHESIS.md); para la auditoría forense profunda ver [../REVIEW_01.md](../REVIEW_01.md). Los resultados pedagógicos de laboratorios siguen junto a cada laboratorio para evitar romper rutas, procedencia o hashes.
 
 ## Dónde está cada evidencia
 
 | Ruta | Contenido y lectura recomendada |
 |---|---|
+| [../HYPOTHESIS.md](../HYPOTHESIS.md) | Verificación de hipótesis con resultados `seed=42` + backend C99 `entropy_pyramid` y análisis pre-MCU en puro Python vs C99 vs CNNs |
+| [../REVIEW_01.md](../REVIEW_01.md) | Auditoría científica y forense profunda sobre la instantánea `bf4a29f` y decisiones de diseño `N1–N8` |
 | [environment_debug.md](environment_debug.md) | Diagnóstico histórico del 2026-09-26: reparación CUDA y verificaciones; no es un benchmark |
 | `pytorch_cuda_install.log`, `cuda_verification.log`, `environment_verification.log` | Logs locales de instalación y verificación original |
 | [01/outputs/run_summary.json](../understanding/01_patch_partition/outputs/run_summary.json) | Seis casos de partición; cada carpeta de caso incluye rejilla, reconstrucción, coordenadas y métricas |
@@ -22,17 +22,18 @@ para evitar romper rutas, procedencia o hashes.
 | [09_verify_mvtec_csv](../understanding/09_verify_mvtec_csv/README.md) | Control de integridad tabular MVTec-AD (16391 cols, 6612 filas, round-trip bit a bit con diff=0) |
 | [10_verify_kolektorsdd2](../understanding/10_verify_kolektorsdd2/README.md) | Verificación de KolektorSDD2 (clasificación por máscara nativa, conteo 3335 muestras) y matriz visual |
 | [11_verify_kolektorsdd2_csv](../understanding/11_verify_kolektorsdd2_csv/README.md) | Control de integridad tabular KolektorSDD2 (16389 cols, 3335 filas, round-trip bit a bit con diff=0) |
-| [classification/README.md](classification/README.md) | Resultados medidos de clasificación supervisada (`RF` y `k-NN`), ablación $\mathbf{x}_{85}$ vs $\mathbf{x}_9$, análisis de matrices de confusión, umbrales y comparación `normal` vs `inverted` |
-| [comparison/README.md](comparison/README.md) | **Legado `mixed-device (deprecated)`:** CSVs/PNGs históricos del Experimento 08 que mezclaban latencia CNN en CUDA con ML en CPU; conservado sin borrar |
-| `comparison_cpu/` | Comparación **100% CPU justa** (`experiments/benchmark_cpu_fair.py`): CSVs `<tag>_baseline_vs_cnn_cpu.csv`, referencia CUDA aislada `<tag>_cuda_reference.csv`, Pareto PNGs por hilos y tabla agregada `summary_all_datasets.csv` |
-| `profiling/` | Reportes de profiling científico profundo (`experiments/profile_pipelines.py`): subcarpetas `<tag>/` con `environment.json`, desgloses por etapa (`x94`) y capa (`cnn`), ATen ops, `cProfile`, pruebas Mann-Whitney U, ablación $\Delta\text{F1}/\Delta\text{ms}$, 6 figuras y `README.md` de hallazgos |
+| [12_profiling_stages](../understanding/12_profiling_stages/README.md) | Disección pedagógica por etapas de `x94`, overhead de `sklearn` y capas PyTorch CNN |
+| [13_entropy_maps_optimization](../understanding/13_entropy_maps_optimization/README.md) | Variantes piramidales NumPy (`V1/V2`) y kernel C99 de una sola pasada (`V3`, `92.65×` sobre `V0` en `x85`) |
+| [classification/README.md](classification/README.md) | Resultados medidos de clasificación supervisada (`dt`, `knn`, `lr`, `lr_dot`, `rf`), ablación $\mathbf{x}_{85}$ vs $\mathbf{x}_9$, matrices de confusión y `normal` vs `inverted` |
+| `cnn/` | Checkpoints (`checkpoint.pt`), curvas y `metrics_summary.json` locales (gitignored) entrenados en CUDA con `seed=42` (`experiments/evaluate_cnn.py`) |
+| [comparison/README.md](comparison/README.md) | **Legado `mixed-device (deprecated)`:** CSVs/PNGs de `experiments/compare_baseline_vs_cnn.py` refrescados con `c_single_pass`, pero que siguen mezclando latencia CNN en CUDA con ML en CPU; no usar para comparaciones CPU |
+| `comparison_cpu/` | Comparación oficial **100% CPU justa** (`experiments/benchmark_cpu_fair.py`, backend `auto` $\rightarrow$ C99 `c_single_pass` + `lr_dot`): CSVs `<tag>_baseline_vs_cnn_cpu.csv`, `<tag>_cuda_reference.csv`, Pareto PNGs y `summary_all_datasets.csv` |
+| `comparison_cpu_python/` | Salida local pre-MCU **100% Python/NumPy puro** (`--entropy-backend numpy_finest_pyramid` y `numpy_baseline`, `--no-cuda-reference`), ignorada por Git (`results/*`) |
+| `profiling/` | Reportes de profiling científico profundo (`experiments/profile_pipelines.py`): subcarpetas `<tag>/` con `environment.json`, desgloses por etapa (`x94`) y capa (`cnn`), ATen ops, `cProfile`, pruebas Mann-Whitney U, ablación $\Delta\text{F1}/\Delta\text{ms}$, 6 figuras y `README.md` de hallazgos (rastreado) |
 
-Los checkpoints sintéticos y el fixture no son resultados de detección real.
+Los checkpoints sintéticos y el fixture de `04/` no son resultados de detección real.
 Los CSV/JSON de tiempos describen el equipo y protocolo registrados, no hardware
-embebido. Los logs y artefactos grandes se mantienen locales; actualmente no hay
-un repositorio Git inicializado en la raíz. `.gitignore` expresa una política
-futura, no constituye un respaldo. Conservar las imágenes cacheadas para poder
-repetir sin depender de una descarga externa.
+embebido. El repositorio Git está activo y `.gitignore` excluye los artefactos pesados locales bajo `results/*` (conservando este índice, los `README.md` de subcarpetas y `results/profiling/*/README.md`), `data/`, `comparison_cpu_python/` y los binarios compilados nativos; `.gitignore` no constituye un respaldo, por lo que conviene conservar `data/` local para reproducir sin descargas externas.
 
 ## Revisión de estructura y documentación · 2026-09-28
 
