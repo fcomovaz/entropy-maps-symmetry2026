@@ -20,8 +20,10 @@ from typing import Mapping, Sequence
 
 import numpy as np
 import pandas as pd
-from sklearn.base import ClassifierMixin
+from scipy.special import expit
+from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.exceptions import NotFittedError
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.inspection import permutation_importance
@@ -76,13 +78,119 @@ class DtHyperparams:
 
 @dataclass(frozen=True, slots=True)
 class LrHyperparams:
-    """Immutable hyperparameters for LogisticRegression."""
+    """Immutable hyperparameters for LogisticRegression and LinearDotCoreClassifier."""
 
     C: float
     penalty: str
     solver: str
     class_weight: str | None
     scale_features: bool
+    max_iter: int = 1000
+    linear_mode: str = "sklearn"
+
+
+class LinearDotCoreClassifier(ClassifierMixin, BaseEstimator):
+    """Folded binary logistic classifier fusing optional StandardScaler into a single dot product.
+
+    During `fit`, fits `LogisticRegression` (with optional `StandardScaler`) and folds
+    `(x - mean) / scale @ w + b` algebraically into `x @ w_eff + b_eff`, eliminating per-call
+    scaler transforms and sklearn pipeline/validation dispatch during inference.
+    """
+
+    def __init__(
+        self,
+        C: float = 1.0,
+        penalty: str = "l2",
+        solver: str = "liblinear",
+        class_weight: str | None = "balanced",
+        max_iter: int = 1000,
+        scale_features: bool = True,
+        random_state: int | None = None,
+    ) -> None:
+        self.C = C
+        self.penalty = penalty
+        self.solver = solver
+        self.class_weight = class_weight
+        self.max_iter = max_iter
+        self.scale_features = scale_features
+        self.random_state = random_state
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> LinearDotCoreClassifier:
+        """Fit underlying scaler + logistic model and fold effective weights and bias."""
+        x_arr = np.asarray(X, dtype=np.float64)
+        if x_arr.ndim != 2:
+            raise ValueError(f"Expected 2D array [N, F], got shape {x_arr.shape}")
+        y_arr = np.asarray(y)
+
+        if self.scale_features:
+            scaler = StandardScaler()
+            x_fit = scaler.fit_transform(x_arr)
+        else:
+            scaler = None
+            x_fit = x_arr
+
+        estimator = LogisticRegression(
+            C=self.C,
+            penalty=self.penalty,
+            solver=self.solver,
+            class_weight=self.class_weight,
+            max_iter=self.max_iter,
+            random_state=self.random_state,
+        )
+        estimator.fit(x_fit, y_arr)
+
+        if estimator.coef_.shape[0] != 1 or len(estimator.classes_) != 2:
+            raise ValueError(
+                f"LinearDotCoreClassifier supports binary classification only, "
+                f"got {len(estimator.classes_)} classes"
+            )
+
+        w_raw = np.asarray(estimator.coef_[0], dtype=np.float64)
+        b_raw = float(estimator.intercept_[0])
+        if scaler is not None:
+            safe_scale = np.where(scaler.scale_ == 0.0, 1.0, scaler.scale_)
+            w_eff = np.ascontiguousarray(w_raw / safe_scale, dtype=np.float64)
+            b_eff = float(b_raw - np.dot(w_eff, scaler.mean_))
+        else:
+            w_eff = np.ascontiguousarray(w_raw, dtype=np.float64)
+            b_eff = b_raw
+
+        self.scaler_: StandardScaler | None = scaler
+        self.estimator_: LogisticRegression = estimator
+        self.w_eff_: np.ndarray = w_eff
+        self.b_eff_: float = b_eff
+        self.classes_: np.ndarray = np.asarray(estimator.classes_)
+        self.n_features_in_: int = int(x_arr.shape[1])
+        return self
+
+    def decision_function(self, X: np.ndarray) -> np.ndarray:
+        """Evaluate raw linear margin `X @ w_eff_ + b_eff_` without scaler overhead."""
+        if not hasattr(self, "w_eff_"):
+            raise NotFittedError("This LinearDotCoreClassifier instance is not fitted yet.")
+        x_arr = np.asarray(X, dtype=np.float64)
+        if x_arr.ndim == 1:
+            x_arr = x_arr.reshape(1, -1)
+        elif x_arr.ndim != 2:
+            raise ValueError(f"Expected 2D array [N, F], got shape {x_arr.shape}")
+        if int(x_arr.shape[1]) != self.n_features_in_:
+            raise ValueError(
+                f"X has {x_arr.shape[1]} features, expected {self.n_features_in_}"
+            )
+        return x_arr @ self.w_eff_ + self.b_eff_
+
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        """Compute binary class probabilities via logistic sigmoid on folded linear margins."""
+        scores = self.decision_function(X)
+        p1 = expit(scores)
+        proba = np.empty((scores.shape[0], 2), dtype=np.float64)
+        proba[:, 1] = p1
+        proba[:, 0] = 1.0 - p1
+        return proba
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        """Predict binary class labels directly from `decision_function(X) > 0`."""
+        scores = self.decision_function(X)
+        return np.where(scores > 0.0, self.classes_[1], self.classes_[0])
 
 
 @dataclass(frozen=True, slots=True)
@@ -152,7 +260,7 @@ class ClassificationConfig:
     @property
     def available_classifiers(self) -> tuple[str, ...]:
         """Return tuple of supported classifier names configured in this pipeline."""
-        return ("lr", "dt", "knn", "rf")
+        return ("lr", "lr_dot", "dt", "knn", "rf")
 
     def effective_results_dir(
         self, object_name: str | None, classifier_name: str
@@ -215,9 +323,9 @@ def load_classification_config(
         raise ValueError("'overwrite' in [classification] must be a boolean")
     if isinstance(seed_raw, bool) or not isinstance(seed_raw, int):
         raise ValueError("'seed' in [classification] must be an integer")
-    if default_classifier not in {"rf", "knn", "dt", "lr"}:
+    if default_classifier not in {"rf", "knn", "dt", "lr", "lr_dot"}:
         raise ValueError(
-            f"'default_classifier' must be 'rf', 'knn', 'dt', or 'lr', got '{default_classifier}'"
+            f"'default_classifier' must be 'rf', 'knn', 'dt', 'lr', or 'lr_dot', got '{default_classifier}'"
         )
 
     # Data section
@@ -294,15 +402,26 @@ def load_classification_config(
         class_weight_raw = str(
             _require(lr_table_obj, "class_weight", "[classification.models.lr]")
         )
+        lr_class_weight = None if class_weight_raw.lower() == "none" else class_weight_raw
         scale_features = bool(
             _require(lr_table_obj, "scale_features", "[classification.models.lr]")
         )
+        max_iter_raw = lr_table_obj.get("max_iter", 1000)
+        if isinstance(max_iter_raw, bool) or not isinstance(max_iter_raw, int) or max_iter_raw < 1:
+            raise ValueError(f"[classification.models.lr] max_iter must be integer >= 1, got {max_iter_raw!r}")
+        linear_mode = str(lr_table_obj.get("linear_mode", "sklearn")).strip().lower()
+        if linear_mode not in {"sklearn", "dot_core"}:
+            raise ValueError(
+                f"[classification.models.lr] linear_mode must be 'sklearn' or 'dot_core', got '{linear_mode}'"
+            )
         lr_params = LrHyperparams(
             C=C,
             penalty=penalty,
             solver=solver,
-            class_weight=class_weight_raw,
+            class_weight=lr_class_weight,
             scale_features=scale_features,
+            max_iter=int(max_iter_raw),
+            linear_mode=linear_mode,
         )
     else:
         lr_params = LrHyperparams(
@@ -311,6 +430,8 @@ def load_classification_config(
             solver="liblinear",
             class_weight="balanced",
             scale_features=True,
+            max_iter=1000,
+            linear_mode="sklearn",
         )
 
     # DT section (optional)
@@ -784,10 +905,10 @@ class ClassificationMetrics:
 def build_classifier(
     classifier_name: str, cfg: ClassificationConfig
 ) -> ClassifierMixin | Pipeline:
-    """Instantiate configured Random Forest or k-NN classifier pipeline.
+    """Instantiate configured classical classifier ('rf', 'knn', 'dt', 'lr', or 'lr_dot').
 
     Args:
-        classifier_name: Identifier ('rf' or 'knn').
+        classifier_name: Identifier ('rf', 'knn', 'dt', 'lr', or 'lr_dot').
         cfg: Validated ClassificationConfig instance.
 
     Returns:
@@ -814,12 +935,24 @@ def build_classifier(
             min_samples_leaf=dt.min_samples_leaf,
             class_weight=dt.class_weight,
         )
+    if cls_key == "lr_dot" or (cls_key == "lr" and cfg.lr_params.linear_mode == "dot_core"):
+        return LinearDotCoreClassifier(
+            C=cfg.lr_params.C,
+            penalty=cfg.lr_params.penalty,
+            solver=cfg.lr_params.solver,
+            class_weight=cfg.lr_params.class_weight,
+            max_iter=cfg.lr_params.max_iter,
+            scale_features=cfg.lr_params.scale_features,
+            random_state=cfg.seed,
+        )
     if cls_key == "lr":
         estimator = LogisticRegression(
             C=cfg.lr_params.C,
             penalty=cfg.lr_params.penalty,
             solver=cfg.lr_params.solver,
             class_weight=cfg.lr_params.class_weight,
+            max_iter=cfg.lr_params.max_iter,
+            random_state=cfg.seed,
         )
         if cfg.lr_params.scale_features:
             return Pipeline([("scaler", StandardScaler()), ("lr", estimator)])
@@ -837,7 +970,7 @@ def build_classifier(
             return Pipeline([("scaler", StandardScaler()), ("knn", estimator)])
         return estimator
     raise ValueError(
-        f"Unsupported classifier '{classifier_name}'. Choose 'rf' or 'knn' or 'dt' or 'lr'."
+        f"Unsupported classifier '{classifier_name}'. Choose 'rf', 'knn', 'dt', 'lr', or 'lr_dot'."
     )
 
 

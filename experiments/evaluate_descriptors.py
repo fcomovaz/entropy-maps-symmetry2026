@@ -68,9 +68,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--classifier",
         type=str,
-        choices=["rf", "knn", "dt", "lr", "all"],
+        choices=["rf", "knn", "dt", "lr", "lr_dot", "all"],
         default=None,
-        help="Classifier to evaluate: 'lr', 'rf', 'knn', 'dt', or 'all' to evaluate all available classifiers in sequence. Defaults to TOML setting.",
+        help="Classifier to evaluate: 'lr', 'lr_dot', 'rf', 'knn', 'dt', or 'all' to evaluate all available classifiers in sequence. Defaults to TOML setting.",
+    )
+    parser.add_argument(
+        "--linear-mode",
+        type=str,
+        choices=["sklearn", "dot_core"],
+        default=None,
+        help="Override [classification.models.lr].linear_mode when evaluating 'lr' ('sklearn' or 'dot_core').",
     )
     parser.add_argument(
         "--inverted",
@@ -289,6 +296,11 @@ def main(argv: list[str] | None = None, project_root: Path = PROJECT_ROOT) -> in
             cfg = replace(cfg, inverted=True)
         if args.overwrite:
             cfg = replace(cfg, overwrite=True)
+        if args.linear_mode is not None:
+            cfg = replace(
+                cfg,
+                lr_params=replace(cfg.lr_params, linear_mode=args.linear_mode),
+            )
 
         active_classifiers: list[str]
         req_cls = (args.classifier or cfg.default_classifier).lower()

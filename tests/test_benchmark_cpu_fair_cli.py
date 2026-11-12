@@ -294,7 +294,7 @@ overwrite = true
 seed = 42
 objects = []
 default_object = ""
-classifiers = ["dt", "lr"]
+classifiers = ["dt", "lr", "lr_dot"]
 models = ["ultra_tiny"]
 
 [profiling.protocol]
@@ -316,6 +316,7 @@ disable_gc = true
 image_size = 32
 grid_levels = [1, 2, 4, 8]
 bins = 16
+entropy_backend = "auto"
 asymmetry_scales = [2, 4, 8]
 asymmetry_kinds = ["lr", "tb", "rot180"]
 scalability_image_sizes = [32, 64]
@@ -334,7 +335,7 @@ include_checkpoint_load_and_cold_start = true
 bootstrap_resamples = 25
 confidence_level = 0.95
 mann_whitney_alpha = 0.05
-ml_baseline_models = ["dt", "lr"]
+ml_baseline_models = ["dt", "lr", "lr_dot"]
 cnn_reference_models = ["ultra_tiny"]
 ablation_subsets = ["x85_only", "x9_only", "x94_full"]
 
@@ -493,10 +494,11 @@ class TestBenchmarkCpuFairCli(unittest.TestCase):
 
             with cpu_csv.open("r", newline="", encoding="utf-8") as f:
                 rows = list(csv.DictReader(f))
-            # (2 ML + 1 CNN) * 2 batch sizes = 6 rows
-            self.assertEqual(len(rows), 6)
+            # (3 ML + 1 CNN) * 2 batch sizes = 8 rows
+            self.assertEqual(len(rows), 8)
             self.assertTrue(all(r["device"] == "cpu" for r in rows))
             self.assertEqual({r["family"] for r in rows}, {"ml", "cnn"})
+            self.assertIn("lr_dot (x94)", {r["model"] for r in rows})
 
             for r in rows:
                 if r["family"] == "ml":
@@ -565,6 +567,45 @@ class TestBenchmarkCpuFairCli(unittest.TestCase):
             env_data = json.loads((prof_dir / "environment.json").read_text(encoding="utf-8"))
             self.assertIn("torch_version", env_data)
             self.assertEqual(env_data["seed"], 42)
+
+            with (prof_dir / "classifier_times.csv").open("r", newline="", encoding="utf-8") as f_cls:
+                cls_rows = list(csv.DictReader(f_cls))
+            lr_dot_rows = [r for r in cls_rows if r["classifier"] == "lr_dot"]
+            self.assertTrue(lr_dot_rows)
+            self.assertEqual(int(lr_dot_rows[0]["params_model"]), 95)
+            self.assertEqual(int(lr_dot_rows[0]["scaler_params"]), 0)
+            self.assertGreater(float(lr_dot_rows[0]["direct_core_median_ms"]), 0.0)
+
+            with (prof_dir / "descriptor_scalability.csv").open("r", newline="", encoding="utf-8") as f_sc:
+                sc_rows = list(csv.DictReader(f_sc))
+            self.assertTrue(sc_rows)
+            self.assertIn("entropy_backend", sc_rows[0])
+
+            # Test explicit --entropy-backend CLI override works cleanly
+            self.assertEqual(
+                benchmark_cpu_main(
+                    [
+                        "--config",
+                        "configs/profiling/kolektorsdd2.toml",
+                        "--entropy-backend",
+                        "numpy_finest_pyramid",
+                        "--classifiers",
+                        "lr_dot",
+                        "--models",
+                        "ultra_tiny",
+                        "--threads",
+                        "1",
+                        "--batch-sizes",
+                        "1",
+                        "--no-cuda-reference",
+                        "--output-dir",
+                        "results/cmp_override",
+                    ],
+                    project_root=tmp_root,
+                ),
+                0,
+            )
+            self.assertTrue((tmp_root / "results/cmp_override/kolektorsdd2_baseline_vs_cnn_cpu.csv").is_file())
 
             # Short descriptor verification on inverted variant (no inverted checkpoints needed)
             self.assertEqual(

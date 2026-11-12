@@ -9,6 +9,10 @@ from typing import Mapping
 
 import psutil
 
+from src.features.entropy_maps import validate_entropy_backend
+
+ALLOWED_PROFILING_CLASSIFIERS: tuple[str, ...] = ("dt", "knn", "lr", "lr_dot", "rf")
+
 
 def _require(table: Mapping[str, object], key: str, where: str) -> object:
     """Extract required key from TOML mapping or raise KeyError with section context."""
@@ -67,6 +71,7 @@ class DescriptorProfilingConfig:
     scalability_bins: tuple[int, ...]
     scalability_grid_levels: tuple[tuple[int, ...], ...]
     cprofile_top_n: int
+    entropy_backend: str = "auto"
 
 
 @dataclass(frozen=True, slots=True)
@@ -256,6 +261,11 @@ def load_profiling_config(config_path: Path, project_root: Path) -> ProfilingCon
     if not isinstance(raw_models, list) or not raw_models:
         raise ValueError("'models' in [profiling] must be a non-empty list")
     classifiers = tuple(str(c).lower() for c in raw_classifiers)
+    for cls_name in classifiers:
+        if cls_name not in ALLOWED_PROFILING_CLASSIFIERS:
+            raise ValueError(
+                f"Unsupported classifier '{cls_name}' in [profiling]. Expected one of {ALLOWED_PROFILING_CLASSIFIERS}."
+            )
     models = tuple(str(m).lower() for m in raw_models)
 
     # Resolve dataset metadata from base.toml
@@ -328,6 +338,10 @@ def load_profiling_config(config_path: Path, project_root: Path) -> ProfilingCon
     raw_scale_bins = _require(desc_tbl, "scalability_bins", "[profiling.descriptor]")
     raw_scale_levels = _require(desc_tbl, "scalability_grid_levels", "[profiling.descriptor]")
     cprofile_top_n = int(_require(desc_tbl, "cprofile_top_n", "[profiling.descriptor]"))
+    raw_backend = desc_tbl.get("entropy_backend", "auto")
+    if not isinstance(raw_backend, str):
+        raise ValueError("'entropy_backend' in [profiling.descriptor] must be a string")
+    entropy_backend = validate_entropy_backend(raw_backend)
 
     if not all(isinstance(x, list) and x for x in (raw_levels, raw_asym_scales, raw_asym_kinds, raw_scale_sizes, raw_scale_bins, raw_scale_levels)):
         raise ValueError("Descriptor list fields in [profiling.descriptor] must be non-empty lists")
@@ -342,6 +356,7 @@ def load_profiling_config(config_path: Path, project_root: Path) -> ProfilingCon
         scalability_bins=tuple(int(b) for b in raw_scale_bins),
         scalability_grid_levels=tuple(tuple(int(g) for g in lv) for lv in raw_scale_levels),
         cprofile_top_n=cprofile_top_n,
+        entropy_backend=entropy_backend,
     )
 
     # [profiling.cnn]
@@ -369,11 +384,19 @@ def load_profiling_config(config_path: Path, project_root: Path) -> ProfilingCon
     if not (isinstance(raw_ml_base, list) and isinstance(raw_cnn_ref, list) and isinstance(raw_ablation, list)):
         raise ValueError("Statistical model lists in [profiling.statistics] must be lists")
 
+    ml_baseline_models = tuple(str(m).lower() for m in raw_ml_base)
+    for cls_name in ml_baseline_models:
+        if cls_name not in ALLOWED_PROFILING_CLASSIFIERS:
+            raise ValueError(
+                f"Unsupported ml_baseline_models entry '{cls_name}' in [profiling.statistics]. "
+                f"Expected one of {ALLOWED_PROFILING_CLASSIFIERS}."
+            )
+
     stat_cfg = StatisticsProfilingConfig(
         bootstrap_resamples=bootstrap_resamples,
         confidence_level=confidence_level,
         mann_whitney_alpha=mann_whitney_alpha,
-        ml_baseline_models=tuple(str(m).lower() for m in raw_ml_base),
+        ml_baseline_models=ml_baseline_models,
         cnn_reference_models=tuple(str(m).lower() for m in raw_cnn_ref),
         ablation_subsets=tuple(str(s) for s in raw_ablation),
     )

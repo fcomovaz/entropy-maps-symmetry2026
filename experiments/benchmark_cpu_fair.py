@@ -37,7 +37,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from configs.logging import configure_logging, logger
-from src.features.entropy_maps import build_entropy_plan
+from src.features.entropy_maps import ENTROPY_BACKENDS, build_entropy_plan
 from src.models.cnn import (
     CnnConfig,
     CnnDatasetPartition,
@@ -188,7 +188,13 @@ def build_parser() -> argparse.ArgumentParser:
         nargs="+",
         type=str,
         default=None,
-        help="Classical ML classifiers subset (e.g. dt knn lr rf, or 'all').",
+        help="Classical ML classifiers subset (e.g. dt knn lr lr_dot rf, or 'all').",
+    )
+    parser.add_argument(
+        "--entropy-backend",
+        choices=list(ENTROPY_BACKENDS),
+        default=None,
+        help="Override [profiling.descriptor].entropy_backend ('auto', 'numpy_baseline', 'numpy_finest_pyramid', 'numpy_fused_entropy', or 'c_single_pass').",
     )
     parser.add_argument(
         "--models",
@@ -226,7 +232,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def resolve_selected_classifiers(raw_arg: Sequence[str] | None, cfg: ProfilingConfig) -> tuple[str, ...]:
     """Validate and normalize requested classical ML classifiers."""
-    allowed = {"dt", "knn", "lr", "rf"}
+    allowed = {"dt", "knn", "lr", "lr_dot", "rf"}
     if not raw_arg:
         chosen = cfg.classifiers
     elif len(raw_arg) == 1 and raw_arg[0].lower() == "all":
@@ -481,6 +487,13 @@ def run_cpu_fair_target(
     desc_cfg = prof_cfg.descriptor
     env = capture_environment(prof_cfg.project_root, seed=prof_cfg.seed)
 
+    plan = build_entropy_plan(
+        desc_cfg.image_size,
+        desc_cfg.grid_levels,
+        desc_cfg.bins,
+        backend=desc_cfg.entropy_backend,
+    )
+
     if dry_run:
         # Lightweight shape & checkpoint verification without writing artifacts
         x_sample = extract_x94_end_to_end(
@@ -489,6 +502,7 @@ def run_cpu_fair_target(
             bins=desc_cfg.bins,
             asymmetry_scales=desc_cfg.asymmetry_scales,
             asymmetry_kinds=desc_cfg.asymmetry_kinds,
+            plan=plan,
         )
         for m_name in models:
             ckpt = cnn_cfg.effective_results_dir(object_name, m_name) / "checkpoint.pt"
@@ -502,8 +516,9 @@ def run_cpu_fair_target(
                 raise RuntimeError(f"Model '{m_name}' unexpected output shape: {tuple(out.shape)}")
 
         logger.info(
-            "Dry-run OK: %s | ML split test=%s | CNN split test=%s | real_samples=%d | x94=%s | checkpoints=%d OK",
+            "Dry-run OK: %s | backend=%s | ML split test=%s | CNN split test=%s | real_samples=%d | x94=%s | checkpoints=%d OK",
             tag,
+            plan.resolved_backend,
             cls_part.test_counts,
             base_cnn_part.test_counts,
             int(images_u8.shape[0]),
@@ -571,12 +586,12 @@ def run_cpu_fair_target(
         bins=desc_cfg.bins,
         asymmetry_scales=desc_cfg.asymmetry_scales,
         asymmetry_kinds=desc_cfg.asymmetry_kinds,
+        backend=plan.resolved_backend,
     )
     n_desc_features = (
         sum(int(g) * int(g) for g in desc_cfg.grid_levels)
         + len(desc_cfg.asymmetry_scales) * len(desc_cfg.asymmetry_kinds)
     )
-    plan = build_entropy_plan(desc_cfg.image_size, desc_cfg.grid_levels, desc_cfg.bins)
 
     cpu_rows: list[dict[str, Any]] = []
     raw_batch1_primary_ms: dict[str, tuple[float, ...]] = {}
@@ -1047,6 +1062,11 @@ def main(argv: list[str] | None = None, project_root: Path = PROJECT_ROOT) -> in
 
         if args.inverted:
             prof_cfg = replace(prof_cfg, inverted=True)
+        if args.entropy_backend is not None:
+            prof_cfg = replace(
+                prof_cfg,
+                descriptor=replace(prof_cfg.descriptor, entropy_backend=args.entropy_backend),
+            )
 
         cls_cfg = replace(
             load_classification_config(prof_cfg.classification_config_path, prof_cfg.project_root),

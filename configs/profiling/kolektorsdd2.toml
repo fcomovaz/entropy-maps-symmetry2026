@@ -13,7 +13,7 @@ overwrite = true
 seed = 42
 objects = []
 default_object = ""
-classifiers = ["dt", "knn", "lr", "rf"]
+classifiers = ["dt", "knn", "lr", "lr_dot", "rf"]
 models = [
     "ultra_tiny",
     "ds_cnn",
@@ -43,6 +43,7 @@ disable_gc = true
 image_size = 128
 grid_levels = [1, 2, 4, 8]
 bins = 16
+entropy_backend = "auto"
 asymmetry_scales = [2, 4, 8]
 asymmetry_kinds = ["lr", "tb", "rot180"]
 scalability_image_sizes = [64, 128, 256]
@@ -61,7 +62,7 @@ include_checkpoint_load_and_cold_start = true
 bootstrap_resamples = 1000
 confidence_level = 0.95
 mann_whitney_alpha = 0.05
-ml_baseline_models = ["dt", "lr", "rf"]
+ml_baseline_models = ["dt", "lr", "lr_dot", "rf"]
 cnn_reference_models = ["ds_cnn", "ultra_tiny"]
 ablation_subsets = ["x85_only", "x9_only", "x94_full"]
 

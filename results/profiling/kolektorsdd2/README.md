@@ -4,97 +4,104 @@
 
 - **Objetivo:** Comparar en igualdad estricta de dispositivo (**CPU**), hilos (`threads=1` principal), tamano de lote (`batch_size=1` principal para latencia embebida) y muestras reales el pipeline clasico **x94 + ML** frente a las arquitecturas **CNN ligeras**.
 - **Checkpoints CNN:** Se reutilizan los pesos ya entrenados en GPU (`checkpoint.pt`); la re-evaluacion en CPU verifica paridad numerica frente a las metricas originales sin reentrenar (la calidad no depende del dispositivo de entrenamiento).
-- **Entorno registrado:** CPU `Intel(R) Core(TM) i7-7700HQ CPU @ 2.80GHz` (4 nucleos fisicos / 8 logicos), RAM 15.9 GB, SO `Windows-10-10.0.19045-SP0`, PyTorch `2.14.0+cu126`, NumPy `2.2.6`, scikit-learn `1.7.2`, seed `42`, commit `bf4a29f`.
+- **Entorno registrado:** CPU `Intel(R) Core(TM) i7-7700HQ CPU @ 2.80GHz` (4 nucleos fisicos / 8 logicos), RAM 15.9 GB, SO `Windows-10-10.0.19045-SP0`, PyTorch `2.14.0+cu126`, NumPy `2.2.6`, scikit-learn `1.7.2`, seed `42`, commit `37d8114`.
 - **Temporizacion y estadistica:** `time.perf_counter_ns()` con GC deshabilitado (`gc.disable()`), `torch.inference_mode()`, threads fijados en PyTorch + BLAS/OpenMP (`threadpoolctl`) + `n_jobs`, mediana, IQR, p95, IC95% por bootstrap y test no parametrico U de Mann-Whitney.
 
 ## 2. Hallazgos Medidos: Comparacion 100% CPU (Principal: `threads=1, batch=1`)
 
 | Modelo | Familia | Device | Params (modelo / desc) | F1 | ROC-AUC | T_prep / T_desc (ms) | T_model (ms) | **T_total mediana (ms)** | IQR (ms) | IC95% (ms) | Throughput (img/s) | Paridad CPU diff |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `ultra_tiny` | cnn | cpu | 1154 / 0 | 0.5914 | 0.8793 | 0.0399 (prep) | 0.8494 | **0.8891** | 0.1401 | [0.8715, 0.9154] | 1124.7 | 2.11e-07 |
-| `ds_cnn` | cnn | cpu | 12866 / 0 | 0.6102 | 0.8875 | 0.0399 (prep) | 2.0372 | **2.0805** | 0.2145 | [2.0580, 2.1069] | 480.7 | 4.92e-07 |
-| `dt (x94)` | ml | cpu | 285 / 94 | 0.2798 | 0.5962 | 2.4324 (desc) | 0.0757 | **2.5126** | 0.6610 | [2.4271, 2.6227] | 398.0 | - |
-| `lr (x94)` | ml | cpu | 95 / 94 | 0.4265 | 0.8061 | 2.4324 (desc) | 0.2165 | **2.7124** | 0.6714 | [2.5805, 2.7838] | 368.7 | - |
-| `knn (x94)` | ml | cpu | 219114 / 94 | 0.1500 | 0.6652 | 2.4324 (desc) | 0.8425 | **3.3743** | 0.7769 | [3.2974, 3.5192] | 296.4 | - |
-| `mobilenet_like` | cnn | cpu | 70786 / 0 | 0.6224 | 0.8894 | 0.0399 (prep) | 3.3477 | **3.3875** | 0.6113 | [3.3311, 3.4558] | 295.2 | 4.33e-07 |
-| `tiny_resnet` | cnn | cpu | 77234 / 0 | 0.7389 | 0.9219 | 0.0399 (prep) | 3.5784 | **3.6254** | 0.7541 | [3.5709, 3.7244] | 275.8 | 2.62e-07 |
-| `tiny_cnn` | cnn | cpu | 23538 / 0 | 0.5677 | 0.8625 | 0.0399 (prep) | 4.3639 | **4.4114** | 0.2689 | [4.3705, 4.4363] | 226.7 | 4.22e-07 |
-| `small_cnn` | cnn | cpu | 97650 / 0 | 0.6193 | 0.9093 | 0.0399 (prep) | 5.5349 | **5.5807** | 0.2884 | [5.5437, 5.6046] | 179.2 | 3.40e-07 |
-| `torchvision_mobilenet` | cnn | cpu | 1519618 / 0 | 0.6049 | 0.7816 | 0.0399 (prep) | 8.1400 | **8.1839** | 1.9975 | [7.9473, 8.5606] | 122.2 | 9.69e-06 |
-| `rf (x94)` | ml | cpu | 13208 / 94 | 0.4298 | 0.7904 | 2.4324 (desc) | 9.5815 | **12.2171** | 2.7413 | [11.9378, 12.7179] | 81.9 | - |
+| `lr_dot (x94)` | ml | cpu | 95 / 94 | 0.4265 | 0.8061 | 0.3626 (desc) | 0.0076 | **0.3709** | 0.1050 | [0.3662, 0.3797] | 2696.5 | - |
+| `dt (x94)` | ml | cpu | 285 / 94 | 0.2798 | 0.5962 | 0.3626 (desc) | 0.1401 | **0.5112** | 0.0929 | [0.5036, 0.5167] | 1956.2 | - |
+| `lr (x94)` | ml | cpu | 95 / 94 | 0.4265 | 0.8061 | 0.3626 (desc) | 0.2377 | **0.6074** | 0.1076 | [0.5934, 0.6178] | 1646.4 | - |
+| `ultra_tiny` | cnn | cpu | 1154 / 0 | 0.6304 | 0.8815 | 0.0424 (prep) | 1.0008 | **1.0459** | 0.2632 | [1.0120, 1.0815] | 956.1 | 2.85e-07 |
+| `knn (x94)` | ml | cpu | 219114 / 94 | 0.1500 | 0.6652 | 0.3626 (desc) | 1.0589 | **1.3904** | 0.7237 | [1.2623, 1.5624] | 719.2 | - |
+| `ds_cnn` | cnn | cpu | 12866 / 0 | 0.6562 | 0.8779 | 0.0424 (prep) | 2.8555 | **2.9092** | 1.4988 | [2.7600, 3.1804] | 343.7 | 2.38e-07 |
+| `mobilenet_like` | cnn | cpu | 70786 / 0 | 0.6250 | 0.8622 | 0.0424 (prep) | 4.7383 | **4.7843** | 2.0238 | [4.5389, 5.2490] | 209.0 | 3.61e-07 |
+| `tiny_resnet` | cnn | cpu | 77234 / 0 | 0.7130 | 0.9213 | 0.0424 (prep) | 4.8425 | **4.8865** | 1.6102 | [4.6053, 5.0198] | 204.6 | 4.78e-07 |
+| `tiny_cnn` | cnn | cpu | 23538 / 0 | 0.6154 | 0.8714 | 0.0424 (prep) | 5.6405 | **5.6821** | 1.5790 | [5.3690, 5.9712] | 176.0 | 3.85e-07 |
+| `torchvision_mobilenet` | cnn | cpu | 1519618 / 0 | 0.5976 | 0.7332 | 0.0424 (prep) | 8.4275 | **8.4735** | 0.7378 | [8.3749, 8.5754] | 118.0 | 3.55e-07 |
+| `small_cnn` | cnn | cpu | 97650 / 0 | 0.5965 | 0.8927 | 0.0424 (prep) | 9.0527 | **9.0939** | 3.5100 | [8.5946, 9.6021] | 110.0 | 3.41e-07 |
+| `rf (x94)` | ml | cpu | 13208 / 94 | 0.4298 | 0.7904 | 0.3626 (desc) | 9.8989 | **10.2285** | 1.6193 | [10.0881, 10.4453] | 97.8 | - |
 
-## 3. Desglose Medido por Etapas del Descriptor x94 (`batch=1` vs E2E)
+## 3. Desglose Medido por Etapas del Descriptor x94 (`batch=1` vs E2E, backend `c_single_pass`)
 
-- Inicializacion amortizable (`build_entropy_plan` + LUTs): **0.6253 ms** (se computa una sola vez).
+- Backend de entropia activo: **`c_single_pass`** (solicitado: `auto`).
+- Inicializacion amortizable (`build_entropy_plan` + LUTs): **8.4853 ms** (se computa una sola vez).
 - Verificacion de equivalencia numerica (etapas vs `compute_entropy_features + compute_asymmetry_features`): max abs diff = **0.000e+00**.
-- Suma de medianas por etapa: **1.2865 ms** vs llamada formal E2E: **2.0918 ms** (gap de dispatch/asignaciones Python = **-0.8053 ms**, -62.6%).
+- Suma de medianas por etapa: **0.2442 ms** vs llamada formal E2E: **0.2142 ms** (gap de dispatch/asignaciones Python = **+0.0300 ms**, +12.3%).
 
 | Etapa | Escala | Mediana batch=1 (ms) | % de suma | Peak tracemalloc (KB) | Complejidad esperada (analitica) |
 |---|---|---|---|---|---|
-| `region_histograms_g8` | 8x8 | 0.4827 | 37.5% | 13.4 | `O(H*W) [2*H*W=32768]` |
-| `region_histograms_g4` | 4x4 | 0.1963 | 15.3% | 16.3 | `O(H*W) [2*H*W=32768]` |
-| `region_histograms_g2` | 2x2 | 0.1159 | 9.0% | 50.8 | `O(H*W) [2*H*W=32768]` |
-| `region_histograms_g1` | 1x1 | 0.0963 | 7.5% | 193.2 | `O(H*W) [2*H*W=32768]` |
-| `asymmetry_g2` | 2x2 | 0.0680 | 5.3% | 2.1 | `O(g^2*K) [4x3]` |
+| `asymmetry_g2` | 2x2 | 0.0685 | 28.1% | 2.1 | `O(g^2*K) [4x3]` |
+| `asymmetry_g4` | 4x4 | 0.0571 | 23.4% | 2.1 | `O(g^2*K) [16x3]` |
+| `asymmetry_g8` | 8x8 | 0.0553 | 22.7% | 2.6 | `O(g^2*K) [64x3]` |
+| `c_fine_hist` | 8x8 | 0.0333 | 13.6% | 1.9 | `O(H*W) [C99 fused quant+hist, H=W=128]` |
+| `c_entropy_lut` | all | 0.0117 | 4.8% | 2.1 | `O(F_e*B) [C99 nlogn LUT, F_e=85]` |
 
 ## 4. Desglose Medido por Capas CNN en CPU (`threads=1, batch=1`)
 
 | Arquitectura | Params | Act Peak (KB) | FLOPs (PyTorch) | Hookless (ms) | Hook overhead (%) | Cold 1st (ms) | Familias dominantes (% hooks) |
 |---|---|---|---|---|---|---|---|
-| `ultra_tiny` | 1,154 | 128.0 | 1,335,424 | 1.5857 | -18.0% | 1.475 | dwconv:40.5%, bn:20.7%, conv:13.9% |
-| `ds_cnn` | 12,866 | 1024.0 | 19,366,400 | 2.3721 | +18.9% | 5.907 | dwconv:37.9%, bn:19.5%, pwconv:15.7% |
-| `tiny_cnn` | 23,538 | 1024.0 | 80,216,320 | 4.9356 | -3.7% | 5.683 | pool:57.1%, conv:33.7%, bn:5.4% |
-| `mobilenet_like` | 70,786 | 512.0 | 38,716,416 | 3.1098 | +72.0% | 5.109 | dwconv:43.3%, pwconv:21.1%, bn:20.3% |
-| `tiny_resnet` | 77,234 | 256.0 | 97,648,896 | 3.4394 | +18.4% | 3.848 | conv:70.2%, pwconv:11.9%, bn:11.5% |
-| `small_cnn` | 97,650 | 1024.0 | 117,965,312 | 6.0601 | +21.2% | 6.542 | pool:52.3%, conv:38.1%, bn:6.0% |
-| `torchvision_mobilenet` | 1,519,618 | 288.0 | 35,293,184 | 7.4935 | +29.4% | 8.488 | dwconv:31.8%, pwconv:27.1%, bn:20.0% |
+| `ultra_tiny` | 1,154 | 128.0 | 1,335,424 | 1.2358 | -7.8% | 1.487 | dwconv:39.6%, bn:21.9%, conv:15.0% |
+| `ds_cnn` | 12,866 | 1024.0 | 19,366,400 | 3.0665 | -4.1% | 6.828 | dwconv:38.6%, bn:21.5%, pwconv:14.6% |
+| `tiny_cnn` | 23,538 | 1024.0 | 80,216,320 | 4.8001 | +13.2% | 8.951 | pool:54.0%, conv:34.2%, bn:7.2% |
+| `mobilenet_like` | 70,786 | 512.0 | 38,716,416 | 4.5240 | +9.0% | 5.479 | dwconv:42.5%, pwconv:20.9%, bn:20.6% |
+| `tiny_resnet` | 77,234 | 256.0 | 97,648,896 | 4.2241 | +19.3% | 6.319 | conv:69.0%, bn:12.8%, pwconv:11.6% |
+| `small_cnn` | 97,650 | 1024.0 | 117,965,312 | 7.0314 | +2.1% | 9.771 | pool:50.1%, conv:39.0%, bn:6.9% |
+| `torchvision_mobilenet` | 1,519,618 | 288.0 | 35,293,184 | 8.4207 | +20.6% | 11.841 | dwconv:33.5%, pwconv:26.1%, bn:19.7% |
 
 ## 5. Pruebas de Significancia Estadistica (Mann-Whitney U, 1 hilo, batch=1)
 
 | Comparacion | Mediana A (ms) | Mediana B (ms) | Ratio A/B | Estadistico U | p-valor | Significativo |
 |---|---|---|---|---|---|---|
-| `dt (x94)` vs `ds_cnn` | 2.5126 | 2.0805 | 1.208x | 36246.0 | `7.545e-45` | True |
-| `dt (x94)` vs `ultra_tiny` | 2.5126 | 0.8891 | 2.826x | 39641.0 | `1.008e-64` | True |
-| `lr (x94)` vs `ds_cnn` | 2.7124 | 2.0805 | 1.304x | 38199.0 | `7.955e-56` | True |
-| `lr (x94)` vs `ultra_tiny` | 2.7124 | 0.8891 | 3.051x | 39875.0 | `3.136e-66` | True |
-| `rf (x94)` vs `ds_cnn` | 12.2171 | 2.0805 | 5.872x | 40000.0 | `4.830e-67` | True |
-| `rf (x94)` vs `ultra_tiny` | 12.2171 | 0.8891 | 13.740x | 40000.0 | `4.830e-67` | True |
+| `dt (x94)` vs `ds_cnn` | 0.5112 | 2.9092 | 0.176x | 0.0 | `4.830e-67` | True |
+| `dt (x94)` vs `ultra_tiny` | 0.5112 | 1.0459 | 0.489x | 0.0 | `4.830e-67` | True |
+| `lr (x94)` vs `ds_cnn` | 0.6074 | 2.9092 | 0.209x | 0.0 | `4.830e-67` | True |
+| `lr (x94)` vs `ultra_tiny` | 0.6074 | 1.0459 | 0.581x | 0.0 | `4.830e-67` | True |
+| `lr_dot (x94)` vs `ds_cnn` | 0.3709 | 2.9092 | 0.127x | 0.0 | `4.830e-67` | True |
+| `lr_dot (x94)` vs `ultra_tiny` | 0.3709 | 1.0459 | 0.355x | 0.0 | `4.830e-67` | True |
+| `rf (x94)` vs `ds_cnn` | 10.2285 | 2.9092 | 3.516x | 40000.0 | `4.831e-67` | True |
+| `rf (x94)` vs `ultra_tiny` | 10.2285 | 1.0459 | 9.780x | 40000.0 | `4.831e-67` | True |
 
 ## 6. Ablacion Calidad vs Coste (`x85` vs `x9` vs `x94`)
 
 | Clasificador | Subconjunto | Features | F1 | ROC-AUC | T_total (ms) | dF1 vs x85 | d_ms vs x85 | dF1 / d_ms |
 |---|---|---|---|---|---|---|---|---|
-| `dt` | `x85_only` | 85 | 0.3550 | 0.6117 | 2.1532 | +0.0000 | +0.0000 | +0.0000 |
-| `dt` | `x9_only` | 9 | 0.2326 | 0.5787 | 2.3104 | -0.1224 | +0.1572 | -0.7790 |
-| `dt` | `x94_full` | 94 | 0.2798 | 0.5962 | 2.4214 | -0.0751 | +0.2682 | -0.2802 |
-| `knn` | `x85_only` | 85 | 0.1513 | 0.6442 | 2.8607 | +0.0000 | +0.0000 | +0.0000 |
-| `knn` | `x9_only` | 9 | 0.2208 | 0.6328 | 2.8888 | +0.0695 | +0.0281 | +2.4784 |
-| `knn` | `x94_full` | 94 | 0.1500 | 0.6652 | 3.1249 | -0.0013 | +0.2642 | -0.0048 |
-| `lr` | `x85_only` | 85 | 0.2687 | 0.6179 | 2.2955 | +0.0000 | +0.0000 | +0.0000 |
-| `lr` | `x9_only` | 9 | 0.3591 | 0.7371 | 2.4534 | +0.0905 | +0.1579 | +0.5731 |
-| `lr` | `x94_full` | 94 | 0.4265 | 0.8061 | 2.5694 | +0.1579 | +0.2738 | +0.5764 |
-| `rf` | `x85_only` | 85 | 0.4286 | 0.8255 | 11.1941 | +0.0000 | +0.0000 | +0.0000 |
-| `rf` | `x9_only` | 9 | 0.3765 | 0.7429 | 14.3706 | -0.0521 | +3.1766 | -0.0164 |
-| `rf` | `x94_full` | 94 | 0.4298 | 0.7904 | 11.7668 | +0.0013 | +0.5728 | +0.0022 |
+| `dt` | `x85_only` | 85 | 0.3550 | 0.6117 | 0.1098 | +0.0000 | +0.0000 | +0.0000 |
+| `dt` | `x9_only` | 9 | 0.2326 | 0.5787 | 0.3019 | -0.1224 | +0.1921 | -0.6371 |
+| `dt` | `x94_full` | 94 | 0.2798 | 0.5962 | 0.3125 | -0.0751 | +0.2027 | -0.3707 |
+| `knn` | `x85_only` | 85 | 0.1513 | 0.6442 | 1.0634 | +0.0000 | +0.0000 | +0.0000 |
+| `knn` | `x9_only` | 9 | 0.2208 | 0.6328 | 0.8821 | +0.0695 | -0.1813 | -0.3836 |
+| `knn` | `x94_full` | 94 | 0.1500 | 0.6652 | 1.0693 | -0.0013 | +0.0059 | -0.2118 |
+| `lr` | `x85_only` | 85 | 0.2687 | 0.6179 | 0.2767 | +0.0000 | +0.0000 | +0.0000 |
+| `lr` | `x9_only` | 9 | 0.3591 | 0.7371 | 0.4709 | +0.0905 | +0.1942 | +0.4657 |
+| `lr` | `x94_full` | 94 | 0.4265 | 0.8061 | 0.4762 | +0.1579 | +0.1995 | +0.7915 |
+| `lr_dot` | `x85_only` | 85 | 0.2687 | 0.6179 | 0.0348 | +0.0000 | +0.0000 | +0.0000 |
+| `lr_dot` | `x9_only` | 9 | 0.3591 | 0.7371 | 0.2273 | +0.0905 | +0.1925 | +0.4699 |
+| `lr_dot` | `x94_full` | 94 | 0.4265 | 0.8061 | 0.2361 | +0.1579 | +0.2013 | +0.7842 |
+| `rf` | `x85_only` | 85 | 0.4286 | 0.8255 | 9.4624 | +0.0000 | +0.0000 | +0.0000 |
+| `rf` | `x9_only` | 9 | 0.3765 | 0.7429 | 9.7220 | -0.0521 | +0.2596 | -0.2007 |
+| `rf` | `x94_full` | 94 | 0.4298 | 0.7904 | 9.8575 | +0.0013 | +0.3951 | +0.0032 |
 
 ## 7. Referencia Secundaria CUDA (Aislada, nunca mezclada en ranking CPU)
 
 | Modelo CNN | Device | Batch | T_model mediana (ms) | Throughput (img/s) |
 |---|---|---|---|---|
-| `ultra_tiny` | cuda | 1 | 0.9775 | 1023.0 |
-| `ds_cnn` | cuda | 1 | 1.5389 | 649.8 |
-| `tiny_cnn` | cuda | 1 | 0.8043 | 1243.2 |
-| `mobilenet_like` | cuda | 1 | 2.3397 | 427.4 |
-| `tiny_resnet` | cuda | 1 | 2.0147 | 496.4 |
-| `small_cnn` | cuda | 1 | 0.9970 | 1003.0 |
-| `torchvision_mobilenet` | cuda | 1 | 10.7124 | 93.4 |
-| `ultra_tiny` | cuda | 32 | 0.0428 | 23369.6 |
-| `ds_cnn` | cuda | 32 | 0.2078 | 4812.7 |
-| `tiny_cnn` | cuda | 32 | 0.2071 | 4829.4 |
-| `mobilenet_like` | cuda | 32 | 0.2297 | 4353.4 |
-| `tiny_resnet` | cuda | 32 | 0.1767 | 5658.8 |
-| `small_cnn` | cuda | 32 | 0.2343 | 4267.7 |
-| `torchvision_mobilenet` | cuda | 32 | 0.3139 | 3185.4 |
+| `ultra_tiny` | cuda | 1 | 1.1984 | 834.4 |
+| `ds_cnn` | cuda | 1 | 1.5200 | 657.9 |
+| `tiny_cnn` | cuda | 1 | 0.7828 | 1277.5 |
+| `mobilenet_like` | cuda | 1 | 2.8194 | 354.7 |
+| `tiny_resnet` | cuda | 1 | 2.0274 | 493.2 |
+| `small_cnn` | cuda | 1 | 1.1338 | 882.0 |
+| `torchvision_mobilenet` | cuda | 1 | 10.0429 | 99.6 |
+| `ultra_tiny` | cuda | 32 | 0.0515 | 19418.7 |
+| `ds_cnn` | cuda | 32 | 0.2056 | 4863.3 |
+| `tiny_cnn` | cuda | 32 | 0.2080 | 4806.6 |
+| `mobilenet_like` | cuda | 32 | 0.2304 | 4340.0 |
+| `tiny_resnet` | cuda | 32 | 0.1796 | 5568.0 |
+| `small_cnn` | cuda | 32 | 0.2336 | 4281.0 |
+| `torchvision_mobilenet` | cuda | 32 | 0.3222 | 3103.8 |
 
 ## 8. Separacion de Resultados Medidos vs Estimaciones Analiticas y Limitaciones
 
@@ -104,5 +111,5 @@
 
 ## 9. Recomendaciones Derivadas de los Datos
 
-- **Cuello de botella principal de x94:** `region_histograms_g8` consume **37.5%** (0.4827 ms) del tiempo por etapas; cualquier optimizacion futura en C/Cython debe priorizar el bucle de histogramas multi-escala antes que cuantizacion o asimetria.
-- **Compromiso Pareto CPU (1 hilo, batch=1):** El pipeline mas rapido medido es `ultra_tiny` (**0.8891 ms**, F1=0.5914), mientras el maximo F1 lo obtiene `tiny_resnet` (**F1=0.7389**, 3.6254 ms).
+- **Perfil actual de x94 (`c_single_pass`):** `asymmetry_g2` concentra **28.1%** (0.0685 ms) del tiempo por etapas (E2E=0.2142 ms, gap de despacho Python/ctypes=+0.0300 ms); la piramide de histogramas ya opera en C99 en un solo paso.
+- **Compromiso Pareto CPU (1 hilo, batch=1):** El pipeline mas rapido medido es `lr_dot (x94)` (**0.3709 ms**, F1=0.4265), mientras el maximo F1 lo obtiene `tiny_resnet` (**F1=0.7130**, 4.8865 ms).

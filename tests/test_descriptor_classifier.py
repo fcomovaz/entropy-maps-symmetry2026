@@ -27,6 +27,7 @@ from src.models.descriptor_classifier import (
     DatasetPartition,
     ExplainabilityReport,
     GroupImportance,
+    LinearDotCoreClassifier,
     build_classifier,
     compute_explainability,
     load_and_split_descriptors,
@@ -495,6 +496,51 @@ class TestClassifierAndAblation(unittest.TestCase):
             self.assertIn("lr", model_lr.named_steps)
             self.assertGreaterEqual(metrics_lr.accuracy, 0.5)
 
+            # Folded Logistic Regression (lr_dot & linear_mode='dot_core')
+            model_lr_dot, metrics_lr_dot = train_and_evaluate(part_k, "lr_dot", cfg_k)
+            self.assertIsInstance(model_lr_dot, LinearDotCoreClassifier)
+            self.assertEqual(metrics_lr_dot.classifier_name, "lr_dot")
+            self.assertIn("lr_dot", cfg_k.available_classifiers)
+            np.testing.assert_allclose(
+                model_lr_dot.decision_function(part_k.X_test),
+                model_lr.decision_function(part_k.X_test),
+                atol=1e-12,
+            )
+            np.testing.assert_allclose(
+                model_lr_dot.predict_proba(part_k.X_test),
+                model_lr.predict_proba(part_k.X_test),
+                atol=1e-12,
+            )
+            np.testing.assert_array_equal(
+                model_lr_dot.predict(part_k.X_test),
+                model_lr.predict(part_k.X_test),
+            )
+            self.assertAlmostEqual(metrics_lr_dot.f1, metrics_lr.f1, places=12)
+            self.assertAlmostEqual(metrics_lr_dot.roc_auc, metrics_lr.roc_auc, places=12)
+
+            # linear_mode='dot_core' + scale_features=False parity
+            cfg_dot_noscale = replace(
+                cfg_k,
+                lr_params=replace(cfg_k.lr_params, scale_features=False, linear_mode="dot_core"),
+            )
+            cfg_sk_noscale = replace(
+                cfg_k,
+                lr_params=replace(cfg_k.lr_params, scale_features=False, linear_mode="sklearn"),
+            )
+            mdl_sk_ns, _ = train_and_evaluate(part_k, "lr", cfg_sk_noscale)
+            mdl_dot_ns, _ = train_and_evaluate(part_k, "lr", cfg_dot_noscale)
+            self.assertIsInstance(mdl_dot_ns, LinearDotCoreClassifier)
+            np.testing.assert_allclose(
+                mdl_dot_ns.predict_proba(part_k.X_test),
+                mdl_sk_ns.predict_proba(part_k.X_test),
+                atol=1e-12,
+            )
+
+            # Explainability support for lr_dot (sklearn clone / permutation_importance contract)
+            exp_dot = compute_explainability(model_lr_dot, part_k, cfg_k)
+            self.assertEqual(exp_dot.importances.shape, (94,))
+            self.assertAlmostEqual(float(np.sum(exp_dot.importances)), 1.0, places=5)
+
             # Invalid classifier name
             with self.assertRaises(ValueError):
                 build_classifier("svm_unknown", cfg_k)
@@ -655,6 +701,22 @@ class TestPlotsAndCli(unittest.TestCase):
             out_dir_k = tmp / "results" / "classification" / "kolektorsdd2-inverted" / "full_knn"
             for fname in expected_files:
                 self.assertTrue((out_dir_k / fname).is_file())
+
+            # 3b. Inverted run on KolektorSDD2 with lr_dot via --linear-mode dot_core
+            rc_lr_dot = cli_main(
+                ["--config", str(kolektor_cfg_rel), "--classifier", "lr_dot"],
+                project_root=tmp,
+            )
+            self.assertEqual(rc_lr_dot, 0)
+            out_dir_dot = tmp / "results" / "classification" / "kolektorsdd2" / "full_lr_dot"
+            for fname in expected_files:
+                self.assertTrue((out_dir_dot / fname).is_file())
+
+            rc_lr_mode = cli_main(
+                ["--config", str(kolektor_cfg_rel), "--classifier", "lr", "--linear-mode", "dot_core", "--overwrite"],
+                project_root=tmp,
+            )
+            self.assertEqual(rc_lr_mode, 0)
 
             # 4. --all-objects on MVTec-AD (synthetic has 'bottle' and 'cable' populated; adjust subdatasets to ['bottle', 'cable'])
             base_path = tmp / "configs" / "base.toml"

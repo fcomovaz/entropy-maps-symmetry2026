@@ -18,8 +18,9 @@ Suites de pruebas automáticas, unitarias y de integración del proyecto.
 .\.venv\Scripts\python.exe -m unittest tests/test_csv_export.py
 .\.venv\Scripts\python.exe -m unittest tests/test_kolektorsdd2_csv_export.py
 
-# 4. Pruebas de mapas de entropía y características regionales (x85)
+# 4. Pruebas de mapas de entropía, kernel C99 y características regionales (x85)
 .\.venv\Scripts\python.exe -m unittest tests/test_entropy_maps.py
+.\.venv\Scripts\python.exe -m unittest tests/test_native_entropy.py
 .\.venv\Scripts\python.exe -m unittest tests/test_entropy_csv.py
 
 # 5. Pruebas de anexado de asimetrías de entropía (x85 -> x94)
@@ -37,10 +38,11 @@ Suites de pruebas automáticas, unitarias y de integración del proyecto.
 .\.venv\Scripts\python.exe -m unittest tests/test_cnn_evaluate.py
 .\.venv\Scripts\python.exe -m unittest tests/test_cnn_cli.py
 
-# 8. Pruebas de comparación 100 % CPU justa y profiling científico (task_08)
+# 8. Pruebas de comparación 100 % CPU justa y profiling científico (task_08 / task_10)
 .\.venv\Scripts\python.exe -m unittest tests/test_profiling_config.py
 .\.venv\Scripts\python.exe -m unittest tests/test_profiling_timing.py
 .\.venv\Scripts\python.exe -m unittest tests/test_profiling_descriptor_stages.py
+.\.venv\Scripts\python.exe -m unittest tests/test_profiling_classifier.py
 .\.venv\Scripts\python.exe -m unittest tests/test_profiling_cnn_layers.py
 .\.venv\Scripts\python.exe -m unittest tests/test_benchmark_cpu_fair_cli.py
 
@@ -64,20 +66,22 @@ Suites de pruebas automáticas, unitarias y de integración del proyecto.
 | `test_kolektorsdd2.py` | Emparejamiento `_GT`, descarte de huérfanos/copias, clasificación binaria, letterbox 128x128, grises, inversión y CLI | Cobertura integral de `src/preprocessing/kolektorsdd2.py` |
 | `test_csv_export.py` | Lectura de TOML, nombres de columnas (16391 cols), aplanado row-major, streaming temporal seguro, conteos y CLI | Cobertura integral de `src/datasets/mvtec_ad_csv.py` |
 | `test_kolektorsdd2_csv_export.py` | Lectura de TOML, nombres de columnas (16389 cols), aplanado row-major, streaming temporal seguro, conteos y CLI | Cobertura integral de `src/datasets/kolektorsdd2_csv.py` |
-| `test_entropy_maps.py` | Validación de niveles/bins, cotas $[0, 1]$, determinismo, partición espacial y paridad exacta con oráculo `06` ($< 10^{-12}$) | Cobertura matemática de `src/features/entropy_maps.py` |
-| `test_entropy_csv.py` | Carga TOML, validación de cabecera, preservación de metadatos, escritura atómica `.tmp`, sidecar y CLI | Cobertura integral de `src/features/entropy_csv.py` y CLI |
+| `test_entropy_maps.py` | Validación de niveles/bins, cotas $[0, 1]$, determinismo, partición espacial, paridad exacta entre los 5 backends (`numpy_baseline`, `numpy_finest_pyramid`, `numpy_fused_entropy`, `c_single_pass`, `auto`) y oráculo `06` ($< 10^{-12}$) | Cobertura matemática de `src/features/entropy_maps.py` |
+| `test_native_entropy.py` | Carga `native_entropy.toml`, verificación estructural (anidamiento, $g \le 16$, $B \le 256$), ausencia de DLL y paridad C99 vs oráculo ($< 10^{-12}$) | Cobertura de `src/features/native_entropy.py` y `entropy_pyramid.dll` |
+| `test_entropy_csv.py` | Carga TOML, validación de cabecera, preservación de metadatos, `--backend`, escritura atómica `.tmp`, sidecar y CLI | Cobertura integral de `src/features/entropy_csv.py` y CLI |
 | `test_asymmetry_maps.py` | Validación de escalas/tipos, cotas $[0, 1]$, invariancia simétrica, desigualdades triangulares y paridad con oráculo `05` ($< 10^{-12}$) | Cobertura matemática de `src/features/asymmetry_maps.py` |
 | `test_asymmetry_csv.py` | Carga TOML, validación de cabecera, copia byte a byte de metadatos, atomicidad `.tmp`, sidecar y CLI | Cobertura integral de `src/features/asymmetry_csv.py` y CLI |
-| `test_descriptor_classifier.py` | Carga TOML, exclusión de `ground_truth`, partición `presplit` vs `stratified` sin mutar CSVs, RF y k-NN (`StandardScaler`), ablación `x85/x9/x94`, explicabilidad 2D y CLI | Cobertura integral de `src/models/` y `experiments/evaluate_descriptors.py` |
+| `test_descriptor_classifier.py` | Carga TOML, exclusión de `ground_truth`, partición `presplit` vs `stratified` sin mutar CSVs, RF, k-NN, DT, LR y núcleo plegado `lr_dot` (`LinearDotCoreClassifier`), ablación `x85/x9/x94`, explicabilidad 2D y CLI | Cobertura integral de `src/models/` y `experiments/evaluate_descriptors.py` |
 | `test_cnn_architectures.py` | Verificación exacta de parámetros en 7 CNNs, salida `[B, 2]`, resolución multiescala (32/64/128) y backward | Cobertura de `src/models/cnn/architectures/` |
 | `test_cnn_config.py` | Carga TOML de KolektorSDD2 y MVTec-AD, validación de claves requeridas y resolución dinámica de rutas | Cobertura de `src/models/cnn/config.py` |
 | `test_cnn_data.py` | Ingesta directa de PNGs, exclusión de `ground_truth`, paridad de split con baseline y validación de 128x128 | Cobertura de `src/models/cnn/data.py` |
 | `test_cnn_train.py` | Smoke test de entrenamiento (convergencia de pérdida), determinismo de semillas y early stopping | Cobertura de `src/models/cnn/train.py` |
 | `test_cnn_evaluate.py` | Cálculo de métricas compatibles con `ClassificationMetrics` (Acc, BalAcc, F1, ROC, PR) y probabilidades | Cobertura de `src/models/cnn/evaluate.py` |
 | `test_cnn_cli.py` | Validación CLI dry-run para ambos datasets, manejo de errores y reporte comparativo | Cobertura de `experiments/evaluate_cnn.py` y `compare_baseline_vs_cnn.py` |
-| `test_profiling_config.py` | Carga TOML de profiling, validación fail-fast ante claves faltantes/dispositivo `cuda`, resolución dinámica de rutas y listado de objetos | Cobertura de `src/profiling/config.py` |
+| `test_profiling_config.py` | Carga TOML de profiling, validación fail-fast ante claves faltantes/dispositivo `cuda`/`entropy_backend` inválido, resolución dinámica de rutas y listado de objetos | Cobertura de `src/profiling/config.py` |
 | `test_profiling_timing.py` | Mediana/IQR/p95/IC95% con datos conocidos, medición no negativa, restauración garantizada de `gc` y pinning de hilos (`torch`/`threadpoolctl`) | Cobertura de `src/profiling/timing.py` |
-| `test_profiling_descriptor_stages.py` | Equivalencia numérica exacta ($< 10^{-12}$) por etapas frente a `src/features/`, suma porcentual $\approx 100\,\%$, forma `[N, 94]` y escalabilidad | Cobertura de `src/profiling/descriptor_stages.py` |
+| `test_profiling_descriptor_stages.py` | Equivalencia numérica exacta ($< 10^{-12}$) por etapas en backends base, NumPy piramidal y C99 frente a `src/features/`, suma porcentual $\approx 100\,\%$, forma `[N, 94]` y escalabilidad | Cobertura de `src/profiling/descriptor_stages.py` |
+| `test_profiling_classifier.py` | Paridad numérica, conteo real de parámetros (`scaler_params=0`), FLOPs/MACs analíticos y profiling de `lr_dot` frente a `lr` sklearn | Cobertura de `src/profiling/classifier_profile.py` |
 | `test_profiling_cnn_layers.py` | Reporte completo de módulos hoja en CNN sintética en CPU sin CUDA, overhead de *hooks* acotado, `torch.profiler` ATen y *cold start* | Cobertura de `src/profiling/cnn_layers.py` |
 | `test_benchmark_cpu_fair_cli.py` | Ejecución `--dry-run` de Fase A/B (código `0`), imposición estricta de `device=cpu`, rechazo fail-fast de `--device cuda` y errores por checkpoints faltantes | Cobertura CLI de `benchmark_cpu_fair.py` y `profile_pipelines.py` |
 | `03/test_entropy.py` | 5 tests: formulaciones Shannon E1–E5, cotas, LUTs y rankings | Utiliza artefactos cacheados de 01 |

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import sys
+import tempfile
 import unittest
 
 import numpy as np
@@ -20,6 +21,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.features.asymmetry_maps import compute_asymmetry_features
 from src.features.entropy_maps import build_entropy_plan, compute_entropy_features
+from src.features.native_entropy import resolve_default_native_dll_path
 from src.profiling.descriptor_stages import (
     DescriptorProfileReport,
     estimate_descriptor_ops,
@@ -28,6 +30,8 @@ from src.profiling.descriptor_stages import (
     profile_descriptor_scalability,
     profile_descriptor_stages,
 )
+from src.profiling.environment import capture_environment
+from src.profiling.report import generate_profiling_figures, write_profiling_readme
 
 
 class TestProfilingDescriptorStages(unittest.TestCase):
@@ -112,9 +116,12 @@ class TestProfilingDescriptorStages(unittest.TestCase):
             cprofile_top_n=10,
             seed=42,
             scaler=scaler,
+            backend="numpy_baseline",
         )
 
         self.assertIsInstance(report, DescriptorProfileReport)
+        self.assertEqual(report.entropy_backend, "numpy_baseline")
+        self.assertEqual(report.requested_backend, "numpy_baseline")
         self.assertLessEqual(report.max_numerical_diff, 1e-12)
         self.assertGreater(report.e2e_batch1_stats.median_ms, 0.0)
         self.assertGreater(report.staged_sum_batch1_ms, 0.0)
@@ -128,11 +135,27 @@ class TestProfilingDescriptorStages(unittest.TestCase):
         self.assertTrue(len(report.cprofile_report_text.strip()) > 0)
 
         ops = estimate_descriptor_ops(
-            128, grid_levels=(1, 2, 4, 8), bins=16, asymmetry_scales=(2, 4, 8), asymmetry_kinds=("lr", "tb", "rot180")
+            128,
+            grid_levels=(1, 2, 4, 8),
+            bins=16,
+            asymmetry_scales=(2, 4, 8),
+            asymmetry_kinds=("lr", "tb", "rot180"),
+            backend="numpy_baseline",
         )
         self.assertEqual(ops.quantize_ops, 128 * 128)
         self.assertEqual(ops.histogram_ops, 4 * 2 * 128 * 128)
         self.assertGreater(ops.total_ops, ops.histogram_ops)
+
+        ops_c = estimate_descriptor_ops(
+            128,
+            grid_levels=(1, 2, 4, 8),
+            bins=16,
+            asymmetry_scales=(2, 4, 8),
+            asymmetry_kinds=("lr", "tb", "rot180"),
+            backend="c_single_pass",
+        )
+        self.assertLess(ops_c.histogram_ops, ops.histogram_ops)
+        self.assertLess(ops_c.total_ops, ops.total_ops)
 
     def test_profile_descriptor_scalability_sweep(self) -> None:
         """Verify parameter sweep across image sizes, bin counts, and grid levels executes cleanly."""
@@ -160,6 +183,88 @@ class TestProfilingDescriptorStages(unittest.TestCase):
         self.assertEqual([r.sweep_dimension for r in records[2:4]], ["bins", "bins"])
         self.assertEqual([r.sweep_dimension for r in records[4:]], ["grid_levels", "grid_levels"])
         self.assertTrue(all(r.median_ms > 0.0 and r.analytical_ops_per_sample > 0 for r in records))
+        self.assertTrue(all(bool(r.entropy_backend) for r in records))
+
+    def test_fast_entropy_backends_staged_parity_stages_and_report_rendering(self) -> None:
+        """Verify NumPy single-pass and C99 staged profiles match baseline x94 and render Fig 1."""
+        rng = np.random.default_rng(2026)
+        images = rng.integers(0, 256, size=(6, 64, 64), dtype=np.uint8)
+        baseline = extract_x94_end_to_end(images, backend="numpy_baseline")
+
+        expected_stages_map: dict[str, set[str]] = {
+            "numpy_finest_pyramid": {"quantize_pixels", "fine_grid_histograms", "pyramid_sum", "normalized_entropy_g8"},
+            "numpy_fused_entropy": {"quantize_pixels", "fine_grid_histograms", "pyramid_sum", "fused_entropy"},
+        }
+        dll_path = resolve_default_native_dll_path(PROJECT_ROOT)
+        if dll_path is not None and dll_path.is_file():
+            expected_stages_map["c_single_pass"] = {"c_fine_hist", "c_pyramid_sum", "c_entropy_lut"}
+
+        last_report: DescriptorProfileReport | None = None
+        for backend_name, expected_subset in expected_stages_map.items():
+            staged = extract_x94_staged(images, backend=backend_name)
+            e2e = extract_x94_end_to_end(images, backend=backend_name)
+            np.testing.assert_allclose(staged, baseline, atol=1e-12)
+            np.testing.assert_allclose(e2e, baseline, atol=1e-12)
+
+            report = profile_descriptor_stages(
+                images_u8=images,
+                dataset_tag=f"synth_{backend_name}",
+                grid_levels=(1, 2, 4, 8),
+                bins=16,
+                asymmetry_scales=(2, 4, 8),
+                asymmetry_kinds=("lr", "tb", "rot180"),
+                threads=1,
+                batch_n_size=4,
+                warmup_iters=2,
+                timed_iters=8,
+                batch_timed_iters=4,
+                disable_gc_flag=True,
+                bootstrap_resamples=20,
+                cprofile_top_n=8,
+                seed=42,
+                backend=backend_name,
+            )
+            self.assertEqual(report.entropy_backend, backend_name)
+            self.assertEqual(report.requested_backend, backend_name)
+            self.assertLessEqual(report.max_numerical_diff, 1e-12)
+            stage_names = {s.stage for s in report.stages_batch1}
+            self.assertTrue(expected_subset.issubset(stage_names), f"{backend_name} missing {expected_subset} in {stage_names}")
+            share_sum = sum(s.share_of_staged_sum_pct for s in report.stages_batch1 if s.stage != "standard_scaler")
+            self.assertAlmostEqual(share_sum, 100.0, places=4)
+            last_report = report
+
+        assert last_report is not None
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            out_dir = Path(tmp_dir)
+            figs = generate_profiling_figures(
+                output_dir=out_dir,
+                dataset_label="synth_fast",
+                desc_report=last_report,
+                desc_scalability=(),
+                layer_reports=(),
+                cnn_scaling=(),
+                cls_scaling=(),
+                cpu_comparison_rows=(),
+                dpi=80,
+            )
+            self.assertTrue((out_dir / "fig1_x94_stage_breakdown.png").is_file())
+            self.assertGreaterEqual(len(figs), 1)
+            env = capture_environment(PROJECT_ROOT, seed=42)
+            readme_path = write_profiling_readme(
+                output_path=out_dir / "README.md",
+                dataset_label="synth_fast",
+                env=env,
+                desc_report=last_report,
+                cpu_rows=(),
+                cuda_rows=(),
+                stat_tests=(),
+                ablation_rows=(),
+                layer_reports=(),
+                primary_threads=1,
+                primary_batch_size=1,
+            )
+            readme_txt = readme_path.read_text(encoding="utf-8")
+            self.assertIn(last_report.entropy_backend, readme_txt)
 
 
 if __name__ == "__main__":

@@ -21,6 +21,8 @@ from src.features.asymmetry_maps import (
 )
 from src.features.entropy_maps import (
     EntropyPlan,
+    _compute_pyramid_counts_from_fine,
+    _fine_histograms_from_quantized,
     build_entropy_plan,
     build_quantization_lut,
     build_shannon_term_lut,
@@ -28,6 +30,13 @@ from src.features.entropy_maps import (
     normalized_entropy,
     quantize_pixels,
     region_histograms,
+    resolve_entropy_backend,
+    validate_entropy_backend,
+)
+from src.features.native_entropy import (
+    run_native_stage_entropy,
+    run_native_stage_fine_hist,
+    run_native_stage_sum,
 )
 from .timing import (
     LatencyStats,
@@ -104,6 +113,8 @@ class DescriptorProfileReport:
     stages_batch_n: tuple[DescriptorStageRecord, ...]
     raw_e2e_batch1_ms: tuple[float, ...]
     cprofile_report_text: str
+    requested_backend: str = "auto"
+    entropy_backend: str = "numpy_baseline"
 
 
 @dataclass(frozen=True, slots=True)
@@ -126,6 +137,7 @@ class DescriptorScalabilityRecord:
     throughput_samples_s: float
     analytical_ops_per_sample: int
     expected_complexity_note: str
+    entropy_backend: str = "numpy_baseline"
 
 
 def _normalize_images_u8(images: np.ndarray) -> np.ndarray:
@@ -153,6 +165,29 @@ def _uniform_term_lut_for_scale(plan: EntropyPlan, g: int) -> np.ndarray | None:
     return None
 
 
+def _build_or_reuse_plan(
+    image_size: int,
+    grid_levels: Sequence[int],
+    bins: int,
+    plan: EntropyPlan | None,
+    backend: str | None,
+) -> EntropyPlan:
+    """Reuse caller plan when geometry/backend match, otherwise construct resolved EntropyPlan."""
+    levels_t = tuple(int(g) for g in grid_levels)
+    if plan is not None and (plan.image_size, plan.grid_levels, plan.bins) == (
+        image_size,
+        levels_t,
+        bins,
+    ):
+        if backend is None:
+            return plan
+        req = validate_entropy_backend(backend)
+        if req in (plan.backend, plan.resolved_backend):
+            return plan
+    active_backend = "auto" if backend is None else validate_entropy_backend(backend)
+    return build_entropy_plan(image_size, levels_t, bins, backend=active_backend)
+
+
 def extract_x94_end_to_end(
     images: np.ndarray,
     grid_levels: Sequence[int] = (1, 2, 4, 8),
@@ -160,6 +195,7 @@ def extract_x94_end_to_end(
     asymmetry_scales: Sequence[int] = (2, 4, 8),
     asymmetry_kinds: Sequence[str] = ("lr", "tb", "rot180"),
     plan: EntropyPlan | None = None,
+    backend: str | None = None,
 ) -> np.ndarray:
     """Extract x94 descriptors via formal src.features entry points.
 
@@ -170,6 +206,8 @@ def extract_x94_end_to_end(
         asymmetry_scales: Spatial scales >= 2 used for symmetry residuals.
         asymmetry_kinds: Reflection/rotation kinds ('lr', 'tb', 'rot180').
         plan: Optional precomputed EntropyPlan.
+        backend: Optional backend override ('auto', 'numpy_baseline',
+            'numpy_finest_pyramid', 'numpy_fused_entropy', or 'c_single_pass').
 
     Returns:
         Array of shape [N, sum(g^2) + len(asymmetry_scales)*len(asymmetry_kinds)], dtype float64.
@@ -180,7 +218,13 @@ def extract_x94_end_to_end(
         n_asym = len(asymmetry_scales) * len(asymmetry_kinds)
         return np.zeros((0, n_ent + n_asym), dtype=np.float64)
 
-    x85 = compute_entropy_features(arr, grid_levels=grid_levels, bins=bins, plan=plan)
+    x85 = compute_entropy_features(
+        arr,
+        grid_levels=grid_levels,
+        bins=bins,
+        plan=plan,
+        backend=backend,
+    )
     e_by_scale: dict[int, np.ndarray] = {}
     offset = 0
     for g in grid_levels:
@@ -202,8 +246,9 @@ def extract_x94_staged(
     asymmetry_scales: Sequence[int] = (2, 4, 8),
     asymmetry_kinds: Sequence[str] = ("lr", "tb", "rot180"),
     plan: EntropyPlan | None = None,
+    backend: str | None = None,
 ) -> np.ndarray:
-    """Replicate x94 extraction step-by-step calling public primitives without altering src/features.
+    """Replicate x94 extraction step-by-step per resolved backend without altering src/features.
 
     Args:
         images: Square grayscale uint8 images of shape [N, H, W] or [H, W].
@@ -212,6 +257,8 @@ def extract_x94_staged(
         asymmetry_scales: Scales for spatial entropy asymmetry.
         asymmetry_kinds: Symmetry axes.
         plan: Optional precomputed EntropyPlan.
+        backend: Optional backend override ('auto', 'numpy_baseline',
+            'numpy_finest_pyramid', 'numpy_fused_entropy', or 'c_single_pass').
 
     Returns:
         Feature matrix [N, n_features], numerically equivalent (<1e-12) to `extract_x94_end_to_end`.
@@ -223,26 +270,77 @@ def extract_x94_staged(
         return np.zeros((0, n_ent + n_asym), dtype=np.float64)
 
     height = int(arr.shape[1])
-    if (
-        plan is None
-        or plan.image_size != height
-        or plan.grid_levels != tuple(grid_levels)
-        or plan.bins != bins
-    ):
-        plan = build_entropy_plan(height, grid_levels, bins)
+    plan = _build_or_reuse_plan(height, grid_levels, bins, plan=plan, backend=backend)
+    n_images = int(arr.shape[0])
+    resolved = plan.resolved_backend
 
-    quantized = quantize_pixels(arr, bins=bins, lut=plan.quant_lut)
-
-    e_parts: list[np.ndarray] = []
     e_by_scale: dict[int, np.ndarray] = {}
-    for g in grid_levels:
-        counts_g = region_histograms(quantized, g=g, bins=bins)
-        term_lut_g = _uniform_term_lut_for_scale(plan, g)
-        ent_g = normalized_entropy(counts_g, bins=bins, term_lut=term_lut_g)
-        e_parts.append(ent_g)
-        e_by_scale[g] = ent_g
-
-    x85 = np.concatenate(e_parts, axis=1)
+    if resolved == "c_single_pass":
+        assert plan.native_buffers is not None
+        fine_hist = run_native_stage_fine_hist(plan.native_buffers, arr)
+        all_hist = run_native_stage_sum(plan.native_buffers, fine_hist)
+        x85 = run_native_stage_entropy(plan.native_buffers, all_hist)
+        for g, start, end in plan.level_offsets:
+            e_by_scale[g] = x85[:, start:end]
+    elif resolved == "numpy_finest_pyramid":
+        quantized = quantize_pixels(arr, bins=bins, lut=plan.quant_lut)
+        fine_counts = _fine_histograms_from_quantized(
+            quantized, plan.g_max, plan.cell_side, bins
+        )
+        counts_by_level = _compute_pyramid_counts_from_fine(fine_counts, plan)
+        term_lut_map = dict(plan.term_luts_by_level)
+        e_parts: list[np.ndarray] = []
+        for g in grid_levels:
+            counts_g = counts_by_level[g]
+            terms = term_lut_map[g][counts_g]
+            ent_g = np.sum(terms, axis=-1) / plan.log2_bins
+            ent_g[np.all(counts_g == counts_g[:, :, :1], axis=-1)] = 1.0
+            e_parts.append(ent_g)
+            e_by_scale[g] = ent_g
+        x85 = np.concatenate(e_parts, axis=1)
+    elif resolved == "numpy_fused_entropy":
+        assert plan.nlogn_lut is not None
+        assert plan.npix_int_vec is not None
+        assert plan.npix_f64_vec is not None
+        assert plan.log2_npix_vec is not None
+        quantized = quantize_pixels(arr, bins=bins, lut=plan.quant_lut)
+        all_counts = np.empty((n_images, plan.total_features, bins), dtype=np.int64)
+        offset_map = {g: (s, e) for g, s, e in plan.level_offsets}
+        f_start, f_end = offset_map[plan.g_max]
+        all_counts[:, f_start:f_end, :] = _fine_histograms_from_quantized(
+            quantized, plan.g_max, plan.cell_side, bins
+        )
+        for g_curr, g_child, k in plan.merge_schedule:
+            c_start, c_end = offset_map[g_child]
+            t_start, t_end = offset_map[g_curr]
+            all_counts[:, t_start:t_end, :] = (
+                all_counts[:, c_start:c_end, :]
+                .reshape(n_images, g_curr, k, g_curr, k, bins)
+                .sum(axis=(2, 4))
+                .reshape(n_images, g_curr * g_curr, bins)
+            )
+        s_vec = plan.nlogn_lut[all_counts].sum(axis=-1)
+        x85 = (
+            plan.log2_npix_vec[None, :] - (s_vec / plan.npix_f64_vec[None, :])
+        ) / plan.log2_bins
+        np.maximum(x85, 0.0, out=x85)
+        x85[np.max(all_counts, axis=-1) == plan.npix_int_vec[None, :]] = 0.0
+        x85[
+            np.all(all_counts == all_counts[:, :, :1], axis=-1)
+            & (plan.npix_int_vec[None, :] > 0)
+        ] = 1.0
+        for g, start, end in plan.level_offsets:
+            e_by_scale[g] = x85[:, start:end]
+    else:
+        quantized = quantize_pixels(arr, bins=bins, lut=plan.quant_lut)
+        e_parts = []
+        for g in grid_levels:
+            counts_g = region_histograms(quantized, g=g, bins=bins)
+            term_lut_g = _uniform_term_lut_for_scale(plan, g)
+            ent_g = normalized_entropy(counts_g, bins=bins, term_lut=term_lut_g)
+            e_parts.append(ent_g)
+            e_by_scale[g] = ent_g
+        x85 = np.concatenate(e_parts, axis=1)
 
     asym_cols: list[np.ndarray] = []
     for g in asymmetry_scales:
@@ -261,28 +359,48 @@ def estimate_descriptor_ops(
     bins: int,
     asymmetry_scales: Sequence[int],
     asymmetry_kinds: Sequence[str],
+    backend: str = "numpy_baseline",
 ) -> DescriptorAnalyticalOps:
     """Compute an explicit analytical operation count and LUT memory footprint for x94.
 
     Marked strictly as an analytical estimate: LUT table indexing and integer histogram
     increments are memory-bound integer ops rather than neural float MACs.
     """
-    n_pix = int(image_size) * int(image_size)
-    n_levels = len(grid_levels)
+    levels_t = tuple(int(g) for g in grid_levels)
+    bins_i = int(bins)
+    img_i = int(image_size)
+    resolved = resolve_entropy_backend(validate_entropy_backend(backend), img_i, levels_t, bins_i)
+
+    n_pix = img_i * img_i
+    n_levels = len(levels_t)
     quant_ops = n_pix  # 1 LUT lookup per pixel
-    # Offset addition + int32 bincount update per pixel per scale
-    hist_ops = n_levels * (2 * n_pix)
-    # Per region: bins LUT lookups + (bins - 1) sums + equiprobable check + 1 div
-    total_regions = sum(int(g) * int(g) for g in grid_levels)
-    ent_ops = total_regions * (3 * int(bins) + 1)
-    # Per asymmetry scale & kind: 3*g^2 ops (diff, abs, mean reduction)
+    total_regions = sum(g * g for g in levels_t)
+    ent_ops = total_regions * (3 * bins_i + 1)
     asym_regions = sum(int(g) * int(g) for g in asymmetry_scales)
     asym_ops = len(asymmetry_kinds) * asym_regions * 3
-    total_ops = quant_ops + hist_ops + ent_ops + asym_ops
 
     quant_lut_bytes = 256  # uint8[256]
-    unique_pix_counts = {(image_size // int(g)) * (image_size // int(g)) for g in grid_levels}
-    shannon_lut_bytes = sum((c + 1) * 8 for c in unique_pix_counts)  # float64
+    if resolved == "numpy_baseline":
+        hist_ops = n_levels * (2 * n_pix)
+        unique_pix_counts = {(img_i // g) * (img_i // g) for g in levels_t}
+        shannon_lut_bytes = sum((c + 1) * 8 for c in unique_pix_counts)
+    else:
+        g_max = max(levels_t)
+        coarse_cells = max(0, total_regions - (g_max * g_max))
+        if resolved == "c_single_pass":
+            hist_ops = n_pix + (coarse_cells * bins_i)
+            max_pix = (img_i // min(levels_t)) ** 2
+            shannon_lut_bytes = (max_pix + 1) * 8
+        elif resolved == "numpy_fused_entropy":
+            hist_ops = (2 * n_pix) + (coarse_cells * bins_i)
+            max_pix = (img_i // min(levels_t)) ** 2
+            shannon_lut_bytes = (max_pix + 1) * 8
+        else:  # numpy_finest_pyramid
+            hist_ops = (2 * n_pix) + (coarse_cells * bins_i)
+            unique_pix_counts = {(img_i // g) * (img_i // g) for g in levels_t}
+            shannon_lut_bytes = sum((c + 1) * 8 for c in unique_pix_counts)
+
+    total_ops = quant_ops + hist_ops + ent_ops + asym_ops
     return DescriptorAnalyticalOps(
         quantize_ops=quant_ops,
         histogram_ops=hist_ops,
@@ -301,10 +419,11 @@ def run_descriptor_cprofile(
     asymmetry_kinds: Sequence[str],
     top_n: int = 30,
     n_calls: int = 100,
+    backend: str = "auto",
 ) -> str:
     """Run Python `cProfile` on repeated single-image x94 extractions to locate call bottlenecks."""
     arr = _normalize_images_u8(images)
-    plan = build_entropy_plan(int(arr.shape[1]), grid_levels, bins)
+    plan = build_entropy_plan(int(arr.shape[1]), grid_levels, bins, backend=backend)
     n = int(arr.shape[0])
 
     # Warm caches once outside cProfile
@@ -333,7 +452,7 @@ def run_descriptor_cprofile(
 
     buf = io.StringIO()
     buf.write(
-        f"# cProfile summary ({n_calls} single-image calls; NOTE: trace callback inflates micro-ops)\n"
+        f"# cProfile summary (backend={plan.resolved_backend}, {n_calls} single-image calls; NOTE: trace callback inflates micro-ops)\n"
     )
     stats_obj = pstats.Stats(profiler, stream=buf).sort_stats("cumtime")
     stats_obj.print_stats(top_n)
@@ -372,33 +491,126 @@ def _measure_stages_for_batch_mode(
             batches.append(np.ascontiguousarray(images_u8[idx]))
     n_batches = len(batches)
 
-    term_luts = {g: _uniform_term_lut_for_scale(plan, g) for g in grid_levels}
-    stage_meta: list[tuple[str, str, str, str, int]] = [
-        ("quantize_pixels", "entropy", "all", f"O(H*W) [H=W={img_size}]", ops.quantize_ops),
-    ]
-    for g in grid_levels:
-        stage_meta.append(
-            (
-                f"region_histograms_g{g}",
-                "entropy",
-                f"{g}x{g}",
-                f"O(H*W) [2*H*W={2*img_size*img_size}]",
-                2 * img_size * img_size,
-            )
+    resolved = plan.resolved_backend
+    n_ent_feats = sum(g * g for g in grid_levels)
+    n_total_feats = n_ent_feats + len(asym_scales) * len(asym_kinds)
+    coarse_cells = max(0, n_ent_feats - plan.g_max * plan.g_max)
+
+    stage_meta: list[tuple[str, str, str, str, int]] = []
+    if resolved == "c_single_pass":
+        stage_meta.extend(
+            [
+                (
+                    "c_fine_hist",
+                    "entropy",
+                    f"{plan.g_max}x{plan.g_max}",
+                    f"O(H*W) [C99 fused quant+hist, H=W={img_size}]",
+                    2 * img_size * img_size,
+                ),
+                (
+                    "c_pyramid_sum",
+                    "entropy",
+                    "coarse",
+                    f"O(C_coarse*B) [C99 child sum, C_coarse={coarse_cells}]",
+                    coarse_cells * bins,
+                ),
+                (
+                    "c_entropy_lut",
+                    "entropy",
+                    "all",
+                    f"O(F_e*B) [C99 nlogn LUT, F_e={n_ent_feats}]",
+                    n_ent_feats * (3 * bins + 1),
+                ),
+            ]
         )
-    for g in grid_levels:
-        stage_meta.append(
-            (
-                f"normalized_entropy_g{g}",
-                "entropy",
-                f"{g}x{g}",
-                f"O(g^2*B) [{g*g}x{bins}]",
-                g * g * (3 * bins + 1),
-            )
+    elif resolved == "numpy_finest_pyramid":
+        stage_meta.extend(
+            [
+                ("quantize_pixels", "entropy", "all", f"O(H*W) [H=W={img_size}]", ops.quantize_ops),
+                (
+                    "fine_grid_histograms",
+                    "entropy",
+                    f"{plan.g_max}x{plan.g_max}",
+                    f"O(H*W) [1 global bincount, H=W={img_size}]",
+                    2 * img_size * img_size,
+                ),
+                (
+                    "pyramid_sum",
+                    "entropy",
+                    "coarse",
+                    f"O(C_coarse*B) [child sum, C_coarse={coarse_cells}]",
+                    coarse_cells * bins,
+                ),
+            ]
         )
-    stage_meta.append(
-        ("concat_x85", "assembly", "x85", f"O(F_e) [F_e={sum(g*g for g in grid_levels)}]", sum(g * g for g in grid_levels))
-    )
+        for g in grid_levels:
+            stage_meta.append(
+                (
+                    f"normalized_entropy_g{g}",
+                    "entropy",
+                    f"{g}x{g}",
+                    f"O(g^2*B) [{g*g}x{bins}]",
+                    g * g * (3 * bins + 1),
+                )
+            )
+        stage_meta.append(
+            ("concat_x85", "assembly", "x85", f"O(F_e) [F_e={n_ent_feats}]", n_ent_feats)
+        )
+    elif resolved == "numpy_fused_entropy":
+        stage_meta.extend(
+            [
+                ("quantize_pixels", "entropy", "all", f"O(H*W) [H=W={img_size}]", ops.quantize_ops),
+                (
+                    "fine_grid_histograms",
+                    "entropy",
+                    f"{plan.g_max}x{plan.g_max}",
+                    f"O(H*W) [1 global bincount, H=W={img_size}]",
+                    2 * img_size * img_size,
+                ),
+                (
+                    "pyramid_sum",
+                    "entropy",
+                    "coarse",
+                    f"O(C_coarse*B) [child sum, C_coarse={coarse_cells}]",
+                    coarse_cells * bins,
+                ),
+                (
+                    "fused_entropy",
+                    "entropy",
+                    "all",
+                    f"O(F_e*B) [fused nlogn LUT, F_e={n_ent_feats}]",
+                    n_ent_feats * (3 * bins + 1),
+                ),
+            ]
+        )
+    else:
+        stage_meta.append(
+            ("quantize_pixels", "entropy", "all", f"O(H*W) [H=W={img_size}]", ops.quantize_ops)
+        )
+        for g in grid_levels:
+            stage_meta.append(
+                (
+                    f"region_histograms_g{g}",
+                    "entropy",
+                    f"{g}x{g}",
+                    f"O(H*W) [2*H*W={2*img_size*img_size}]",
+                    2 * img_size * img_size,
+                )
+            )
+        for g in grid_levels:
+            stage_meta.append(
+                (
+                    f"normalized_entropy_g{g}",
+                    "entropy",
+                    f"{g}x{g}",
+                    f"O(g^2*B) [{g*g}x{bins}]",
+                    g * g * (3 * bins + 1),
+                )
+            )
+        stage_meta.append(
+            ("concat_x85", "assembly", "x85", f"O(F_e) [F_e={n_ent_feats}]", n_ent_feats)
+        )
+
     for g in asym_scales:
         stage_meta.append(
             (
@@ -409,8 +621,6 @@ def _measure_stages_for_batch_mode(
                 g * g * len(asym_kinds) * 3,
             )
         )
-    n_ent_feats = sum(g * g for g in grid_levels)
-    n_total_feats = n_ent_feats + len(asym_scales) * len(asym_kinds)
     stage_meta.append(
         ("concat_x94", "assembly", "x94", f"O(F_total) [F={n_total_feats}]", n_total_feats)
     )
@@ -421,36 +631,173 @@ def _measure_stages_for_batch_mode(
 
     stage_raw_ms: dict[str, list[float]] = {m[0]: [] for m in stage_meta}
 
-    def _run_staged_record(batch: np.ndarray, record: bool) -> np.ndarray:
-        t0 = time.perf_counter_ns()
-        q = quantize_pixels(batch, bins=bins, lut=plan.quant_lut)
-        t1 = time.perf_counter_ns()
-        if record:
-            stage_raw_ms["quantize_pixels"].append((t1 - t0) / 1e6)
+    # Precomputed / reusable per-backend stage buffers outside timed iterations
+    term_luts = {g: _uniform_term_lut_for_scale(plan, g) for g in grid_levels}
+    term_lut_map = dict(plan.term_luts_by_level)
+    offset_map = {g: (s, e) for g, s, e in plan.level_offsets}
 
-        e_parts: list[np.ndarray] = []
+    c_fine_buf = (
+        np.empty((batch_size, plan.g_max * plan.g_max, bins), dtype=np.uint32)
+        if resolved == "c_single_pass"
+        else None
+    )
+    c_all_buf = (
+        np.empty((batch_size, plan.total_features, bins), dtype=np.uint32)
+        if resolved == "c_single_pass"
+        else None
+    )
+    c_x85_buf = (
+        np.empty((batch_size, plan.total_features), dtype=np.float64)
+        if resolved == "c_single_pass"
+        else None
+    )
+
+    def _run_staged_record(batch: np.ndarray, record: bool) -> np.ndarray:
         e_by_scale: dict[int, np.ndarray] = {}
-        for g in grid_levels:
-            th0 = time.perf_counter_ns()
-            counts_g = region_histograms(q, g=g, bins=bins)
-            th1 = time.perf_counter_ns()
+
+        if resolved == "c_single_pass":
+            assert plan.native_buffers is not None
+            assert c_fine_buf is not None and c_all_buf is not None and c_x85_buf is not None
+            t0 = time.perf_counter_ns()
+            _ = run_native_stage_fine_hist(plan.native_buffers, batch, out_fine_hist=c_fine_buf)
+            t1 = time.perf_counter_ns()
             if record:
-                stage_raw_ms[f"region_histograms_g{g}"].append((th1 - th0) / 1e6)
+                stage_raw_ms["c_fine_hist"].append((t1 - t0) / 1e6)
+
+            ts0 = time.perf_counter_ns()
+            _ = run_native_stage_sum(plan.native_buffers, c_fine_buf, out_all_hist=c_all_buf)
+            ts1 = time.perf_counter_ns()
+            if record:
+                stage_raw_ms["c_pyramid_sum"].append((ts1 - ts0) / 1e6)
 
             te0 = time.perf_counter_ns()
-            ent_g = normalized_entropy(counts_g, bins=bins, term_lut=term_luts[g])
+            x85 = run_native_stage_entropy(plan.native_buffers, c_all_buf, out_features=c_x85_buf)
             te1 = time.perf_counter_ns()
             if record:
-                stage_raw_ms[f"normalized_entropy_g{g}"].append((te1 - te0) / 1e6)
+                stage_raw_ms["c_entropy_lut"].append((te1 - te0) / 1e6)
 
-            e_parts.append(ent_g)
-            e_by_scale[g] = ent_g
+            for g in asym_scales:
+                s_idx, e_idx = offset_map[g]
+                e_by_scale[g] = x85[:, s_idx:e_idx]
+        elif resolved == "numpy_finest_pyramid":
+            t0 = time.perf_counter_ns()
+            q = quantize_pixels(batch, bins=bins, lut=plan.quant_lut)
+            t1 = time.perf_counter_ns()
+            if record:
+                stage_raw_ms["quantize_pixels"].append((t1 - t0) / 1e6)
 
-        tc0 = time.perf_counter_ns()
-        x85 = np.concatenate(e_parts, axis=1)
-        tc1 = time.perf_counter_ns()
-        if record:
-            stage_raw_ms["concat_x85"].append((tc1 - tc0) / 1e6)
+            tfh0 = time.perf_counter_ns()
+            fine_counts = _fine_histograms_from_quantized(q, plan.g_max, plan.cell_side, bins)
+            tfh1 = time.perf_counter_ns()
+            if record:
+                stage_raw_ms["fine_grid_histograms"].append((tfh1 - tfh0) / 1e6)
+
+            tp0 = time.perf_counter_ns()
+            counts_by_level = _compute_pyramid_counts_from_fine(fine_counts, plan)
+            tp1 = time.perf_counter_ns()
+            if record:
+                stage_raw_ms["pyramid_sum"].append((tp1 - tp0) / 1e6)
+
+            e_parts: list[np.ndarray] = []
+            for g in grid_levels:
+                te0 = time.perf_counter_ns()
+                counts_g = counts_by_level[g]
+                terms = term_lut_map[g][counts_g]
+                ent_g = np.sum(terms, axis=-1) / plan.log2_bins
+                ent_g[np.all(counts_g == counts_g[:, :, :1], axis=-1)] = 1.0
+                te1 = time.perf_counter_ns()
+                if record:
+                    stage_raw_ms[f"normalized_entropy_g{g}"].append((te1 - te0) / 1e6)
+                e_parts.append(ent_g)
+                e_by_scale[g] = ent_g
+
+            tc0 = time.perf_counter_ns()
+            x85 = np.concatenate(e_parts, axis=1)
+            tc1 = time.perf_counter_ns()
+            if record:
+                stage_raw_ms["concat_x85"].append((tc1 - tc0) / 1e6)
+        elif resolved == "numpy_fused_entropy":
+            assert plan.nlogn_lut is not None
+            assert plan.npix_int_vec is not None
+            assert plan.npix_f64_vec is not None
+            assert plan.log2_npix_vec is not None
+            t0 = time.perf_counter_ns()
+            q = quantize_pixels(batch, bins=bins, lut=plan.quant_lut)
+            t1 = time.perf_counter_ns()
+            if record:
+                stage_raw_ms["quantize_pixels"].append((t1 - t0) / 1e6)
+
+            tfh0 = time.perf_counter_ns()
+            fine_counts = _fine_histograms_from_quantized(q, plan.g_max, plan.cell_side, bins)
+            tfh1 = time.perf_counter_ns()
+            if record:
+                stage_raw_ms["fine_grid_histograms"].append((tfh1 - tfh0) / 1e6)
+
+            tp0 = time.perf_counter_ns()
+            n_b_cur = int(batch.shape[0])
+            all_counts = np.empty((n_b_cur, plan.total_features, bins), dtype=np.int64)
+            f_s, f_e = offset_map[plan.g_max]
+            all_counts[:, f_s:f_e, :] = fine_counts
+            for g_curr, g_child, k in plan.merge_schedule:
+                cs, ce = offset_map[g_child]
+                ts, te = offset_map[g_curr]
+                all_counts[:, ts:te, :] = (
+                    all_counts[:, cs:ce, :]
+                    .reshape(n_b_cur, g_curr, k, g_curr, k, bins)
+                    .sum(axis=(2, 4))
+                    .reshape(n_b_cur, g_curr * g_curr, bins)
+                )
+            tp1 = time.perf_counter_ns()
+            if record:
+                stage_raw_ms["pyramid_sum"].append((tp1 - tp0) / 1e6)
+
+            te0 = time.perf_counter_ns()
+            s_vec = plan.nlogn_lut[all_counts].sum(axis=-1)
+            x85 = (
+                plan.log2_npix_vec[None, :] - (s_vec / plan.npix_f64_vec[None, :])
+            ) / plan.log2_bins
+            np.maximum(x85, 0.0, out=x85)
+            x85[np.max(all_counts, axis=-1) == plan.npix_int_vec[None, :]] = 0.0
+            x85[
+                np.all(all_counts == all_counts[:, :, :1], axis=-1)
+                & (plan.npix_int_vec[None, :] > 0)
+            ] = 1.0
+            te1 = time.perf_counter_ns()
+            if record:
+                stage_raw_ms["fused_entropy"].append((te1 - te0) / 1e6)
+
+            for g in asym_scales:
+                s_idx, e_idx = offset_map[g]
+                e_by_scale[g] = x85[:, s_idx:e_idx]
+        else:
+            t0 = time.perf_counter_ns()
+            q = quantize_pixels(batch, bins=bins, lut=plan.quant_lut)
+            t1 = time.perf_counter_ns()
+            if record:
+                stage_raw_ms["quantize_pixels"].append((t1 - t0) / 1e6)
+
+            e_parts = []
+            for g in grid_levels:
+                th0 = time.perf_counter_ns()
+                counts_g = region_histograms(q, g=g, bins=bins)
+                th1 = time.perf_counter_ns()
+                if record:
+                    stage_raw_ms[f"region_histograms_g{g}"].append((th1 - th0) / 1e6)
+
+                te0 = time.perf_counter_ns()
+                ent_g = normalized_entropy(counts_g, bins=bins, term_lut=term_luts[g])
+                te1 = time.perf_counter_ns()
+                if record:
+                    stage_raw_ms[f"normalized_entropy_g{g}"].append((te1 - te0) / 1e6)
+
+                e_parts.append(ent_g)
+                e_by_scale[g] = ent_g
+
+            tc0 = time.perf_counter_ns()
+            x85 = np.concatenate(e_parts, axis=1)
+            tc1 = time.perf_counter_ns()
+            if record:
+                stage_raw_ms["concat_x85"].append((tc1 - tc0) / 1e6)
 
         asym_cols: list[np.ndarray] = []
         for g in asym_scales:
@@ -510,24 +857,124 @@ def _measure_stages_for_batch_mode(
 
     # Single-pass memory attribution per stage using sample batch 0
     mem_batch = batches[0]
-    q_mem, snap_q = measure_memory_alloc(lambda: quantize_pixels(mem_batch, bins=bins, lut=plan.quant_lut))
-    stage_mem: dict[str, tuple[float, float]] = {
-        "quantize_pixels": (snap_q.tracemalloc_peak_kb, snap_q.rss_delta_mb)
-    }
-    e_parts_mem: list[np.ndarray] = []
+    stage_mem: dict[str, tuple[float, float]] = {}
     e_by_scale_mem: dict[int, np.ndarray] = {}
-    for g in grid_levels:
-        counts_m, snap_h = measure_memory_alloc(lambda gg=g: region_histograms(q_mem, g=gg, bins=bins))
-        stage_mem[f"region_histograms_g{g}"] = (snap_h.tracemalloc_peak_kb, snap_h.rss_delta_mb)
-        ent_m, snap_e = measure_memory_alloc(
-            lambda cc=counts_m, gg=g: normalized_entropy(cc, bins=bins, term_lut=term_luts[gg])
-        )
-        stage_mem[f"normalized_entropy_g{g}"] = (snap_e.tracemalloc_peak_kb, snap_e.rss_delta_mb)
-        e_parts_mem.append(ent_m)
-        e_by_scale_mem[g] = ent_m
 
-    x85_mem, snap_c85 = measure_memory_alloc(lambda: np.concatenate(e_parts_mem, axis=1))
-    stage_mem["concat_x85"] = (snap_c85.tracemalloc_peak_kb, snap_c85.rss_delta_mb)
+    if resolved == "c_single_pass":
+        assert plan.native_buffers is not None
+        assert c_fine_buf is not None and c_all_buf is not None and c_x85_buf is not None
+        fine_m, snap_cf = measure_memory_alloc(
+            lambda: run_native_stage_fine_hist(plan.native_buffers, mem_batch, out_fine_hist=c_fine_buf)
+        )
+        stage_mem["c_fine_hist"] = (snap_cf.tracemalloc_peak_kb, snap_cf.rss_delta_mb)
+        all_m, snap_cp = measure_memory_alloc(
+            lambda: run_native_stage_sum(plan.native_buffers, fine_m, out_all_hist=c_all_buf)
+        )
+        stage_mem["c_pyramid_sum"] = (snap_cp.tracemalloc_peak_kb, snap_cp.rss_delta_mb)
+        x85_mem, snap_ce = measure_memory_alloc(
+            lambda: run_native_stage_entropy(plan.native_buffers, all_m, out_features=c_x85_buf)
+        )
+        stage_mem["c_entropy_lut"] = (snap_ce.tracemalloc_peak_kb, snap_ce.rss_delta_mb)
+        for g in asym_scales:
+            s_idx, e_idx = offset_map[g]
+            e_by_scale_mem[g] = x85_mem[:, s_idx:e_idx]
+    elif resolved == "numpy_finest_pyramid":
+        q_mem, snap_q = measure_memory_alloc(
+            lambda: quantize_pixels(mem_batch, bins=bins, lut=plan.quant_lut)
+        )
+        stage_mem["quantize_pixels"] = (snap_q.tracemalloc_peak_kb, snap_q.rss_delta_mb)
+        fine_m, snap_fh = measure_memory_alloc(
+            lambda: _fine_histograms_from_quantized(q_mem, plan.g_max, plan.cell_side, bins)
+        )
+        stage_mem["fine_grid_histograms"] = (snap_fh.tracemalloc_peak_kb, snap_fh.rss_delta_mb)
+        c_map_m, snap_ps = measure_memory_alloc(
+            lambda: _compute_pyramid_counts_from_fine(fine_m, plan)
+        )
+        stage_mem["pyramid_sum"] = (snap_ps.tracemalloc_peak_kb, snap_ps.rss_delta_mb)
+        e_parts_mem: list[np.ndarray] = []
+        for g in grid_levels:
+            def _ent_finest(gg: int = g) -> np.ndarray:
+                cg = c_map_m[gg]
+                ent = np.sum(term_lut_map[gg][cg], axis=-1) / plan.log2_bins
+                ent[np.all(cg == cg[:, :, :1], axis=-1)] = 1.0
+                return ent
+
+            ent_m, snap_e = measure_memory_alloc(_ent_finest)
+            stage_mem[f"normalized_entropy_g{g}"] = (snap_e.tracemalloc_peak_kb, snap_e.rss_delta_mb)
+            e_parts_mem.append(ent_m)
+            e_by_scale_mem[g] = ent_m
+        x85_mem, snap_c85 = measure_memory_alloc(lambda: np.concatenate(e_parts_mem, axis=1))
+        stage_mem["concat_x85"] = (snap_c85.tracemalloc_peak_kb, snap_c85.rss_delta_mb)
+    elif resolved == "numpy_fused_entropy":
+        assert plan.nlogn_lut is not None
+        assert plan.npix_int_vec is not None
+        assert plan.npix_f64_vec is not None
+        assert plan.log2_npix_vec is not None
+        q_mem, snap_q = measure_memory_alloc(
+            lambda: quantize_pixels(mem_batch, bins=bins, lut=plan.quant_lut)
+        )
+        stage_mem["quantize_pixels"] = (snap_q.tracemalloc_peak_kb, snap_q.rss_delta_mb)
+        fine_m, snap_fh = measure_memory_alloc(
+            lambda: _fine_histograms_from_quantized(q_mem, plan.g_max, plan.cell_side, bins)
+        )
+        stage_mem["fine_grid_histograms"] = (snap_fh.tracemalloc_peak_kb, snap_fh.rss_delta_mb)
+
+        def _fused_pyr_mem() -> np.ndarray:
+            nb = int(mem_batch.shape[0])
+            ac = np.empty((nb, plan.total_features, bins), dtype=np.int64)
+            fs, fe = offset_map[plan.g_max]
+            ac[:, fs:fe, :] = fine_m
+            for g_curr, g_child, k in plan.merge_schedule:
+                cs, ce = offset_map[g_child]
+                ts, te = offset_map[g_curr]
+                ac[:, ts:te, :] = (
+                    ac[:, cs:ce, :]
+                    .reshape(nb, g_curr, k, g_curr, k, bins)
+                    .sum(axis=(2, 4))
+                    .reshape(nb, g_curr * g_curr, bins)
+                )
+            return ac
+
+        all_m, snap_ps = measure_memory_alloc(_fused_pyr_mem)
+        stage_mem["pyramid_sum"] = (snap_ps.tracemalloc_peak_kb, snap_ps.rss_delta_mb)
+
+        def _fused_ent_mem() -> np.ndarray:
+            assert plan.nlogn_lut is not None
+            assert plan.npix_int_vec is not None
+            assert plan.npix_f64_vec is not None
+            assert plan.log2_npix_vec is not None
+            sv = plan.nlogn_lut[all_m].sum(axis=-1)
+            ha = (plan.log2_npix_vec[None, :] - (sv / plan.npix_f64_vec[None, :])) / plan.log2_bins
+            np.maximum(ha, 0.0, out=ha)
+            ha[np.max(all_m, axis=-1) == plan.npix_int_vec[None, :]] = 0.0
+            ha[
+                np.all(all_m == all_m[:, :, :1], axis=-1) & (plan.npix_int_vec[None, :] > 0)
+            ] = 1.0
+            return ha
+
+        x85_mem, snap_fe = measure_memory_alloc(_fused_ent_mem)
+        stage_mem["fused_entropy"] = (snap_fe.tracemalloc_peak_kb, snap_fe.rss_delta_mb)
+        for g in asym_scales:
+            s_idx, e_idx = offset_map[g]
+            e_by_scale_mem[g] = x85_mem[:, s_idx:e_idx]
+    else:
+        q_mem, snap_q = measure_memory_alloc(
+            lambda: quantize_pixels(mem_batch, bins=bins, lut=plan.quant_lut)
+        )
+        stage_mem["quantize_pixels"] = (snap_q.tracemalloc_peak_kb, snap_q.rss_delta_mb)
+        e_parts_mem = []
+        for g in grid_levels:
+            counts_m, snap_h = measure_memory_alloc(lambda gg=g: region_histograms(q_mem, g=gg, bins=bins))
+            stage_mem[f"region_histograms_g{g}"] = (snap_h.tracemalloc_peak_kb, snap_h.rss_delta_mb)
+            ent_m, snap_e = measure_memory_alloc(
+                lambda cc=counts_m, gg=g: normalized_entropy(cc, bins=bins, term_lut=term_luts[gg])
+            )
+            stage_mem[f"normalized_entropy_g{g}"] = (snap_e.tracemalloc_peak_kb, snap_e.rss_delta_mb)
+            e_parts_mem.append(ent_m)
+            e_by_scale_mem[g] = ent_m
+
+        x85_mem, snap_c85 = measure_memory_alloc(lambda: np.concatenate(e_parts_mem, axis=1))
+        stage_mem["concat_x85"] = (snap_c85.tracemalloc_peak_kb, snap_c85.rss_delta_mb)
 
     asym_cols_mem: list[np.ndarray] = []
     for g in asym_scales:
@@ -616,6 +1063,7 @@ def profile_descriptor_stages(
     cprofile_top_n: int = 30,
     seed: int = 42,
     scaler: StandardScaler | None = None,
+    backend: str = "auto",
 ) -> DescriptorProfileReport:
     """Profile all x94 descriptor stages, initialization costs, memory, Python gap, and cProfile."""
     arr = _normalize_images_u8(images_u8)
@@ -623,6 +1071,7 @@ def profile_descriptor_stages(
     levels_t = tuple(int(g) for g in grid_levels)
     asym_s_t = tuple(int(g) for g in asymmetry_scales)
     asym_k_t = tuple(str(k) for k in asymmetry_kinds)
+    req_backend = validate_entropy_backend(backend)
 
     with thread_limits(threads):
         # 1. Measure one-time plan/LUT precomputations (clearing LRU cache first)
@@ -637,7 +1086,7 @@ def profile_descriptor_stages(
 
         build_shannon_term_lut.cache_clear()
         t_p0 = time.perf_counter_ns()
-        plan = build_entropy_plan(image_size, levels_t, bins)
+        plan = build_entropy_plan(image_size, levels_t, bins, backend=req_backend)
         init_plan_ms = (time.perf_counter_ns() - t_p0) / 1e6
 
         # 2. Verify exact numerical equivalence between staged execution and end-to-end
@@ -670,6 +1119,7 @@ def profile_descriptor_stages(
             bins=bins,
             asymmetry_scales=asym_s_t,
             asymmetry_kinds=asym_k_t,
+            backend=plan.resolved_backend,
         )
 
         # 3. Batch=1 detailed stage profile
@@ -735,6 +1185,7 @@ def profile_descriptor_stages(
             asymmetry_kinds=asym_k_t,
             top_n=cprofile_top_n,
             n_calls=min(100, timed_iters),
+            backend=plan.resolved_backend,
         )
 
     gap_ms = staged_sum_b1 - e2e_b1_stats.median_ms
@@ -764,6 +1215,8 @@ def profile_descriptor_stages(
         stages_batch_n=stages_bn,
         raw_e2e_batch1_ms=tuple(float(v) for v in raw_e2e_b1),
         cprofile_report_text=cprof_text,
+        requested_backend=plan.backend,
+        entropy_backend=plan.resolved_backend,
     )
 
 
@@ -795,9 +1248,11 @@ def profile_descriptor_scalability(
     bootstrap_resamples: int = 500,
     confidence_level: float = 0.95,
     seed: int = 42,
+    backend: str = "auto",
 ) -> tuple[DescriptorScalabilityRecord, ...]:
     """Sweep image_size, bins, and grid_levels separately on real samples (CPU, batch=1)."""
     arr_base = _normalize_images_u8(images_u8)
+    req_backend = validate_entropy_backend(backend)
     records: list[DescriptorScalabilityRecord] = []
 
     def _bench_cfg(
@@ -813,7 +1268,7 @@ def profile_descriptor_scalability(
         if not asym_s:
             raise ValueError(f"Grid levels {g_levels} require at least one scale >= 2 for asymmetry")
         t_p0 = time.perf_counter_ns()
-        plan = build_entropy_plan(img_size, g_levels, b_cnt)
+        plan = build_entropy_plan(img_size, g_levels, b_cnt, backend=req_backend)
         init_ms = (time.perf_counter_ns() - t_p0) / 1e6
 
         n_img = int(imgs.shape[0])
@@ -837,7 +1292,14 @@ def profile_descriptor_scalability(
             confidence_level=confidence_level,
             seed=seed,
         )
-        ops = estimate_descriptor_ops(img_size, g_levels, b_cnt, asym_s, asymmetry_kinds)
+        ops = estimate_descriptor_ops(
+            img_size,
+            g_levels,
+            b_cnt,
+            asym_s,
+            asymmetry_kinds,
+            backend=plan.resolved_backend,
+        )
         n_feats = sum(g * g for g in g_levels) + len(asym_s) * len(asymmetry_kinds)
         return DescriptorScalabilityRecord(
             sweep_dimension=sweep_dim,
@@ -856,6 +1318,7 @@ def profile_descriptor_scalability(
             throughput_samples_s=st.throughput_samples_s,
             analytical_ops_per_sample=ops.total_ops,
             expected_complexity_note=note,
+            entropy_backend=plan.resolved_backend,
         )
 
     base_levels_t = tuple(int(g) for g in base_grid_levels)

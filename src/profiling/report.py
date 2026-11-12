@@ -215,6 +215,7 @@ def write_descriptor_stage_artifacts(
     csv_path = output_dir / "descriptor_stage_times.csv"
     fieldnames = [
         "dataset_tag",
+        "entropy_backend",
         "batch_size",
         "threads",
         "stage",
@@ -242,6 +243,7 @@ def write_descriptor_stage_artifacts(
             d = asdict(rec)
             row = {
                 "dataset_tag": report.dataset_tag,
+                "entropy_backend": report.entropy_backend,
                 "batch_size": rec.batch_size,
                 "threads": report.threads,
                 **d,
@@ -283,6 +285,7 @@ def write_descriptor_scalability_csv(
         "grid_levels",
         "n_features",
         "threads",
+        "entropy_backend",
         "init_plan_ms",
         "median_ms",
         "iqr_ms",
@@ -813,7 +816,8 @@ def generate_profiling_figures(
     fig1_path = output_dir / "fig1_x94_stage_breakdown.png"
     fig1, axes1 = plt.subplots(1, 2, figsize=(15, 5.5), dpi=dpi)
     fig1.suptitle(
-        f"x94 Descriptor Stage Breakdown: {dataset_label} (CPU threads={desc_report.threads})",
+        f"x94 Descriptor Stage Breakdown: {dataset_label} "
+        f"(backend={desc_report.entropy_backend}, CPU threads={desc_report.threads})",
         fontsize=12,
         fontweight="bold",
     )
@@ -843,17 +847,29 @@ def generate_profiling_figures(
     axes1[0].legend(fontsize=8)
     axes1[0].grid(True, axis="x", linestyle=":", alpha=0.5)
 
-    # Stacked percentage summary grouped by macro-family
-    macro_groups = {
-        "Quantization LUT": sum(s.share_of_staged_sum_pct for s in core_stages if s.stage == "quantize_pixels"),
-        "Histograms (g=1,2,4,8)": sum(s.share_of_staged_sum_pct for s in core_stages if s.stage.startswith("region_histograms")),
-        "Entropy LUT (g=1,2,4,8)": sum(s.share_of_staged_sum_pct for s in core_stages if s.stage.startswith("normalized_entropy")),
-        "Asymmetry x9 (g=2,4,8)": sum(s.share_of_staged_sum_pct for s in core_stages if s.stage.startswith("asymmetry_")),
-        "Concat / Assembly": sum(s.share_of_staged_sum_pct for s in core_stages if s.stage.startswith("concat_")),
-    }
-    colors = ["#4c72b0", "#dd8452", "#55a868", "#8172b3", "#937860"]
+    # Stacked percentage summary grouped by macro-family (supports baseline, NumPy single-pass, and C99)
+    macro_specs = (
+        ("Quantization LUT", "#4c72b0", lambda s: s.stage == "quantize_pixels"),
+        ("C99 Fused Quant+Hist", "#4c72b0", lambda s: s.stage == "c_fine_hist"),
+        (
+            "Histograms",
+            "#dd8452",
+            lambda s: s.stage == "fine_grid_histograms" or s.stage.startswith("region_histograms"),
+        ),
+        ("Pyramid Child Sum", "#e5ae38", lambda s: s.stage in {"c_pyramid_sum", "pyramid_sum"}),
+        (
+            "Entropy LUT",
+            "#55a868",
+            lambda s: s.stage in {"c_entropy_lut", "fused_entropy"} or s.stage.startswith("normalized_entropy"),
+        ),
+        ("Asymmetry x9", "#8172b3", lambda s: s.stage.startswith("asymmetry_")),
+        ("Concat / Assembly", "#937860", lambda s: s.stage.startswith("concat_")),
+    )
     left = 0.0
-    for (m_name, pct), col in zip(macro_groups.items(), colors):
+    for m_name, col, pred in macro_specs:
+        if not any(pred(s) for s in core_stages):
+            continue
+        pct = sum(s.share_of_staged_sum_pct for s in core_stages if pred(s))
         axes1[1].barh([0], [pct], left=left, color=col, edgecolor="white", label=f"{m_name}: {pct:.1f}%")
         if pct >= 5.0:
             axes1[1].text(left + pct / 2.0, 0, f"{pct:.1f}%", ha="center", va="center", color="white", fontsize=8, fontweight="bold")
@@ -1020,7 +1036,7 @@ def generate_profiling_figures(
         dims = ("image_size", "bins", "grid_levels")
         fig5, axes5 = plt.subplots(1, 3, figsize=(16, 4.8), dpi=dpi)
         fig5.suptitle(
-            f"x94 Descriptor Scalability (CPU threads={desc_report.threads}, batch=1)",
+            f"x94 Descriptor Scalability (backend={desc_report.entropy_backend}, CPU threads={desc_report.threads}, batch=1)",
             fontsize=12,
             fontweight="bold",
         )
@@ -1156,8 +1172,9 @@ def write_profiling_readme(
     lines.extend(
         [
             "",
-            "## 3. Desglose Medido por Etapas del Descriptor x94 (`batch=1` vs E2E)",
+            f"## 3. Desglose Medido por Etapas del Descriptor x94 (`batch=1` vs E2E, backend `{desc_report.entropy_backend}`)",
             "",
+            f"- Backend de entropia activo: **`{desc_report.entropy_backend}`** (solicitado: `{desc_report.requested_backend}`).",
             f"- Inicializacion amortizable (`build_entropy_plan` + LUTs): **{desc_report.init_entropy_plan_ms:.4f} ms** (se computa una sola vez).",
             f"- Verificacion de equivalencia numerica (etapas vs `compute_entropy_features + compute_asymmetry_features`): max abs diff = **{desc_report.max_numerical_diff:.3e}**.",
             f"- Suma de medianas por etapa: **{desc_report.staged_sum_batch1_ms:.4f} ms** vs llamada formal E2E: **{desc_report.e2e_batch1_stats.median_ms:.4f} ms** (gap de dispatch/asignaciones Python = **{desc_report.python_call_gap_ms:+.4f} ms**, {desc_report.python_call_gap_pct:+.1f}%).",
@@ -1259,9 +1276,14 @@ def write_profiling_readme(
         ]
     )
     if dominant_stage is not None:
-        lines.append(
-            f"- **Cuello de botella principal de x94:** `{dominant_stage.stage}` consume **{dominant_stage.share_of_staged_sum_pct:.1f}%** ({dominant_stage.median_ms:.4f} ms) del tiempo por etapas; cualquier optimizacion futura en C/Cython debe priorizar el bucle de histogramas multi-escala antes que cuantizacion o asimetria."
-        )
+        if desc_report.entropy_backend == "c_single_pass":
+            lines.append(
+                f"- **Perfil actual de x94 (`c_single_pass`):** `{dominant_stage.stage}` concentra **{dominant_stage.share_of_staged_sum_pct:.1f}%** ({dominant_stage.median_ms:.4f} ms) del tiempo por etapas (E2E={desc_report.e2e_batch1_stats.median_ms:.4f} ms, gap de despacho Python/ctypes={desc_report.python_call_gap_ms:+.4f} ms); la piramide de histogramas ya opera en C99 en un solo paso."
+            )
+        else:
+            lines.append(
+                f"- **Cuello de botella principal de x94 (`{desc_report.entropy_backend}`):** `{dominant_stage.stage}` consume **{dominant_stage.share_of_staged_sum_pct:.1f}%** ({dominant_stage.median_ms:.4f} ms) del tiempo por etapas; habilitar `c_single_pass` consolida cuantizacion, piramide y entropia en un unico bucle C99."
+            )
     if fastest_row is not None and best_f1_row is not None:
         lines.append(
             f"- **Compromiso Pareto CPU (1 hilo, batch=1):** El pipeline mas rapido medido es `{fastest_row['model']}` (**{float(fastest_row['t_total_ms_median']):.4f} ms**, F1={float(fastest_row['f1']):.4f}), mientras el maximo F1 lo obtiene `{best_f1_row['model']}` (**F1={float(best_f1_row['f1']):.4f}**, {float(best_f1_row['t_total_ms_median']):.4f} ms)."

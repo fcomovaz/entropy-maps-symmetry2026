@@ -46,7 +46,7 @@ from experiments.benchmark_cpu_fair import (
     validate_required_inputs_upfront,
 )
 from src.features.asymmetry_maps import compute_asymmetry_features
-from src.features.entropy_maps import build_entropy_plan, compute_entropy_features
+from src.features.entropy_maps import ENTROPY_BACKENDS, build_entropy_plan, compute_entropy_features
 from src.models.cnn import (
     CnnConfig,
     create_model,
@@ -172,7 +172,13 @@ def build_parser() -> argparse.ArgumentParser:
         nargs="+",
         type=str,
         default=None,
-        help="Classical ML classifiers subset (e.g. dt knn lr rf, or 'all').",
+        help="Classical ML classifiers subset (e.g. dt knn lr lr_dot rf, or 'all').",
+    )
+    parser.add_argument(
+        "--entropy-backend",
+        choices=list(ENTROPY_BACKENDS),
+        default=None,
+        help="Override [profiling.descriptor].entropy_backend ('auto', 'numpy_baseline', 'numpy_finest_pyramid', 'numpy_fused_entropy', or 'c_single_pass').",
     )
     parser.add_argument(
         "--models",
@@ -259,7 +265,12 @@ def _measure_subset_descriptor_ms(
 
     with thread_limits(primary_threads):
         if subset_name == "x85_only":
-            plan_85 = build_entropy_plan(desc_cfg.image_size, desc_cfg.grid_levels, desc_cfg.bins)
+            plan_85 = build_entropy_plan(
+                desc_cfg.image_size,
+                desc_cfg.grid_levels,
+                desc_cfg.bins,
+                backend=desc_cfg.entropy_backend,
+            )
 
             def _fn85(idx: int) -> np.ndarray:
                 return compute_entropy_features(
@@ -277,7 +288,12 @@ def _measure_subset_descriptor_ms(
             )
         elif subset_name == "x9_only":
             asym_scales = tuple(int(g) for g in desc_cfg.asymmetry_scales)
-            plan_asym = build_entropy_plan(desc_cfg.image_size, asym_scales, desc_cfg.bins)
+            plan_asym = build_entropy_plan(
+                desc_cfg.image_size,
+                asym_scales,
+                desc_cfg.bins,
+                backend=desc_cfg.entropy_backend,
+            )
 
             def _fn9(idx: int) -> np.ndarray:
                 e_sub = compute_entropy_features(
@@ -303,7 +319,12 @@ def _measure_subset_descriptor_ms(
                 disable_gc=prof_cfg.protocol.disable_gc,
             )
         elif subset_name == "x94_full":
-            plan_94 = build_entropy_plan(desc_cfg.image_size, desc_cfg.grid_levels, desc_cfg.bins)
+            plan_94 = build_entropy_plan(
+                desc_cfg.image_size,
+                desc_cfg.grid_levels,
+                desc_cfg.bins,
+                backend=desc_cfg.entropy_backend,
+            )
 
             def _fn94(idx: int) -> np.ndarray:
                 return extract_x94_end_to_end(
@@ -438,6 +459,12 @@ def run_profile_target(
         )
 
         if dry_run:
+            short_plan = build_entropy_plan(
+                desc_cfg.image_size,
+                desc_cfg.grid_levels,
+                desc_cfg.bins,
+                backend=desc_cfg.entropy_backend,
+            )
             diff = float(
                 np.max(
                     np.abs(
@@ -447,6 +474,7 @@ def run_profile_target(
                             bins=desc_cfg.bins,
                             asymmetry_scales=desc_cfg.asymmetry_scales,
                             asymmetry_kinds=desc_cfg.asymmetry_kinds,
+                            plan=short_plan,
                         )
                         - extract_x94_end_to_end(
                             images_u8[:4],
@@ -454,13 +482,15 @@ def run_profile_target(
                             bins=desc_cfg.bins,
                             asymmetry_scales=desc_cfg.asymmetry_scales,
                             asymmetry_kinds=desc_cfg.asymmetry_kinds,
+                            plan=short_plan,
                         )
                     )
                 )
             )
             logger.info(
-                "Dry-run OK (short descriptor check): %s | samples=%d | x94 staged parity diff=%.3e",
+                "Dry-run OK (short descriptor check): %s | backend=%s | samples=%d | x94 staged parity diff=%.3e",
                 tag,
+                short_plan.resolved_backend,
                 int(images_u8.shape[0]),
                 diff,
             )
@@ -489,6 +519,7 @@ def run_profile_target(
             cprofile_top_n=desc_cfg.cprofile_top_n,
             seed=prof_cfg.seed,
             scaler=None,
+            backend=desc_cfg.entropy_backend,
         )
         write_descriptor_stage_artifacts(out_dir, desc_report, precision=prof_cfg.output.float_precision)
 
@@ -611,6 +642,7 @@ def run_profile_target(
         cprofile_top_n=desc_cfg.cprofile_top_n,
         seed=prof_cfg.seed,
         scaler=lr_scaler,
+        backend=desc_cfg.entropy_backend,
     )
     write_descriptor_stage_artifacts(out_dir, desc_report, precision=prof_cfg.output.float_precision)
 
@@ -630,6 +662,7 @@ def run_profile_target(
         bootstrap_resamples=min(500, prof_cfg.statistics.bootstrap_resamples),
         confidence_level=prof_cfg.statistics.confidence_level,
         seed=prof_cfg.seed,
+        backend=desc_cfg.entropy_backend,
     )
     write_descriptor_scalability_csv(
         output_path=out_dir / "descriptor_scalability.csv",
@@ -847,6 +880,11 @@ def main(argv: list[str] | None = None, project_root: Path = PROJECT_ROOT) -> in
 
         if args.inverted:
             prof_cfg = replace(prof_cfg, inverted=True)
+        if args.entropy_backend is not None:
+            prof_cfg = replace(
+                prof_cfg,
+                descriptor=replace(prof_cfg.descriptor, entropy_backend=args.entropy_backend),
+            )
 
         cls_cfg = replace(
             load_classification_config(prof_cfg.classification_config_path, prof_cfg.project_root),
