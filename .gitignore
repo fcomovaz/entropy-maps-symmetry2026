@@ -49,4 +49,9 @@ data/csv/*
 !data/csv/.gitkeep
 memory/*
 !memory/.gitkeep
+understanding/13_entropy_maps_optimization/native/build/
+*.dll
+*.lib
+*.exp
+*.obj
 
