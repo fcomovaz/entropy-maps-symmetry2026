@@ -50,19 +50,21 @@ Extracción modular y vectorizada de características visuales y descriptores de
 - `entropy_maps.py`:
   - `validate_grid_levels(levels, image_size)`: validación defensiva de escalas $g$ sin duplicados ni sobrepaso de tamaño.
   - `validate_bins(bins)`: comprobación estricta de contenedores de histograma $B \in [2, 256]$.
-  - `build_quantization_lut(bins)`: precomputación de Look-Up Table de 256 bytes para cuantización directa $O(1)$.
-  - `build_shannon_term_lut(n_pixels)`: precomputación y caché LRU de términos de Shannon $-p \log_2(p)$ para evitar llamadas trascendentales.
-  - `build_entropy_plan(image_size, grid_levels, bins)`: plan inmutable (`EntropyPlan`) que congela geometrías y tablas para ejecución en cero recálculos.
+  - `build_quantization_lut(bins)` y `build_shannon_term_lut(n_pixels)` / `build_nlogn_lut(n_pixels)`: precomputación O(1) de cuantización y tablas LUT de Shannon ($-p\log_2 p$ y $n\log_2 n$).
+  - `build_entropy_plan(image_size, grid_levels, bins, backend="auto")`: plan inmutable (`EntropyPlan`) que congela geometrías, buffers y tablas LUT para ejecución multiescala con cero recálculos.
+  - `resolve_entropy_backend(backend, image_size, grid_levels, bins)`: despacho multi-backend (`"auto"`, `"c_single_pass"`, `"numpy_finest_pyramid"`, `"numpy_fused_entropy"`, `"numpy_baseline"`) con selección automática en pirámide anidada y validación *fail-fast* en modos explícitos.
   - `region_edges(size, g)`: cálculo proporcional de límites $\lfloor k \cdot \text{size} / g \rfloor$ en división entera C-order.
   - `quantize_pixels(images, bins, lut=None)`: cuantización acelerada por LUT vectorizada para lotes.
   - `region_histograms(quantized, g, bins)`: histogramas discretos por región mediante truco de offset vectorizado sobre `np.bincount` en `int32`.
   - `normalized_entropy(counts, bins, term_lut=None)`: entropía de Shannon normalizada $H / \log_2(B)$, acelerada por LUT con valor analítico $1.0$ exacto para distribuciones equiprobables.
-  - `compute_entropy_features(images, grid_levels, bins, plan=None)`: extracción de vector concatenado $\sum g^2$ (85 características para escalas $[1, 2, 4, 8]$).
+  - `compute_entropy_features(images, grid_levels, bins, plan=None, backend=None)`: extracción de vector concatenado $\sum g^2$ (85 características para escalas $[1, 2, 4, 8]$) con paridad numérica $< 10^{-12}$ entre backends.
   - `feature_names(grid_levels, template)`: generación determinista de nombres de columna (ej. `E_1x1_r0_c0` ... `E_8x8_r7_c7`).
+- `native_entropy.py` / `build_native.py` / `native/entropy_pyramid.{h,c}`:
+  - Kernel nativo C99 compilado a `src/features/native/build/entropy_pyramid.dll` (configurado en `configs/features/native_entropy.toml`) y envoltura `ctypes` con buffers preasignados cero-asignaciones en caliente (`NativeEntropyPlan`, `compute_entropy_features_c`).
 - `entropy_csv.py`:
-  - `load_entropy_config(config_path, project_root)`: carga y validación inmutable (`EntropyCsvConfig`) anclada dinámicamente al raíz del proyecto.
+  - `load_entropy_config(config_path, project_root)`: carga y validación inmutable (`EntropyCsvConfig`) anclada dinámicamente al raíz del proyecto (incluyendo `entropy_backend`).
   - `validate_header(header, cfg)`: validación estricta de metadatos, dimensiones y contigüidad de columnas de píxeles.
-  - `export_entropy_csv(cfg, dry_run=False)`: escritor streaming en bloques (`chunk_size`), reemplazo atómico seguro (`.tmp` -> `.csv`) y emisión de sidecar JSON con metadata de reproducibilidad y tiempo de extracción.
+  - `export_entropy_csv(cfg, dry_run=False)`: escritor streaming en bloques (`chunk_size`), reemplazo atómico seguro (`.tmp` -> `.csv`) y emisión de sidecar JSON con metadata de reproducibilidad, `entropy_backend`, `resolved_backend` y tiempo de extracción.
 - `asymmetry_maps.py`:
   - `validate_scales(scales, global_scale=1)`: validación estricta de escalas espaciales $g \ge 2$ sin duplicados y exclusión de escala global.
   - `validate_kinds(kinds)`: comprobación defensiva de medidas canónicas (`"lr"`, `"tb"`, `"rot180"`).
@@ -85,7 +87,7 @@ Clasificación supervisada ligera, ablación de subconjuntos y explicabilidad es
   - `load_classification_config(config_path, project_root)`: carga y validación inmutable (`ClassificationConfig`) anclada a `configs/base.toml` y `configs/asymmetry/*.toml`.
   - `resolve_feature_groups(header, cfg)`: validación y resolución determinista de subconjuntos (`x94_full`, `x85_only`, `x9_only`, `E_1x1..E_8x8`, `asym_2x2..asym_8x8`, `asym_lr`, `asym_tb`, `asym_rot180`).
   - `load_and_split_descriptors(cfg, object_name=None, subset_name=None)`: filtrado en memoria de particiones permitidas (excluyendo estrictamente `ground_truth`), selección de objeto en MVTec-AD y partición `presplit` (KolektorSDD2) o `stratified` reproducible en memoria (MVTec-AD) sin mutar los archivos CSV en disco.
-  - `build_classifier(classifier_name, cfg)`: construcción de `RandomForestClassifier` o `Pipeline(StandardScaler + KNeighborsClassifier)`.
+  - `build_classifier(classifier_name, cfg, linear_mode=None)`: construcción de `RandomForestClassifier`, `DecisionTreeClassifier`, `Pipeline(StandardScaler + KNeighborsClassifier | LogisticRegression)` o núcleo lineal plegado `LinearDotCoreClassifier` (`lr_dot`, donde escala y sesgo del `StandardScaler` se fusionan algebraicamente en `w_eff @ x + b_eff`).
   - `train_and_evaluate(partition, classifier_name, cfg, subset_name=None)`: entrenamiento, evaluación de métricas (`Accuracy`, `Balanced Accuracy`, `Precision`, `Recall`, `F1`, `ROC-AUC`, `PR-AUC`, matriz de confusión) y separación de tiempos (`T_model_train`, `T_model_inference`, `ms/sample`).
   - `run_subset_ablation(cfg, object_name, classifier_name, base_partition=None)`: evaluación comparativa de subconjuntos sobre la misma partición exacta para cuantificar la ganancia de simetría $\Delta\text{F1}(\mathbf{x}_{94} - \mathbf{x}_{85})$ y la escala de entropía óptima.
   - `compute_explainability(model, partition, cfg)`: motor de explicabilidad (impureza Gini MDI para Random Forest; importancia por permutación en test o distancia discriminante de Fisher para k-NN) con desglose por familia ($\mathbf{x}_{85}$ vs $\mathbf{x}_9$), por escala ($1\times1, 2\times2, 4\times4, 8\times8$), por eje de simetría (`lr`, `tb`, `rot180`) y reconstrucción de mapas de calor espaciales 2D ($2\times2, 4\times4, 8\times8$).
