@@ -1,6 +1,8 @@
 # Resultados de Clasificación Supervisada, Ablación y Explicabilidad ($\mathbf{x}_{94} = [\mathbf{x}_{85}, \mathbf{x}_9]$)
 
-Este directorio contiene la evidencia experimental cuantitativa (`.json`, `.csv`) y visual (`.png`) generada por `experiments/evaluate_descriptors.py` sobre los 4 datasets tabulares completos (`kolektorsdd2`, `kolektorsdd2-inverted`, `mvtec-ad` y `mvtec-ad-inverted`).
+Este directorio contiene la evidencia experimental cuantitativa (`.json`, `.csv`) y visual (`.png`) generada por `experiments/evaluate_descriptors.py` sobre los datasets tabulares (`kolektorsdd2`, `kolektorsdd2-inverted`, `mvtec-ad` y `mvtec-ad-inverted`).
+
+> **Nota sobre hiperparámetros y alcance de las carpetas:** Actualmente el flujo soporta cinco clasificadores (`dt`, `knn`, `lr`, `lr_dot` y `rf`). En `configs/classification/kolektorsdd2.toml`, `rf` usa `n_estimators = 200, max_depth = 6` (`dt max_depth = 16`); en `configs/classification/mvtec_ad.toml`, la configuración vigente fija `rf` en `n_estimators = 100, max_depth = 12` (`dt max_depth = 3`). Las secciones 2–4 conservan el registro diagnóstico histórico del barrido inicial `rf` con 200 árboles sobre las 15 categorías de MVTec-AD (`mvtec_all_objects_rf_summary.csv`, generado únicamente al invocar `--all-objects`).
 
 ---
 
@@ -8,14 +10,14 @@ Este directorio contiene la evidencia experimental cuantitativa (`.json`, `.csv`
 
 | Carpeta / Archivo | Contenido |
 |---|---|
-| `kolektorsdd2/full_rf/`, `kolektorsdd2/full_knn/` | Resultados sobre KolektorSDD2 estándar (`split_mode = "presplit"`, Train = 2,331, Test = 1,004). |
-| `kolektorsdd2-inverted/full_rf/`, `kolektorsdd2-inverted/full_knn/` | Resultados sobre KolektorSDD2 invertido ($255 - I$ antes de letterbox). |
-| `mvtec-ad/<objeto>_rf/`, `mvtec-ad/bottle_knn/` | Resultados por categoría sobre las 15 clases de MVTec-AD estándar (`split_mode = "stratified"`, 80% train / 20% test en memoria, `seed = 42`, excluyendo `ground_truth`). |
-| `mvtec-ad-inverted/<objeto>_rf/`, `mvtec-ad-inverted/bottle_knn/` | Resultados por categoría sobre las 15 clases de MVTec-AD invertido. |
-| `mvtec-ad/mvtec_all_objects_rf_summary.csv` y `.png` | Tabla consolidada y gráfica comparativa de las 15 categorías de MVTec-AD estándar. |
-| `mvtec-ad-inverted/mvtec_all_objects_rf_summary.csv` y `.png` | Tabla consolidada y gráfica comparativa de las 15 categorías de MVTec-AD invertido. |
+| `kolektorsdd2/full_<dt\|knn\|lr\|lr_dot\|rf>/` | Resultados sobre KolektorSDD2 estándar (`split_mode = "presplit"`, Train = 2,331, Test = 1,004). |
+| `kolektorsdd2-inverted/full_<dt\|knn\|lr\|lr_dot\|rf>/` | Resultados sobre KolektorSDD2 invertido ($255 - I$ antes de letterbox). |
+| `mvtec-ad/<objeto>_<dt\|knn\|lr\|lr_dot\|rf>/` | Resultados por categoría en MVTec-AD estándar (`split_mode = "stratified"`, 80% train / 20% test en memoria, `seed = 42`, excluyendo `ground_truth`; `bottle` cubre los 5 clasificadores). |
+| `mvtec-ad-inverted/<objeto>_<dt\|knn\|lr\|lr_dot\|rf>/` | Resultados por categoría sobre MVTec-AD invertido. |
+| `mvtec-ad/mvtec_all_objects_rf_summary.csv` y `.png` | Tabla consolidada y gráfica comparativa cuando se ejecuta `--all-objects` en MVTec-AD estándar. |
+| `mvtec-ad-inverted/mvtec_all_objects_rf_summary.csv` y `.png` | Tabla consolidada y gráfica comparativa cuando se ejecuta `--all-objects` en MVTec-AD invertido. |
 
-Dentro de cada subcarpeta individual (`<objeto_o_full>_<rf|knn>/`) se encuentran 8 archivos:
+Dentro de cada subcarpeta individual (`<objeto_o_full>_<dt|knn|lr|lr_dot|rf>/`) se encuentran 8 archivos:
 1. `metrics_summary.json`: Conteos por clase, métricas del descriptor activo, hallazgos de explicabilidad y tiempos desglosados (`T_data_load_s`, `T_model_train_s`, `T_model_inference_s`, `inference_ms_per_sample`).
 2. `ablation_table.csv`: Comparación de `x85_only`, `x9_only`, `x94_full`, `E_1x1`, `E_2x2`, `E_4x4` y `E_8x8`.
 3. `feature_importance.csv`: Ranking completo de las 94 características con su peso bruto y porcentaje normalizado (`share_pct`).

@@ -3,8 +3,15 @@
 - **Review Date:** 2026-11-09 *(Follow-up Design Notes §3 added 2026-11-11)*
 - **Reference Specification:** [`tasks/review_01.md`](tasks/review_01.md)
 - **Workspace Root:** `d:/Publications/2026-10-Symmetry-Entropy/code`
-- **Git Revision Audited:** `bf4a29f` *(local full-results snapshot audited 2026-11-09; current repo HEAD is `65e668f`, which ignores heavy `results/` CSVs/JSONs via `.gitignore` while keeping [`results/profiling/*/README.md`](results/profiling/mvtec-ad_bottle/README.md) tracked)*
+- **Git Revision Audited:** `bf4a29f` *(historical full-results snapshot audited 2026-11-09; numbers below preserve that audit verbatim)*
 - **Target Decision:** Determine with peer-review rigor whether (1) the scientific hypothesis is valid and verified, (2) the work constitutes real scientific research vs. speculation, (3) the underlying CSV/JSON experimental artifacts are internally consistent and methodologically sound, and (4) we can proceed to a **native C/C++ implementation of the $\mathbf{x}_{94}$ descriptor + lightweight classifier pipeline**.
+
+> [!NOTE]
+> **Post-Audit Status on `main` (2026-11-11, post-merge `486c111`):** Since this `bf4a29f` audit was recorded, three major actions landed on `main` and are summarized with updated metrics in [`HYPOTHESIS.md`](HYPOTHESIS.md):
+> - **`M1` (Split Parity):** Re-ran CNN checkpoints locally with `--seeds 42` across `kolektorsdd2` and `mvtec-ad_bottle` (normal + inverted), aligning CNN and classical ML onto the exact same `seed=42` splits.
+> - **Track A + `F5` (C99 Kernel & `lr_dot`):** Integrated Lab 13 (`entropy_pyramid.c` single-pass C99 backend + `numpy_finest_pyramid`/`numpy_fused_entropy`) and `LinearDotCoreClassifier` (`lr_dot`) into `src/` and re-ran CPU-fair benchmarks (`results/comparison_cpu/`) and profiling (`results/profiling/`), dropping `lr_dot (x94)` to `0.36–0.39 ms` (`3.64×` faster than `ultra_tiny` on `kolektorsdd2`).
+> - **`D1` (Housekeeping):** Fixed `test_cnn_cli.py` temp-dir isolation and updated stale READMEs (`RESUME.md`, `tests/README.md`, `understanding/README.md`, `experiments/README.md`, `results/README.md`, `results/classification/README.md`).
+> - **Still Open:** `M2` (`val_f1` non-degeneracy guard in `evaluate.py` + dual $\tau=0.50$/$\tau^*$ ML+CNN reporting), `M3` (CNN/CPU sweeps on `tile` and additional MVTec-AD categories), and `[1, 2, 4, 8, 16]` grid ablation.
 
 ---
 

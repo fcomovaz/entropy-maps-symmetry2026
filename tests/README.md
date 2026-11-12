@@ -49,10 +49,11 @@ Suites de pruebas automáticas, unitarias y de integración del proyecto.
 # 9. Pruebas pedagógicas de laboratorios locales
 .\.venv\Scripts\python.exe understanding/03_entropy_benchmark/test_entropy.py
 .\.venv\Scripts\python.exe understanding/04_lightweight_cnns/tests/test_models.py
-.\.venv\Scripts\python.exe understanding/05_symmetry_features/test_symmetry.py
-.\.venv\Scripts\python.exe understanding/06_entropy_pyramid_descriptor/test_descriptor.py
-.\.venv\Scripts\python.exe understanding/07_descriptor_behavior/test_behavior.py
+.\.venv\Scripts\python.exe understanding/05_symmetry_features/tests/test_symmetry_features.py
+.\.venv\Scripts\python.exe understanding/06_entropy_pyramid_descriptor/tests/test_descriptor.py
+$env:PYTHONPATH = (Get-Location).Path; .\.venv\Scripts\python.exe understanding/07_descriptor_behavior/tests/test_behavior_helpers.py
 .\.venv\Scripts\python.exe understanding/07_entropy_maps_vectorized/explain_entropy_maps.py
+.\.venv\Scripts\python.exe understanding/13_entropy_maps_optimization/tests/test_entropy_variants.py
 ```
 
 ---
@@ -77,7 +78,7 @@ Suites de pruebas automáticas, unitarias y de integración del proyecto.
 | `test_cnn_data.py` | Ingesta directa de PNGs, exclusión de `ground_truth`, paridad de split con baseline y validación de 128x128 | Cobertura de `src/models/cnn/data.py` |
 | `test_cnn_train.py` | Smoke test de entrenamiento (convergencia de pérdida), determinismo de semillas y early stopping | Cobertura de `src/models/cnn/train.py` |
 | `test_cnn_evaluate.py` | Cálculo de métricas compatibles con `ClassificationMetrics` (Acc, BalAcc, F1, ROC, PR) y probabilidades | Cobertura de `src/models/cnn/evaluate.py` |
-| `test_cnn_cli.py` | Validación CLI dry-run para ambos datasets, manejo de errores y reporte comparativo | Cobertura de `experiments/evaluate_cnn.py` y `compare_baseline_vs_cnn.py` |
+| `test_cnn_cli.py` | Validación CLI dry-run para ambos datasets, manejo de errores y reporte comparativo aislado en `TemporaryDirectory` | Cobertura de `experiments/evaluate_cnn.py` y `compare_baseline_vs_cnn.py` |
 | `test_profiling_config.py` | Carga TOML de profiling, validación fail-fast ante claves faltantes/dispositivo `cuda`/`entropy_backend` inválido, resolución dinámica de rutas y listado de objetos | Cobertura de `src/profiling/config.py` |
 | `test_profiling_timing.py` | Mediana/IQR/p95/IC95% con datos conocidos, medición no negativa, restauración garantizada de `gc` y pinning de hilos (`torch`/`threadpoolctl`) | Cobertura de `src/profiling/timing.py` |
 | `test_profiling_descriptor_stages.py` | Equivalencia numérica exacta ($< 10^{-12}$) por etapas en backends base, NumPy piramidal y C99 frente a `src/features/`, suma porcentual $\approx 100\,\%$, forma `[N, 94]` y escalabilidad | Cobertura de `src/profiling/descriptor_stages.py` |
@@ -86,6 +87,7 @@ Suites de pruebas automáticas, unitarias y de integración del proyecto.
 | `test_benchmark_cpu_fair_cli.py` | Ejecución `--dry-run` de Fase A/B (código `0`), imposición estricta de `device=cpu`, rechazo fail-fast de `--device cuda` y errores por checkpoints faltantes | Cobertura CLI de `benchmark_cpu_fair.py` y `profile_pipelines.py` |
 | `03/test_entropy.py` | 5 tests: formulaciones Shannon E1–E5, cotas, LUTs y rankings | Utiliza artefactos cacheados de 01 |
 | `04/tests/test_models.py` | 8 tests: shapes, backward/Adam, parámetros y capas depthwise en 7 CNNs | CPU obligatorio, CUDA probado en hardware compatible |
-| `05/test_symmetry.py` | 20 tests: simetrías LR/TB/R180, desigualdades y rangos de asimetría | Verificación matemática de residuos espaciales |
-| `06/test_descriptor.py` | 25 tests: vector canónico x94, pirámide espacial 1/2/4/8 e inmutabilidad | Valida esquema `x94-v1` |
-| `07/test_behavior.py` | 15 tests: respuesta de x94 ante ruido, desenfoque, contraste y defectos sintéticos | Caracterización de límites y sensibilidad |
+| `05/tests/test_symmetry_features.py` | 20 tests: simetrías LR/TB/R180, desigualdades y rangos de asimetría | Verificación matemática de residuos espaciales |
+| `06/tests/test_descriptor.py` | 25 tests: vector canónico x94, pirámide espacial 1/2/4/8 e inmutabilidad | Valida esquema `x94-v1` |
+| `07/tests/test_behavior_helpers.py` | 15 tests: respuesta de x94 ante ruido, desenfoque, contraste y defectos sintéticos | Caracterización de límites y sensibilidad (invocar con `PYTHONPATH` en `code/`) |
+| `13/tests/test_entropy_variants.py` | 13 tests: paridad numérica `V0–V3` ($\le 10^{-12}$), pirámides anidadas, `bins` arbitrarios y C99 zero-alloc | Valida `numpy_finest_pyramid`, `numpy_fused_entropy` y `entropy_pyramid.dll` |

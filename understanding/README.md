@@ -8,12 +8,12 @@ No es código de producción: una implementación migra a `src/` únicamente cua
 
 ## Estado general: ¿En qué fase estamos?
 
-El proyecto se encuentra en la transición entre el análisis exploratorio a nivel de componentes y la experimentación formal con datasets reales:
+El proyecto ha completado la exploración por componentes, la experimentación formal en datasets reales y la optimización del descriptor en Python/NumPy puro y C99 nativo, preparándose para la portación final a microcontrolador:
 
 ```
-[ Fase 1: Primitivas ]  ──>  [ Fase 2: Baselines CNN ]  ──>  [ Fase 3: Descriptor x94 ]  ──>  [ Fase 4: Datasets Reales ]  ──>  [ Fase 5: Experimentos ]
-   (01, 02, 03)                     (04)                         (05, 06, 07)                    (08, 09, 10, 11)                 (experiments/)
-    COMPLETADA                       COMPLETADA                    COMPLETADA                       COMPLETADA                    SIGUIENTE HITO
+[ Fase 1: Primitivas ] -> [ Fase 2: CNNs ] -> [ Fase 3: x94 ] -> [ Fase 4: Datasets ] -> [ Fase 5: Experimentos ] -> [ Fase 6: Opt. CPU / C99 ]
+     (01, 02, 03)               (04)            (05, 06, 07)      (08, 09, 10, 11)        (12 + experiments/)        (13 + src/ optimizado)
+      COMPLETADA             COMPLETADA          COMPLETADA          COMPLETADA               COMPLETADA                COMPLETADA (Pre-MCU)
 ```
 
 1. **Fase 1 — Primitivas matemáticas y computacionales (Completada):**
@@ -29,10 +29,11 @@ El proyecto se encuentra en la transición entre el análisis exploratorio a niv
 4. **Fase 4 — Validación y control de datasets reales (Completada):**
    - MVTec-AD estandarizado a 128x128 en grises e invertido ([08](08_verify_mvtec_preprocessing/README.md)), y su serialización tabular de 16391 columnas con reconstrucción exacta ([09](09_verify_mvtec_csv/README.md)).
    - KolektorSDD2 preprocesado mediante clasificación por máscara nativa a 128x128 ([10](10_verify_kolektorsdd2/README.md)), y su serialización tabular de 16389 columnas con reconstrucción exacta ([11](11_verify_kolektorsdd2_csv/README.md)).
-5. **Próxima fase — Integración científica (`code/experiments/`):**
-   - Clasificación de defectos con clasificadores ligeros (RF, k-NN, DT, LR) consumiendo `x94` y comparación contra CNNs de [04](04_lightweight_cnns/README.md).
-   - Profiling granular CPU y análisis comparativo justo (`T_total = T_descriptor + T_model`), precedido por el laboratorio [12](12_profiling_stages/README.md).
-   - Pipeline de selección de regiones informativas (top-k / umbral) conectado a las CNN.
+5. **Fase 5 — Experimentación formal y profiling en CPU (Completada):**
+   - Clasificación supervisada ligera (`dt`, `knn`, `lr`, `lr_dot`, `rf`), ablaciones $\mathbf{x}_{85}$ vs $\mathbf{x}_9$ vs $\mathbf{x}_{94}$ y comparación 100 % CPU justa frente a las 7 CNNs ligeras en `experiments/`.
+   - Descomposición granular por etapas de $\mathbf{x}_{94}$ y capas PyTorch en [12](12_profiling_stages/README.md), identificando el cuello de botella de las 85 rebanadas Python/NumPy y el wrapper de `scikit-learn`.
+6. **Fase 6 — Optimización algorítmica y kernel C99 Pre-MCU (Completada):**
+   - Validación matemática y experimental de paso único en grilla más fina con pirámide aditiva en NumPy puro (`numpy_finest_pyramid`) y kernel C99 portable (`c_single_pass`), más el núcleo lineal plegado `lr_dot` ([13](13_entropy_maps_optimization/README.md)), promovidos al pipeline formal `src/`.
 
 ---
 
@@ -54,6 +55,9 @@ Todos los laboratorios residen en carpetas hermanas dentro de `code/understandin
 | [10_verify_kolektorsdd2/](10_verify_kolektorsdd2/README.md) | Verificación e integridad KolektorSDD2 | `data/preprocessed/KolektorSDD2(-inverted)` | Conteos good/defect y `kolektorsdd2_verification.png` |
 | [11_verify_kolektorsdd2_csv/](11_verify_kolektorsdd2_csv/README.md) | Control de integridad CSV KolektorSDD2 | `data/csv/kolektorsdd2(-inverted).csv` | Validación 16389 cols y `csv_roundtrip.png` |
 | [12_profiling_stages/](12_profiling_stages/README.md) | Profiling manual por etapa ($\mathbf{x}_{94}$) y capa (`ds_cnn`) en CPU | Sintético o PNG `128x128` | Desglose `perf_counter_ns`, `cProfile`, `torch.profiler` y figura apilada |
+| [13_entropy_maps_optimization/](13_entropy_maps_optimization/README.md) | Paso único en grilla más fina, pirámide aditiva NumPy (`V1/V2`) y kernel C99 (`V3`) + `lr_dot` | `real:mvtec-ad` (`n=200`, `128x128`) | 13 tests de paridad ($\le 1.89\times10^{-15}$), `benchmark_*.csv` y 7+1 figuras |
+
+Además existe [`07_entropy_maps_vectorized/explain_entropy_maps.py`](07_entropy_maps_vectorized/explain_entropy_maps.py) como guion explicativo visual de la vectorización de mapas $\mathbf{x}_{85}$.
 
 ---
 
@@ -76,9 +80,11 @@ Píxeles crudos
      │                                                                                       │
      └──> [10] KolektorSDD2 (clasificación por máscara nativa, 128x128, grises) <────────────┘
                  │
-                 └───> [11] KolektorSDD2 serializado en CSV (16387 cols, row-major)
+                 └───> [11] KolektorSDD2 serializado en CSV (16389 cols, row-major)
                              │
-                             └───> Conexión formal en experiments/ (clasificación, selección y coste total)
+                             └───> [12] Profiling por etapas  ──>  [13] Optimización single-pass (Py + C99)
+                                         │                                  │
+                                         └──────────> Pipeline formal en src/ y experiments/ <──────────────┘
 ```
 
 ---
@@ -109,48 +115,58 @@ Píxeles crudos
 - **Serialización tabular CSV de KolektorSDD2 (11):**
   - Exportación en streaming atómica (`.tmp` -> final) de 16389 columnas (`split`, `type`, `file_name`, 16384 intensidades de píxel en row-major, `width`, `height`).
   - Total de 3335 muestras balanceadas por split (`train`: 2085 good, 246 defect; `test`: 894 good, 110 defect) y reconstrucción exacta píxel a píxel (diferencia absoluta 0).
+- **Profiling granular en CPU (12):**
+  - En la implementación baseline, la extracción de $\mathbf{x}_{94}$ invertía la mayor parte del tiempo en 85 iteraciones Python (`slice` + `np.bincount`, con `8x8` dominando), el *gap* de despacho inter-etapa y el wrapper `Pipeline.predict` de `scikit-learn` (`StandardScaler` + validación), ocultando el costo real de un producto punto de 94 dimensiones.
+- **Optimización single-pass y núcleo C99 pre-MCU (13):**
+  - Al calcular histogramas únicamente sobre la grilla más fina ($8\times8$) en una sola lectura y obtener $4\times4$, $2\times2$ y $1\times1$ por suma exacta de bloques hijo, **NumPy puro (`numpy_finest_pyramid`)** acelera $\mathbf{x}_{85}$ en `9.40x` y el kernel **C99 (`c_single_pass`, sin `malloc` en batch=1)** alcanza `92.65x` (`0.024 ms` vs `2.23 ms`) manteniendo paridad numérica $\le 1.89\times10^{-15}$. El plegado algebraico de `StandardScaler` en un producto punto directo (`lr_dot`) elimina el overhead de `scikit-learn`.
 
 ---
 
-## Qué falta comprender o comprobar (Gaps hacia el paper)
+## Qué está verificado y qué sigue abierto hacia el paper y el MCU
 
-1. **Capacidad predictiva real:** evaluar si `x94` separa defectos industriales reales en MVTec-AD y KolektorSDD2 mediante clasificadores clásicos (regresión logística, Random Forest, SVM) y MLP ligeros.
-2. **Ablación de componentes:** cuantificar el aporte real de las 85 entropías solas vs. las 9 asimetrías solas vs. el vector combinado 94.
-3. **Mecanismos de selección:** diseñar selectores basados en entropía local (top-k / threshold) para descartar regiones homogéneas y alimentar las CNN de [04](04_lightweight_cnns/README.md).
-4. **Evaluación de coste total ($T_{\text{total}}$):** verificar experimentalmente si seleccionar parches reduce el tiempo total de inferencia o si el coste del selector ($T_{\text{selector}}$) supera el ahorro del modelo ($T_{\text{model}}$).
+1. **Capacidad predictiva real y ablación (`Completado` — ver [`../HYPOTHESIS.md`](../HYPOTHESIS.md)):** evaluado en MVTec-AD y KolektorSDD2 con clasificadores ligeros (`dt`, `knn`, `lr`, `lr_dot`, `rf`) frente a 7 CNNs ligeras. Confirmado el aporte de $\mathbf{x}_9$ sobre $\mathbf{x}_{85}$ y la invarianza fotométrica en imágenes sin padding; refutada la superioridad universal frente a CNNs en micro-fisuras sub-celda (`KolektorSDD2`).
+2. **Evaluación justa de coste total ($T_{\text{total}}$) en CPU (`Completado`):** medido extremo a extremo (`T_descriptor + T_model`) en Python puro (`numpy_baseline`, `numpy_finest_pyramid`) y con entropía en C99 (`c_single_pass`), demostrando que la asimetría $\mathbf{x}_9$ en NumPy pasa a ser el siguiente candidato natural para migrar a C junto con `entropy_pyramid.c`.
+3. **Migración completa a C/C++ en microcontrolador (MCU):** portar las 9 asimetrías (`2x2`, `4x4`, `8x8`) y los coeficientes plegados `lr_dot` junto al kernel C99 de entropía ya libre de heap (`entropy_pyramid.c`), evaluando Flash/SRAM y precisión fija en hardware embebido real.
+4. **Ablación de grilla fina ($16\times16$) y ruteo adaptativo por entropía:** estudiar si extender la pirámide a `g=16` (`8x8` px por celda) o usar $\mathbf{x}_{85}$ como selector rápido de parches (`top-k / threshold`) antes de una CNN reduce falsos negativos en fisuras de 1–2 px.
 
 ---
 
 ## Reproducibilidad y ejecución
 
-Los scripts de comprensión usan rutas relativas al proyecto y fijan semillas reproducibles (20260928 en 02/03; 20261001 en 05/06/07; 42 en 04).
+Los scripts de comprensión usan rutas relativas al proyecto y fijan semillas reproducibles (20260928 en 02/03; 20261001 en 05/06/07; 42 en 04, 12 y 13).
 
-Para ejecutar los laboratorios individuales o sus tests manuales:
+Para ejecutar los laboratorios individuales o sus tests manuales (PowerShell desde carpeta `code/`):
 ```powershell
-# Pruebas unitarias de componentes
-.\code\.venv\Scripts\python.exe .\code\understanding\03_entropy_benchmark\test_entropy.py
-.\code\.venv\Scripts\python.exe .\code\understanding\04_lightweight_cnns\tests\test_models.py
-.\code\.venv\Scripts\python.exe .\code\understanding\05_symmetry_features\tests\test_symmetry_features.py
-.\code\.venv\Scripts\python.exe .\code\understanding\06_entropy_pyramid_descriptor\tests\test_descriptor.py
-.\code\.venv\Scripts\python.exe .\code\understanding\07_descriptor_behavior\tests\test_behavior_helpers.py
+# Pruebas unitarias de componentes (invocar Lab 07 con PYTHONPATH=code/)
+.\.venv\Scripts\python.exe understanding/03_entropy_benchmark/test_entropy.py
+.\.venv\Scripts\python.exe -m unittest understanding/04_lightweight_cnns/tests/test_models.py
+.\.venv\Scripts\python.exe -m unittest understanding/05_symmetry_features/tests/test_symmetry_features.py
+.\.venv\Scripts\python.exe -m unittest understanding/06_entropy_pyramid_descriptor/tests/test_descriptor.py
+$env:PYTHONPATH = (Get-Location).Path; .\.venv\Scripts\python.exe -m unittest understanding/07_descriptor_behavior/tests/test_behavior_helpers.py
+.\.venv\Scripts\python.exe -m unittest understanding/13_entropy_maps_optimization/tests/test_entropy_variants.py
 
-# Demos y benchmarks
-.\code\.venv\Scripts\python.exe .\code\understanding\06_entropy_pyramid_descriptor\run_demo.py
-.\code\.venv\Scripts\python.exe .\code\understanding\07_descriptor_behavior\run_all.py
+# Demos y benchmarks de comprensión
+.\.venv\Scripts\python.exe understanding/06_entropy_pyramid_descriptor/run_demo.py
+$env:PYTHONPATH = (Get-Location).Path; .\.venv\Scripts\python.exe understanding/07_descriptor_behavior/run_all.py
+.\.venv\Scripts\python.exe understanding/07_entropy_maps_vectorized/explain_entropy_maps.py
 
-# Verificación de preprocesamiento MVTec-AD
-.\code\.venv\Scripts\python.exe .\code\understanding\08_verify_mvtec_preprocessing\verify.py
-.\code\.venv\Scripts\python.exe .\code\understanding\08_verify_mvtec_preprocessing\verify.py --inverted
+# Verificación de preprocesamiento y exportación CSV
+.\.venv\Scripts\python.exe understanding/08_verify_mvtec_preprocessing/verify.py
+.\.venv\Scripts\python.exe understanding/08_verify_mvtec_preprocessing/verify.py --inverted
+.\.venv\Scripts\python.exe understanding/09_verify_mvtec_csv/verify.py
+.\.venv\Scripts\python.exe understanding/09_verify_mvtec_csv/verify.py --inverted
+.\.venv\Scripts\python.exe understanding/10_verify_kolektorsdd2/verify.py
+.\.venv\Scripts\python.exe understanding/10_verify_kolektorsdd2/verify.py --inverted
+.\.venv\Scripts\python.exe understanding/11_verify_kolektorsdd2_csv/verify.py
+.\.venv\Scripts\python.exe understanding/11_verify_kolektorsdd2_csv/verify.py --inverted
 
-# Verificación de exportación CSV MVTec-AD
-.\code\.venv\Scripts\python.exe .\code\understanding\09_verify_mvtec_csv\verify.py
-.\code\.venv\Scripts\python.exe .\code\understanding\09_verify_mvtec_csv\verify.py --inverted
+# Lab 12: Profiling manual paso a paso en CPU (x94 + ds_cnn)
+.\.venv\Scripts\python.exe understanding/12_profiling_stages/explain_profiling_stages.py
+.\.venv\Scripts\python.exe understanding/12_profiling_stages/explain_profiling_stages.py --image data/preprocessed/KolektorSDD2/test/defect/10002.png
 
-# Verificación de preprocesamiento KolektorSDD2
-.\code\.venv\Scripts\python.exe .\code\understanding\10_verify_kolektorsdd2\verify.py
-.\code\.venv\Scripts\python.exe .\code\understanding\10_verify_kolektorsdd2\verify.py --inverted
-
-# Profiling manual paso a paso en CPU (x94 + ds_cnn, lab 12)
-.\code\.venv\Scripts\python.exe .\code\understanding\12_profiling_stages\explain_profiling_stages.py
-.\code\.venv\Scripts\python.exe .\code\understanding\12_profiling_stages\explain_profiling_stages.py --image .\code\data\preprocessed\KolektorSDD2\test\defect\10002.png
+# Lab 13: Compilación C99, explicación single-pass, benchmark CPU-justo y gráficas
+.\.venv\Scripts\python.exe understanding/13_entropy_maps_optimization/build_native.py
+.\.venv\Scripts\python.exe understanding/13_entropy_maps_optimization/explain_single_pass.py
+.\.venv\Scripts\python.exe understanding/13_entropy_maps_optimization/benchmark_entropy_variants.py --config configs/optimization/entropy_maps.toml
+.\.venv\Scripts\python.exe understanding/13_entropy_maps_optimization/plot_entropy_optimization.py --config configs/optimization/entropy_maps.toml
 ```

@@ -1,81 +1,68 @@
 # RESUME.md — project state for any agent
 
-Last reviewed: 2026-10-30. Provisional name: *Entropy-Aware Region Selection for Efficient Embedded Vision* (folder `2026-10-Symmetry-Entropy`).
+Last reviewed: 2026-11-11. Provisional name: *Entropy-Aware Region Selection for Efficient Embedded Vision* (folder `2026-10-Symmetry-Entropy`).
 
-Read `AGENTS.md` first: it holds the operating rules (Windows 10, PowerShell, Python 3.11, venv at `code/.venv`, PyTorch cu126, no global installs, no TensorFlow, scientific-integrity rules). Then this file. Then `code/understanding/README.md` (knowledge map).
+Read `AGENTS.md` first: it holds the operating rules (Windows 10, PowerShell, Python 3.11, venv at `code/.venv`, PyTorch cu126, no global installs, no TensorFlow, scientific-integrity rules). Then read this file, [HYPOTHESIS.md](HYPOTHESIS.md) (verified hypotheses & pre-MCU pure-Python vs C99 synthesis), [REVIEW_01.md](REVIEW_01.md) (forensic audit), and [understanding/README.md](understanding/README.md) (knowledge map).
 
 ## 1. Research goal
 
-Classify defects/errors in industrial images using hand-crafted image entropy features as a lightweight alternative (or complement) to a CNN, plus asymmetry metrics of the entropy layout. Long-term: efficient region selection before running a model, possibly on embedded hardware.
+Classify defects/errors in industrial images using hand-crafted image entropy features as a lightweight alternative (or complement) to a CNN, plus asymmetry metrics of the entropy layout. Long-term: efficient region selection before running a model, possibly on embedded microcontrollers (MCU).
 
 Stated claim to test: selecting informative regions / describing images with entropy + asymmetry can replace or cheapen a CNN while keeping acceptable quality.
 
 ## 2. Current state in one paragraph
 
-Twelve understanding labs exist under `code/understanding/` (01–12). Labs 01–04 cover exploratory primitives (patches, histograms, entropy benchmark, lightweight CNNs). Labs 05–07 establish the canonical 94-dimension descriptor `image -> x94` (schema `x94-v1`: 85 pyramid Shannon entropies + 9 asymmetry residuals) and its 15 behavior experiments. Formal pipeline modules live in `code/src/` (`src/preprocessing/` for letterbox, MVTec-AD and KolektorSDD2; `src/datasets/` for tabular CSV export; `src/features/` for multiscale entropy and spatial asymmetry extraction; `src/models/` for lightweight supervised classification, subset ablation, and spatial explainability). CLI experiment entry points in `code/experiments/` automate dataset standardization (`preprocess_mvtec_ad.py`, `export_mvtec_ad_csv.py`, `preprocess_kolektorsdd2.py`, `export_kolektorsdd2_csv.py`), feature extraction (`export_entropy_maps.py`, `append_asymmetry_features.py`), and supervised evaluation (`evaluate_descriptors.py`). Labs 08–12 provide visual validation and metric integrity checks. Formal unit tests in `code/tests/` verify environment, preprocessing, CSV export, entropy/asymmetry extraction, and descriptor classification (149 tests total).
+Thirteen understanding labs exist under `code/understanding/` (01–13). Labs 01–04 cover exploratory primitives (patches, histograms, entropy benchmark, lightweight CNNs). Labs 05–07 establish the canonical 94-dimension descriptor `image -> x94` (schema `x94-v1`: 85 pyramid Shannon entropies + 9 asymmetry residuals) and its 15 behavior experiments (279 scenes). Labs 08–12 validate preprocessing, CSV round-trips, spatial heatmaps, and pipeline stage profiling, while Lab 13 establishes single-pass C99 entropy optimization (`92.65x` over pure NumPy `V0` for `x85`). Formal pipeline modules live in `code/src/` (`src/preprocessing/` for letterbox, MVTec-AD and KolektorSDD2; `src/datasets/` for tabular CSV export; `src/features/` for NumPy and C99 `entropy_pyramid` multiscale entropy plus spatial asymmetry extraction; `src/models/` for `dt`, `knn`, `lr`, folded `lr_dot`, `rf`, subset ablation, spatial explainability, and 7 lightweight CNNs under `src/models/cnn/`; `src/profiling/` for 100% CPU-fair benchmarking and stage/layer profiling). CLI entry points in `code/experiments/` run dataset preprocessing, CSV/feature export, ML/CNN evaluation (`seed=42` aligned on `kolektorsdd2` and `mvtec-ad_bottle` normal/inverted), 100% CPU-fair comparisons (`results/comparison_cpu/`), pre-MCU pure-Python CPU runs (`results/comparison_cpu_python/`), and deep profiling (`results/profiling/`). Automated verification spans **294 tests + CUDA environment check** (`208` formal tests in `code/tests/` + `86` lab tests in `understanding/`).
 
 ## 3. Directory map
 
 ```text
 AGENTS.md                     binding work rules (read first)
-README.md                     environment, install, replay protocol, dataset pipelines
+README.md                     environment, install, replay protocol, CLI quickstarts
+HYPOTHESIS.md                 verified hypothesis verdicts + Python vs C99 pre-MCU synthesis
+REVIEW_01.md                  forensic audit of historical bf4a29f snapshot & design notes
 RESUME.md                     this file
 code/
-├── configs/                  declarative configurations (no hardcoding in src/)
+├── configs/                  declarative TOML configurations (no hardcoding in src/)
 │   ├── base.toml             dataset roots, categories, splits, and full CSV paths
 │   ├── logging.py            centralized rotating logging setup
-│   ├── preprocessing/
-│   │   ├── mvtec_ad.toml     letterbox, 128x128, LANCZOS, NEAREST for masks
-│   │   └── kolektorsdd2.toml binary mask threshold, letterbox, regex stem pairing
-│   ├── csv/
-│   │   ├── mvtec_ad.toml     16391 columns tabular export specification
-│   │   └── kolektorsdd2.toml 16389 columns tabular export specification
-│   ├── entropy/
-│   │   ├── mvtec_ad.toml     multiscale entropy pyramid extraction (x85)
-│   │   └── kolektorsdd2.toml multiscale entropy pyramid extraction (x85)
-│   ├── asymmetry/
-│   │   ├── mvtec_ad.toml     spatial asymmetry residuals appender (x85 -> x94)
-│   │   └── kolektorsdd2.toml spatial asymmetry residuals appender (x85 -> x94)
-│   └── classification/
-│       ├── mvtec_ad.toml     stratified in-memory per-object classification & explainability
-│       └── kolektorsdd2.toml official presplit classification & explainability
+│   ├── features/             native_entropy.toml (MSVC C99 DLL build flags & paths)
+│   ├── preprocessing/        mvtec_ad.toml, kolektorsdd2.toml
+│   ├── csv/                  mvtec_ad.toml (16391 cols), kolektorsdd2.toml (16389 cols)
+│   ├── entropy/              mvtec_ad.toml, kolektorsdd2.toml (multiscale x85 + backend)
+│   ├── asymmetry/            mvtec_ad.toml, kolektorsdd2.toml (x85 -> x94)
+│   ├── classification/       mvtec_ad.toml, kolektorsdd2.toml (dt, knn, lr, lr_dot, rf)
+│   ├── cnn/                  mvtec_ad.toml, kolektorsdd2.toml (7 CNNs, AdamW, val_f1)
+│   └── profiling/            mvtec_ad.toml, kolektorsdd2.toml (100% CPU fair & profiling)
 ├── src/                      formal pipeline modules
-│   ├── preprocessing/
-│   │   ├── letterbox.py      pure routines: letterbox_to_square, to_grayscale, invert_intensity
-│   │   ├── mvtec_ad.py       batch traversal, LANCZOS images, NEAREST masks, inverted variant
-│   │   └── kolektorsdd2.py   stem pairing, native mask defect classification, letterbox, no mask output
-│   ├── datasets/
-│   │   ├── mvtec_ad_csv.py   streaming CSV writer (.tmp -> atomic replace), 16391 columns
-│   │   └── kolektorsdd2_csv.py streaming CSV writer (.tmp -> atomic replace), 16389 columns
+│   ├── preprocessing/        letterbox.py, mvtec_ad.py, kolektorsdd2.py
+│   ├── datasets/             mvtec_ad_csv.py, kolektorsdd2_csv.py
 │   ├── features/
-│   │   ├── entropy_maps.py   multiscale Shannon entropy pyramid (1x1, 2x2, 4x4, 8x8 -> 85 features)
+│   │   ├── entropy_maps.py   5 backends (auto, c_single_pass, numpy_finest_pyramid, numpy_fused_entropy, numpy_baseline)
+│   │   ├── native_entropy.py ctypes wrapper & zero-alloc NativeEntropyPlan
+│   │   ├── build_native.py   MSVC C99 DLL builder -> src/features/native/build/entropy_pyramid.dll
+│   │   ├── native/           entropy_pyramid.h, entropy_pyramid.c (pure C99, zero heap allocs)
 │   │   ├── entropy_csv.py    streaming CSV extractor for x85 entropy descriptors
 │   │   ├── asymmetry_maps.py 2D reconstruction and 9 spatial asymmetry residuals (LR, TB, R180)
 │   │   └── asymmetry_csv.py  streaming CSV appender (x85 -> x94, schema x94-v1)
-│   └── models/
-│       ├── descriptor_classifier.py RF & k-NN classifiers, presplit/stratified loaders, ablation & explainability
-│       └── classification_plots.py  publication figures (CM+ROC/PR, ablation, importance, 2D spatial heatmaps)
+│   ├── models/
+│   │   ├── descriptor_classifier.py dt, knn, lr, LinearDotCoreClassifier (lr_dot), rf, ablation, explainability
+│   │   ├── classification_plots.py  publication figures (CM+ROC/PR, ablation, importance, 2D heatmaps)
+│   │   └── cnn/              architectures/ (7 CNNs), config.py, data.py, train.py, evaluate.py, benchmark.py, report.py
+│   └── profiling/            config.py, timing.py, environment.py, descriptor_stages.py, classifier_profile.py, cnn_layers.py, report.py
 ├── experiments/              CLI experiment entry points
-│   ├── preprocess_mvtec_ad.py       MVTec-AD standardized letterboxing
-│   ├── export_mvtec_ad_csv.py       MVTec-AD row-major pixel flattening
-│   ├── preprocess_kolektorsdd2.py   KolektorSDD2 pairing, classification, letterboxing
-│   ├── export_kolektorsdd2_csv.py   KolektorSDD2 row-major pixel flattening
-│   ├── export_entropy_maps.py       batch x85 multiscale entropy CSV extraction
-│   ├── append_asymmetry_features.py batch x9 spatial asymmetry CSV appender (x85 -> x94)
-│   └── evaluate_descriptors.py      supervised classification (RF, k-NN), subset ablation & explainability
-├── tests/                    formal test suites (runnable via unittest, 149 tests)
-│   ├── test_environment.py          real CUDA execution, matmul, small net forward on GTX 1050
-│   ├── test_preprocessing.py        letterbox geometry, masks preservation, inversion, CLI
-│   ├── test_kolektorsdd2.py         mask classification, copy/orphan filtering, letterbox, CLI
-│   ├── test_csv_export.py           MVTec-AD CSV schema, pixel round-trip, streaming, CLI
-│   ├── test_kolektorsdd2_csv_export.py KolektorSDD2 CSV schema, pixel round-trip, streaming, CLI
-│   ├── test_entropy_maps.py         multiscale entropy math and partition bounds
-│   ├── test_entropy_csv.py          streaming entropy CSV export and sidecar metadata
-│   ├── test_asymmetry_maps.py       2D reconstruction and LR/TB/R180 asymmetry math
-│   ├── test_asymmetry_csv.py        byte-identical x85 preservation and x94 CSV appending
-│   └── test_descriptor_classifier.py RF/k-NN classification, ground_truth exclusion, ablation, explainability & CLI
-├── results/                  env diagnostics, classification summary (results/classification/README.md) & review logs
-└── understanding/            pedagogical laboratories (01_patch_partition through 12_entropy_maps)
+│   ├── preprocess_{mvtec_ad,kolektorsdd2}.py
+│   ├── export_{mvtec_ad,kolektorsdd2}_csv.py
+│   ├── export_entropy_maps.py
+│   ├── append_asymmetry_features.py
+│   ├── evaluate_descriptors.py
+│   ├── evaluate_cnn.py
+│   ├── compare_baseline_vs_cnn.py    legacy mixed-device CSV/plot generator (deprecated for CPU latency)
+│   ├── benchmark_cpu_fair.py         100% CPU-fair ML vs CNN benchmark (supports --entropy-backend)
+│   └── profile_pipelines.py          granular stage/layer/ATen/Mann-Whitney U profiling
+├── tests/                    formal test suites (208 unittest cases + test_environment.py)
+├── results/                  diagnostics, logs, classification, cnn, comparison_cpu, profiling, comparison (deprecated)
+└── understanding/            pedagogical laboratories (01_patch_partition through 13_entropy_maps_optimization)
 ```
 
 ## 4. Dependency graph (imports)
@@ -123,14 +110,21 @@ Key API (06): `extract_descriptor(image, bins) -> DescriptorResult` (`.vector`, 
 - **09** — Quality control of MVTec-AD CSV serialization: validates 16391 columns header schema, 6612 total records, deterministic row-major order, and bit-exact reconstruction (absolute difference = 0).
 - **10** — Quality control of KolektorSDD2: confirms binary defect classification via full-resolution mask inspection (`mask.max() > 0`), verifies exact category counts (train: 2085 good / 246 defect; test: 894 good / 110 defect), confirms zero mask files in output tree, generates visual comparison matrix.
 - **11** — Quality control of KolektorSDD2 CSV serialization: validates 16389 columns header schema (`split, type, file_name, px_00000...px_16383, width, height`), 3335 total records, deterministic row-major order, and bit-exact reconstruction (absolute difference = 0).
+- **12** — Stage-by-stage profiling & CNN layer dissection (`12_profiling_stages/`): identifies Python/NumPy per-cell histogram loops and `sklearn` `Pipeline.predict` wrapper overhead vs PyTorch `ATen` kernels.
+- **13** — Single-pass entropy pyramid optimization (`13_entropy_maps_optimization/`): proves bottom-up histogram summation + Shannon LUTs in NumPy (`9.4x–10.5x`) and pure C99 `entropy_pyramid.dll` (`92.65x`, `0.024 ms` for `x85`) with exact $\le 10^{-12}$ parity (`13` unit tests).
 
-## 7. What does NOT exist yet (the actual remaining gaps)
+## 7. Completed vs. actual remaining gaps (pre-MCU & paper)
 
-1. **Classification models on real data:** Train and evaluate classifiers (Logistic Regression, Random Forest, SVM, MLP) on `x94` features extracted from MVTec-AD and KolektorSDD2.
-2. **Ablation study on real datasets:** Measure performance of 85 entropies alone vs 9 asymmetries alone vs combined 94.
-3. **Region selection pipeline:** Implement top-k / threshold region selector feeding CNN models from lab 04.
-4. **End-to-end cost accounting:** Measure actual timings: $T_{\text{selector}}$, $T_{\text{model}}$, $T_{\text{total}} = T_{\text{selector}} + T_{\text{model}}$, RAM, VRAM, and throughput to test if filtering patches saves total time.
-5. **Embedded implementation:** Pure C or embedded inference on microcontrollers/embedded boards.
+**Completed on `main` (verified 2026-11-11):**
+- Supervised real-data evaluation (`dt`, `knn`, `lr`, folded `lr_dot`, `rf`) and full 7-subset ablations (`x85_only`, `x9_only`, `x94_full`, `E_1x1..E_8x8`) on KolektorSDD2 and MVTec-AD (`bottle` normal + inverted).
+- All 7 lightweight CNNs evaluated on identical `seed=42` splits (`kolektorsdd2` & `mvtec-ad_bottle`, normal + inverted).
+- Strictly fair 100% CPU end-to-end benchmarking (`T_total = T_descriptor + T_model`, `threads=1`, `batch=1/32`) with C99 `x85` backend (`results/comparison_cpu/`), deep stage/layer profiling (`results/profiling/`), and isolated pure-Python pre-MCU evaluation (`results/comparison_cpu_python/`).
+
+**Remaining gaps:**
+1. **Pure C99 MCU pipeline port:** Port `asymmetry_g2/4/8` and folded `lr_dot` (94 `float32`/fixed-point MACs + Flash LUTs) into C99 alongside `entropy_pyramid.c`, eliminating all Python/NumPy calls, and benchmark directly on target embedded hardware (Flash/SRAM/FPU telemetry).
+2. **Threshold & multi-category CNN/ML hardening:** Add a non-degeneracy guard in `find_optimal_threshold` (`src/models/cnn/evaluate.py`, per `REVIEW_01.md` `M2`) to prevent `val_f1` single-class collapse on small validation sets, run multi-seed sweeps (`seeds=[42, 43, 44]` per-seed folders), and extend CPU-fair CNN comparisons to additional MVTec-AD categories (e.g., `tile`).
+3. **Sub-cell micro-crack grid ablation:** Evaluate `[1, 2, 4, 8, 16]` grids against frozen `x94-v1` on KolektorSDD2 to test finer spatial resolution without dropping `x94-v1` parity.
+4. **Dynamic region selection pipeline:** Implement top-k / entropy-threshold patch selectors feeding downstream cropped classifiers / lightweight CNNs on selected informative patches.
 
 ## 8. Environment and commands
 
@@ -139,82 +133,66 @@ Interpreter: `.\code\.venv\Scripts\python.exe` from repo root `D:\Publications\2
 ```powershell
 Set-Location D:\Publications\2026-10-Symmetry-Entropy\code
 
-# 1. Health check & formal unit test suites
+# 1. Health check, native C99 build & full formal unit test suite (208 tests)
 .\.venv\Scripts\python.exe tests/test_environment.py
 .\.venv\Scripts\python.exe -m pip check
-.\.venv\Scripts\python.exe -m unittest tests/test_preprocessing.py
-.\.venv\Scripts\python.exe -m unittest tests/test_kolektorsdd2.py
-.\.venv\Scripts\python.exe -m unittest tests/test_csv_export.py
-.\.venv\Scripts\python.exe -m unittest tests/test_kolektorsdd2_csv_export.py
+.\.venv\Scripts\python.exe -m src.features.build_native --config configs/features/native_entropy.toml
+.\.venv\Scripts\python.exe -m unittest discover tests -v
 
-# 2. Dataset preprocessing & export experiments
-.\.venv\Scripts\python.exe -m experiments.preprocess_mvtec_ad
-.\.venv\Scripts\python.exe -m experiments.preprocess_mvtec_ad --inverted
-.\.venv\Scripts\python.exe -m experiments.export_mvtec_ad_csv
-.\.venv\Scripts\python.exe -m experiments.export_mvtec_ad_csv --inverted
-.\.venv\Scripts\python.exe -m experiments.preprocess_kolektorsdd2
-.\.venv\Scripts\python.exe -m experiments.preprocess_kolektorsdd2 --inverted
-.\.venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv
-.\.venv\Scripts\python.exe -m experiments.export_kolektorsdd2_csv --inverted
-
-# 3. Post-run visual validations
-.\.venv\Scripts\python.exe understanding/08_verify_mvtec_preprocessing/verify.py
-.\.venv\Scripts\python.exe understanding/09_verify_mvtec_csv/verify.py
-.\.venv\Scripts\python.exe understanding/10_verify_kolektorsdd2/verify.py
-.\.venv\Scripts\python.exe understanding/11_verify_kolektorsdd2_csv/verify.py
-.\.venv\Scripts\python.exe understanding/11_verify_kolektorsdd2_csv/verify.py --inverted
-
-# 4. Pedagogical lab tests
+# 2. Pedagogical lab tests (86 tests total)
 .\.venv\Scripts\python.exe understanding/03_entropy_benchmark/test_entropy.py
 .\.venv\Scripts\python.exe understanding/04_lightweight_cnns/tests/test_models.py
 .\.venv\Scripts\python.exe understanding/05_symmetry_features/tests/test_symmetry_features.py
 .\.venv\Scripts\python.exe understanding/06_entropy_pyramid_descriptor/tests/test_descriptor.py
-.\.venv\Scripts\python.exe understanding/07_descriptor_behavior/tests/test_behavior_helpers.py
+$env:PYTHONPATH = (Get-Location).Path; .\.venv\Scripts\python.exe understanding/07_descriptor_behavior/tests/test_behavior_helpers.py
+.\.venv\Scripts\python.exe -m unittest understanding/13_entropy_maps_optimization/tests/test_entropy_variants.py -v
+
+# 3. Formal descriptor, CNN, CPU-fair & profiling experiments (see experiments/README.md for flags)
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier all --overwrite
+.\.venv\Scripts\python.exe -m experiments.benchmark_cpu_fair --config configs/profiling/kolektorsdd2.toml
+.\.venv\Scripts\python.exe -m experiments.profile_pipelines --config configs/profiling/kolektorsdd2.toml
 ```
 
 ## 9. Reproducibility rules that bite
 
-- Seeds: 20260928 (labs 02/03), 20261001 (labs 05/06/07), 42 (CNN demo, CSV verification, KolektorSDD2 verification).
-- Labs 01–03 and 05/06/07 default outputs overwrite same-named files on rerun; use `--output` or a replay copy.
+- Seeds: 20260928 (labs 02/03), 20261001 (labs 05/06/07), 42 (CNN/ML canonical comparisons, CSV/dataset verification). When evaluating multiple seeds in `evaluate_cnn.py`, pass `--seeds 42` for single-seed parity because multi-seed loops overwrite the same target folder.
+- Labs 01–03 and 05/06/07 default outputs overwrite same-named files on rerun; use `--output` or a replay copy. Lab 07 (`understanding/07_descriptor_behavior/`) is SHA-256 locked (`compare_descriptors.py`); pass `$env:PYTHONPATH = (Get-Location).Path` rather than editing Lab 07.
 - `analyze_results.py` fails if script hash $\ne$ recorded hash: never edit hashes or delete `run1/` to make it pass.
-- Dry-run flags (`--dry-run`) exist across all preprocessing and export CLIs to verify dataset scans before writing to disk.
+- Dry-run flags (`--dry-run`) exist across preprocessing, CSV/feature export, evaluation, and CPU profiling CLIs.
 
 ## 10. Suggested next steps (priority order)
 
-1. Implement feature extraction pipeline: batch extract `x94` descriptor on preprocessed MVTec-AD and KolektorSDD2 datasets.
-2. Train lightweight baseline classifiers (SVM, Random Forest, Logistic Regression, MLP) on `x94` vectors.
-3. Execute ablation study: 85 entropy features vs 9 asymmetry features vs 94 combined.
-4. Train baseline lightweight CNNs (from lab 04) on preprocessed 128x128 images.
-5. Develop region selection pipeline (top-k / threshold patches) feeding CNNs and evaluate total latency: $T_{\text{total}} = T_{\text{selector}} + T_{\text{model}}$.
+1. Port `asymmetry_g2/4/8` + folded `lr_dot` (`w_eff_[94]`, `b_eff_`) + `float32`/fixed-point LUTs into pure standalone C99 for the MCU target (zero Python, zero heap allocation).
+2. Add non-degeneracy guard in `find_optimal_threshold` (`src/models/cnn/evaluate.py`) and run multi-seed + additional MVTec-AD categories (`tile`, etc.) for paper completeness.
+3. Run `[1, 2, 4, 8, 16]` vs `x94-v1` grid ablation on KolektorSDD2 to test sub-cell micro-crack sensitivity.
+4. Implement and profile dynamic entropy-based region selection before downstream classification (`T_total = T_selector + T_model`).
 
 ## 11. Quick file index (code only, no outputs)
 
 ```text
 configs/base.toml
-configs/preprocessing/{mvtec_ad.toml, kolektorsdd2.toml}
-configs/csv/{mvtec_ad.toml, kolektorsdd2.toml}
+configs/{features/native_entropy,preprocessing/*,csv/*,entropy/*,asymmetry/*,classification/*,cnn/*,profiling/*}.toml
 configs/logging.py
 
 src/preprocessing/{letterbox.py, mvtec_ad.py, kolektorsdd2.py}
 src/datasets/{mvtec_ad_csv.py, kolektorsdd2_csv.py}
+src/features/{entropy_maps.py, native_entropy.py, build_native.py, entropy_csv.py, asymmetry_maps.py, asymmetry_csv.py}
+src/features/native/{entropy_pyramid.h, entropy_pyramid.c}
+src/models/{descriptor_classifier.py, classification_plots.py}
+src/models/cnn/{config.py, data.py, train.py, evaluate.py, benchmark.py, report.py, architectures/*.py}
+src/profiling/{config.py, timing.py, environment.py, descriptor_stages.py, classifier_profile.py, cnn_layers.py, report.py}
 
-experiments/{preprocess_mvtec_ad.py, export_mvtec_ad_csv.py, preprocess_kolektorsdd2.py, export_kolektorsdd2_csv.py}
+experiments/{preprocess_mvtec_ad.py, export_mvtec_ad_csv.py, preprocess_kolektorsdd2.py, export_kolektorsdd2_csv.py,
+             export_entropy_maps.py, append_asymmetry_features.py, evaluate_descriptors.py, evaluate_cnn.py,
+             compare_baseline_vs_cnn.py, benchmark_cpu_fair.py, profile_pipelines.py}
 
-tests/{test_environment.py, test_preprocessing.py, test_kolektorsdd2.py, test_csv_export.py, test_kolektorsdd2_csv_export.py}
+tests/{test_environment.py, test_preprocessing.py, test_kolektorsdd2.py, test_csv_export.py,
+       test_kolektorsdd2_csv_export.py, test_entropy_maps.py, test_native_entropy.py, test_entropy_csv.py,
+       test_asymmetry_maps.py, test_asymmetry_csv.py, test_descriptor_classifier.py,
+       test_cnn_architectures.py, test_cnn_config.py, test_cnn_data.py, test_cnn_train.py,
+       test_cnn_evaluate.py, test_cnn_cli.py, test_profiling_config.py, test_profiling_timing.py,
+       test_profiling_descriptor_stages.py, test_profiling_classifier.py, test_profiling_cnn_layers.py,
+       test_benchmark_cpu_fair_cli.py}
 
-understanding/01_patch_partition/patch_partition.py
-understanding/02_histogram_benchmark/histogram_benchmark.py
-understanding/03_entropy_benchmark/{entropy_benchmark.py, analyze_results.py, test_entropy.py}
-understanding/04_lightweight_cnns/{common.py, train_demo.py, predict_image.py, benchmark_inference.py,
-        inspect_models.py, inspect_architecture.py, models/*.py, tests/test_models.py}
-understanding/05_symmetry_features/{symmetry_features.py, entropy_pyramid.py, synthetic_images.py,
-        synthetic_matrices.py, run_demo.py, tests/test_symmetry_features.py}
-understanding/06_entropy_pyramid_descriptor/{descriptor.py, entropy.py, partition.py, feature_names.py,
-        synthetic_examples.py, run_demo.py, __init__.py, tests/test_descriptor.py}
-understanding/07_descriptor_behavior/{run_all.py, experiments.py, compare_descriptors.py,
-        perturbations.py, synthetic_scenes.py, tests/test_behavior_helpers.py}
-understanding/08_verify_mvtec_preprocessing/verify.py
-understanding/09_verify_mvtec_csv/verify.py
-understanding/10_verify_kolektorsdd2/verify.py
-understanding/11_verify_kolektorsdd2_csv/verify.py
+understanding/{01..13}_*/  (labs 01-13; see understanding/README.md for exact file tree)
 ```

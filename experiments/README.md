@@ -112,7 +112,7 @@ Prepara el dataset KolektorSDD2 inspeccionando cada máscara binaria `_GT` a res
    - Escala imágenes de aspecto ~1:2.8 centrando el contenido y rellenando los laterales con `0` (interpolación `LANCZOS`).
 5. **Inversión opcional (`--inverted`)**:
    - Invierte intensidad de imagen (`255 - x`) antes del letterbox para que el padding permanezca en `0`.
-   - Guarda los resultados en directorio independiente `data/processed/KolektorSDD2-inverted/`.
+   - Guarda los resultados en directorio independiente `data/preprocessed/KolektorSDD2-inverted/`.
 
 ### Comandos de ejecución manual (PowerShell desde carpeta `code/`)
 
@@ -206,38 +206,34 @@ Las columnas de píxeles (`px_*`) y dimensiones (`width`, `height`) son reemplaz
 3. **Características de entropía regional normalizada**:
    - Columnas `E_{g}x{g}_r{r}_c{c}` (ej. `E_1x1_r0_c0` ... `E_8x8_r7_c7`) con valores en $[0.0, 1.0]$ formateados a la precisión decimal configurada.
 4. **Sidecar de reproducibilidad**:
-   - Archivo `.json` adyacente que registra la ruta origen, niveles, contenedores, tiempo medido de cómputo y versión de NumPy.
+   - Archivo `.json` adyacente que registra la ruta origen, niveles, contenedores, backend utilizado (`auto` -> `c_single_pass` / `numpy_finest_pyramid`, etc.), tiempo medido de cómputo y versión de NumPy.
 
 ### Comandos de ejecución manual (PowerShell desde carpeta `code/`)
 
 ```powershell
-# 1. Ejecutar tests matemáticos y de integración del pipeline de entropía
+# 0. Opcional: compilar DLL nativa C99 (Windows MSVC x64) si no existe aún
+.\.venv\Scripts\python.exe -m src.features.build_native --config configs/features/native_entropy.toml
+
+# 1. Ejecutar tests matemáticos y de integración del pipeline de entropía (NumPy + C99)
 .\.venv\Scripts\python.exe -m unittest tests/test_entropy_maps.py
+.\.venv\Scripts\python.exe -m unittest tests/test_native_entropy.py
 .\.venv\Scripts\python.exe -m unittest tests/test_entropy_csv.py
 
 # 2. Ejecutar script pedagógico de comprensión paso a paso con gráfico
 .\.venv\Scripts\python.exe understanding/07_entropy_maps_vectorized/explain_entropy_maps.py
 
-# 3. Dry-run de MVTec-AD (valida esquema y dimensiones sin escribir)
+# 3. Dry-run de MVTec-AD y KolektorSDD2 (valida esquema, backend y dimensiones sin escribir)
 .\.venv\Scripts\python.exe -m experiments.export_entropy_maps --config configs/entropy/mvtec_ad.toml --dry-run
-
-# 4. Dry-run de KolektorSDD2 (valida esquema y dimensiones sin escribir)
 .\.venv\Scripts\python.exe -m experiments.export_entropy_maps --config configs/entropy/kolektorsdd2.toml --dry-run
 
-# 5. Exportar mapas de entropía MVTec-AD (genera data/csv/mvtec-ad-entropy.csv)
+# 4. Exportar mapas de entropía (auto = c_single_pass; admite --backend numpy_finest_pyramid, numpy_fused_entropy o numpy_baseline)
 .\.venv\Scripts\python.exe -m experiments.export_entropy_maps --config configs/entropy/mvtec_ad.toml
-
-# 6. Exportar mapas de entropía MVTec-AD invertido (genera data/csv/mvtec-ad-inverted-entropy.csv)
 .\.venv\Scripts\python.exe -m experiments.export_entropy_maps --config configs/entropy/mvtec_ad.toml --inverted
-
-# 7. Exportar mapas de entropía KolektorSDD2 (genera data/csv/kolektorsdd2-entropy.csv)
 .\.venv\Scripts\python.exe -m experiments.export_entropy_maps --config configs/entropy/kolektorsdd2.toml
-
-# 8. Exportar mapas de entropía KolektorSDD2 invertido (genera data/csv/kolektorsdd2-inverted-entropy.csv)
 .\.venv\Scripts\python.exe -m experiments.export_entropy_maps --config configs/entropy/kolektorsdd2.toml --inverted
 
-# 9. Forzar sobrescritura en caso de existir previamente (--overwrite)
-.\.venv\Scripts\python.exe -m experiments.export_entropy_maps --config configs/entropy/mvtec_ad.toml --overwrite
+# 5. Forzar backend 100 % NumPy puro o sobrescritura (--backend / --overwrite)
+.\.venv\Scripts\python.exe -m experiments.export_entropy_maps --config configs/entropy/mvtec_ad.toml --backend numpy_finest_pyramid --overwrite
 ```
 
 ---
@@ -299,7 +295,7 @@ Calcula las 9 medidas de asimetría espacial multiescala ($\mathbf{x}_9$) direct
 
 ## Experimento 07: Clasificación supervisada ligera, ablación de subconjuntos y explicabilidad espacial sobre descriptores $\mathbf{x}_{94}$
 
-Entrena y evalúa clasificadores supervisados ligeros (`RandomForestClassifier`, `KNeighborsClassifier`, `DecisionTreeClassifier` y `LogisticRegression` con `StandardScaler`) sobre el descriptor tabular completo $\mathbf{x}_{94} = [\mathbf{x}_{85}, \mathbf{x}_9]$, ejecutando automáticamente un estudio de ablación por subconjuntos (`x85_only`, `x9_only`, `x94_full` y cada escala individual $E^{(1)}, E^{(2)}, E^{(4)}, E^{(8)}$) y un análisis de explicabilidad espacial para cuantificar cuánto aportan las 9 medidas de asimetría ($\mathbf{x}_9$) y cuál mapa de entropía es más discriminativo.
+Entrena y evalúa clasificadores supervisados ligeros (`RandomForestClassifier`, `KNeighborsClassifier`, `DecisionTreeClassifier`, `LogisticRegression` con `StandardScaler` y el núcleo plegado `lr_dot` vía `LinearDotCoreClassifier`) sobre el descriptor tabular completo $\mathbf{x}_{94} = [\mathbf{x}_{85}, \mathbf{x}_9]$, ejecutando automáticamente un estudio de ablación por subconjuntos (`x85_only`, `x9_only`, `x94_full` y cada escala individual $E^{(1)}, E^{(2)}, E^{(4)}, E^{(8)}$) y un análisis de explicabilidad espacial para cuantificar cuánto aportan las 9 medidas de asimetría ($\mathbf{x}_9$) y cuál mapa de entropía es más discriminativo.
 
 ### Rol científico de cada dataset en la investigación (*Entropy Maps vs. Convoluciones*)
 
@@ -314,7 +310,7 @@ Entrena y evalúa clasificadores supervisados ligeros (`RandomForestClassifier`,
 
 ### Qué buscar e interpretar en cada archivo y gráfica generada (`results/classification/`)
 
-Para cada corrida se crea una subcarpeta en `results/classification/<dataset>[_inverted]/<objeto_o_full>_<rf|knn>/` con **4 archivos de datos** y **4 figuras PNG**:
+Para cada corrida se crea una subcarpeta en `results/classification/<dataset>[_inverted]/<objeto_o_full>_<dt|knn|lr|lr_dot|rf>/` con **4 archivos de datos** y **4 figuras PNG**:
 
 1. **`confusion_matrix_and_curves.png` (Rendimiento predictivo global):**
    - **Panel izquierdo (Matriz de Confusión):** Muestra verdaderos negativos (`TN`, piezas buenas bien clasificadas), falsos positivos (`FP`, falsas alarmas), falsos negativos (`FN`, defectos no detectados) y verdaderos positivos (`TP`, defectos detectados), tanto en conteo absoluto como en porcentaje por fila (`Row %`).
@@ -346,9 +342,10 @@ Para cada corrida se crea una subcarpeta en `results/classification/<dataset>[_i
 
 ### Notas metodológicas para el artículo (`normal` vs `--inverted`, probabilidades y umbral realista `0.50`)
 
-1. **De dónde salen las probabilidades y por qué se mantiene el umbral realista `0.50`:**
-   - En un `RandomForestClassifier` de $T = 200$ árboles, cada árbol $t$ emite un voto de probabilidad $p_t(\text{defect} \mid \mathbf{x})$ según la proporción de muestras en la hoja donde cae la pieza. La probabilidad del modelo (`predict_proba(X_test)[:, 1]`, usada para trazar las curvas ROC y PR) es el promedio de los 200 árboles: $\hat{p} = \frac{1}{200}\sum_{t=1}^{200} p_t$.
-   - Para construir la **Matriz de Confusión**, `.predict(X_test)` aplica el umbral estándar realista **$\hat{p} \ge 0.50 \Rightarrow \text{defect (1)}$** (sin trucar ni optimizar umbrales post-hoc). En objetos con muy pocos defectos de entrenamiento (como `transistor` con 32 defectos o `grid` con 46) y donde cada árbol solo inspecciona $\sqrt{94} \approx 9$ columnas por corte (`max_features="sqrt"`), muchos árboles dividen sobre celdas sanas del fondo y diluyen el promedio $\hat{p}$ al rango `[0.16, 0.45]`, provocando `TP = 0` en el corte `0.50` a pesar de tener un `ROC-AUC = 0.9386`. Un árbol de decisión individual (`DecisionTreeClassifier`) o usar `max_features=None` evita esa dilución por promediado al evaluar las 94 características simultáneamente.
+1. **Hiperparámetros configurados por dataset y efecto del umbral realista `0.50`:**
+   - En los TOML actuales (`configs/classification/`), `kolektorsdd2.toml` fija `rf` en `n_estimators = 200, max_depth = 6` (`dt max_depth = 16`), mientras que `mvtec_ad.toml` fija `rf` en `n_estimators = 100, max_depth = 12` (`dt max_depth = 3`). Las corridas históricas iniciales de `mvtec_ad` usaron `200` árboles (`F1 = 0.7619` en `bottle`); la configuración vigente da `F1 = 0.7273` (`ROC-AUC = 0.9030`).
+   - En un `RandomForestClassifier` de $T$ árboles, la probabilidad del modelo (`predict_proba`) es el promedio aritmético $\hat{p} = \frac{1}{T}\sum_{t=1}^{T} p_t$ y `.predict(X_test)` aplica el umbral realista **$\hat{p} \ge 0.50 \Rightarrow \text{defect (1)}$**. En objetos con muy pocos defectos y alta correlación entre celdas, `max_features="sqrt"` diluye $\hat{p}$ por debajo de `0.50` aunque el ranking `ROC-AUC` sea alto.
+   - `lr_dot` pliega algebraicamente `StandardScaler` + `LogisticRegression` ($w'_i = w_i / \sigma_i$, $b' = b - \sum_i w_i \mu_i / \sigma_i$) logrando equivalencia numérica exacta frente a `lr` (`< 1e-12` en probabilidades/métricas) sin wrapper `sklearn`.
 
 2. **Qué variante elegir para la investigación (`normal` vs `--inverted`) y cómo reportar ambas en el paper:**
    - **El letterboxing siempre permanece en `0` (negro puro):** Tanto en MVTec-AD como en KolektorSDD2, la inversión $255 - I$ se aplica a la imagen **antes** de `letterbox_to_square(..., pad_value=0)`. Así, las franjas de relleno conservan siempre intensidad `0` y entropía `0.0`.
@@ -374,11 +371,12 @@ Para cada corrida se crea una subcarpeta en `results/classification/<dataset>[_i
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier all
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier all --inverted
 
-# O evaluar clasificadores individuales:
+# O evaluar clasificadores individuales (`dt`, `knn`, `lr`, `lr_dot`, `rf`):
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier rf
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier knn
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier dt
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier lr
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier lr_dot
 
 # 4. MVTec-AD por objeto individual (ej. bottle, tile, metal_nut, zipper; normal o --inverted)
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object bottle --classifier rf
@@ -477,7 +475,7 @@ El reporte generado en `metrics_summary.json` registra tanto el desempeño en el
 
 ## Experimento 09: Benchmarking 100 % CPU Justo (`benchmark_cpu_fair.py`) y Profiling Científico Detallado (`profile_pipelines.py`)
 
-Corrige el sesgo *mixed-device* de `results/comparison/` midiendo el pipeline tabular **$\mathbf{x}_{94}$ + clasificadores clásicos** (`dt`, `knn`, `lr`, `rf`) y las **7 arquitecturas CNN ligeras** bajo un protocolo homogéneo **100 % CPU** (`task_08`), además de descomponer dónde se invierte el tiempo y la memoria en cada etapa y capa.
+Corrige el sesgo *mixed-device* de `results/comparison/` midiendo el pipeline tabular **$\mathbf{x}_{94}$ + clasificadores clásicos** (`dt`, `knn`, `lr`, `lr_dot`, `rf`) y las **7 arquitecturas CNN ligeras** bajo un protocolo homogéneo **100 % CPU** (`task_08` + `task_10`), además de descomponer dónde se invierte el tiempo y la memoria en cada etapa y capa y permitir conmutar el *backend* de entropía (`auto` -> `c_single_pass` C99, `numpy_finest_pyramid` 100 % Python/NumPy puro, `numpy_fused_entropy` o `numpy_baseline`).
 
 ### Protocolo científico y decisiones metodológicas
 
@@ -517,19 +515,18 @@ Corrige el sesgo *mixed-device* de `results/comparison/` midiendo el pipeline ta
 ### Comandos de ejecución manual (PowerShell desde carpeta `code/`)
 
 ```powershell
-# 1. Instalar/sincronizar psutil==7.2.2 si falta y verificar tests de profiling
+# 1. Instalar/sincronizar psutil==7.2.2 si falta y verificar tests de profiling + C99
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe -m unittest tests/test_profiling_config.py tests/test_profiling_timing.py tests/test_profiling_descriptor_stages.py tests/test_profiling_cnn_layers.py tests/test_benchmark_cpu_fair_cli.py -v
+.\.venv\Scripts\python.exe -m unittest tests/test_profiling_config.py tests/test_profiling_timing.py tests/test_profiling_descriptor_stages.py tests/test_profiling_classifier.py tests/test_profiling_cnn_layers.py tests/test_benchmark_cpu_fair_cli.py tests/test_native_entropy.py -v
 .\.venv\Scripts\python.exe -m unittest discover tests -v
 
-# 2. Laboratorio previo (understanding-first) para 1 imagen en CPU
-.\.venv\Scripts\python.exe understanding/12_profiling_stages/explain_profiling_stages.py
+# 2. Laboratorios previos (understanding-first) en CPU
 .\.venv\Scripts\python.exe understanding/12_profiling_stages/explain_profiling_stages.py
 .\.venv\Scripts\python.exe understanding/12_profiling_stages/explain_profiling_stages.py --image data/preprocessed/KolektorSDD2/test/defect/10002.png
+.\.venv\Scripts\python.exe understanding/13_entropy_maps_optimization/explain_single_pass.py
 
-# 3. Solo si faltan checkpoints CNN para MVTec-AD bottle (normal e invertido):
-.\.venv\Scripts\python.exe -m experiments.evaluate_cnn --config configs/cnn/mvtec_ad.toml --object bottle --model all --overwrite
-.\.venv\Scripts\python.exe -m experiments.evaluate_cnn --config configs/cnn/mvtec_ad.toml --object bottle --model all --inverted --overwrite
+# 3. Recompilar DLL C99 si no existe o tras editar src/features/native/
+.\.venv\Scripts\python.exe -m src.features.build_native --config configs/features/native_entropy.toml
 
 # 4. Validación previa (--dry-run) de Fase A y Fase B sin ejecutar benchmarks
 .\.venv\Scripts\python.exe -m experiments.benchmark_cpu_fair --config configs/profiling/kolektorsdd2.toml --dry-run
@@ -537,14 +534,15 @@ Corrige el sesgo *mixed-device* de `results/comparison/` midiendo el pipeline ta
 .\.venv\Scripts\python.exe -m experiments.profile_pipelines --config configs/profiling/kolektorsdd2.toml --dry-run
 .\.venv\Scripts\python.exe -m experiments.profile_pipelines --config configs/profiling/mvtec_ad.toml --objects bottle --dry-run
 
-# 5. Fase A: Comparación 100 % CPU justa (orden recomendado)
+# 5. Fase A (por defecto backend='auto' -> 'c_single_pass' C99): Comparación 100 % CPU justa
 .\.venv\Scripts\python.exe -m experiments.benchmark_cpu_fair --config configs/profiling/kolektorsdd2.toml
 .\.venv\Scripts\python.exe -m experiments.benchmark_cpu_fair --config configs/profiling/kolektorsdd2.toml --inverted
 .\.venv\Scripts\python.exe -m experiments.benchmark_cpu_fair --config configs/profiling/mvtec_ad.toml --objects bottle
 .\.venv\Scripts\python.exe -m experiments.benchmark_cpu_fair --config configs/profiling/mvtec_ad.toml --objects bottle --inverted
 
-# Opcional MVTec-AD multi-objeto (--objects a b o --all-objects):
-.\.venv\Scripts\python.exe -m experiments.benchmark_cpu_fair --config configs/profiling/mvtec_ad.toml --objects bottle metal_nut tile
+# 5B. Comparativa 100 % Python/NumPy puro pre-MCU (sin DLL C99):
+.\.venv\Scripts\python.exe -m experiments.benchmark_cpu_fair --config configs/profiling/kolektorsdd2.toml --entropy-backend numpy_finest_pyramid --output-dir results/comparison_cpu_python --no-cuda-reference
+.\.venv\Scripts\python.exe -m experiments.benchmark_cpu_fair --config configs/profiling/mvtec_ad.toml --objects bottle --entropy-backend numpy_finest_pyramid --output-dir results/comparison_cpu_python --no-cuda-reference
 
 # 6. Fase B: Profiling científico profundo (normales completo; invertidos verificación corta)
 .\.venv\Scripts\python.exe -m experiments.profile_pipelines --config configs/profiling/kolektorsdd2.toml
