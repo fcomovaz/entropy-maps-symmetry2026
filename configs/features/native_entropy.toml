@@ -1,0 +1,10 @@
+# Native C single-pass entropy pyramid kernel build configuration.
+# Relative paths are anchored dynamically against the repository 'code/' root.
+
+[entropy_native]
+source_dir = "src/features/native"
+build_dir = "src/features/native/build"
+library_name = "entropy_pyramid"
+c_sources = ["entropy_pyramid.c"]
+compiler_flags = ["/O2", "/LD", "/arch:AVX2", "/fp:precise"]
+vswhere_hint = "%ProgramFiles(x86)%/Microsoft Visual Studio/Installer/vswhere.exe"

@@ -28,3 +28,5 @@ levels_separator = "|"
 
 [entropy_maps.runtime]
 chunk_size = 256
+backend = "auto"
+native_config = "configs/features/native_entropy.toml"

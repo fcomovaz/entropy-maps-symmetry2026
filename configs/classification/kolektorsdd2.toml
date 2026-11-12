@@ -61,6 +61,7 @@ solver = "liblinear"
 class_weight = "balanced"
 max_iter = 10000
 scale_features = true
+linear_mode = "sklearn"
 
 [classification.explainability]
 enabled = true
