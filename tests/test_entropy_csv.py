@@ -438,6 +438,39 @@ class TestCliIntegration(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             self.assertTrue(cfg.effective_output_csv.is_file())
 
+    def test_cli_backend_override_and_sidecar_recording(self) -> None:
+        """CLI --backend selects backend, falls back cleanly on non-nested auto, and records sidecar."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp = Path(tmp_dir)
+            cfg_rel = _setup_synthetic_project(tmp, "mvtecad", size=16, grid_levels=[1, 2, 4], bins=16)
+            cfg = load_entropy_config(cfg_rel, tmp)
+
+            meta_rows = [["bottle", "train", "good", "good", "000.png"]]
+            _create_synthetic_csv(
+                cfg.effective_input_csv,
+                list(cfg.metadata_columns),
+                meta_rows,
+                size=16,
+            )
+
+            exit_code = cli_main(
+                ["--config", str(cfg_rel), "--backend", "numpy_finest_pyramid"],
+                project_root=tmp,
+            )
+            self.assertEqual(exit_code, 0)
+            sidecar_data = json.loads(
+                cfg.effective_output_csv.with_suffix(".json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(sidecar_data["entropy_backend"], "numpy_finest_pyramid")
+            self.assertEqual(sidecar_data["resolved_entropy_backend"], "numpy_finest_pyramid")
+
+            # Also verify c_single_pass produces identical CSV feature values
+            cfg_c = replace(cfg, overwrite=True, entropy_backend="c_single_pass")
+            baseline_rows = cfg.effective_output_csv.read_text(encoding="utf-8")
+            summary_c = export_entropy_csv(cfg_c)
+            self.assertEqual(summary_c.resolved_entropy_backend, "c_single_pass")
+            self.assertEqual(cfg.effective_output_csv.read_text(encoding="utf-8"), baseline_rows)
+
     def test_cli_main_dry_run(self) -> None:
         """CLI dry-run returns exit code 0 without creating files."""
         with tempfile.TemporaryDirectory() as tmp_dir:

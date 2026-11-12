@@ -35,6 +35,9 @@ class TestProfilingConfig(unittest.TestCase):
         self.assertEqual(kol_cfg.protocol.device, "cpu")
         self.assertEqual(kol_cfg.protocol.primary_threads, 1)
         self.assertEqual(kol_cfg.protocol.primary_batch_size, 1)
+        self.assertEqual(kol_cfg.descriptor.entropy_backend, "auto")
+        self.assertIn("lr_dot", kol_cfg.classifiers)
+        self.assertIn("lr_dot", kol_cfg.statistics.ml_baseline_models)
         self.assertIn(1, kol_cfg.protocol.effective_threads_list())
         self.assertTrue(kol_cfg.base_config_path.is_absolute())
         self.assertTrue(kol_cfg.classification_config_path.is_file())
@@ -44,6 +47,8 @@ class TestProfilingConfig(unittest.TestCase):
         mv_cfg = load_profiling_config(Path("configs/profiling/mvtec_ad.toml"), PROJECT_ROOT)
         self.assertEqual(mv_cfg.dataset_key, "mvtecad")
         self.assertEqual(mv_cfg.protocol.device, "cpu")
+        self.assertEqual(mv_cfg.descriptor.entropy_backend, "auto")
+        self.assertIn("lr_dot", mv_cfg.classifiers)
         self.assertEqual(resolve_target_objects(mv_cfg), ("bottle",))
         self.assertEqual(
             resolve_target_objects(mv_cfg, objects=["bottle", "tile"]),
@@ -97,6 +102,23 @@ dataset_key = "kolektorsdd2"
             with self.assertRaises(ValueError) as ctx:
                 load_profiling_config(bad_path, PROJECT_ROOT)
             self.assertIn("cpu", str(ctx.exception).lower())
+
+    def test_invalid_entropy_backend_rejected_and_missing_defaults_to_auto(self) -> None:
+        """Verify invalid entropy_backend fails fast while omitted key defaults cleanly to 'auto'."""
+        real_toml = (PROJECT_ROOT / "configs/profiling/kolektorsdd2.toml").read_text(encoding="utf-8")
+        bad_toml = real_toml.replace('entropy_backend = "auto"', 'entropy_backend = "bogus_backend"')
+        omitted_toml = real_toml.replace('entropy_backend = "auto"\n', "")
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            bad_path = Path(tmp_dir) / "bad_backend.toml"
+            bad_path.write_text(bad_toml, encoding="utf-8")
+            with self.assertRaises(ValueError):
+                load_profiling_config(bad_path, PROJECT_ROOT)
+
+            legacy_path = Path(tmp_dir) / "legacy.toml"
+            legacy_path.write_text(omitted_toml, encoding="utf-8")
+            legacy_cfg = load_profiling_config(legacy_path, PROJECT_ROOT)
+            self.assertEqual(legacy_cfg.descriptor.entropy_backend, "auto")
 
 
 if __name__ == "__main__":

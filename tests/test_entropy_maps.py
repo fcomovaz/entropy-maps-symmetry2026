@@ -21,19 +21,25 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.features.entropy_maps import (
+    ENTROPY_BACKENDS,
     EntropyPlan,
     build_entropy_plan,
+    build_nlogn_lut,
     build_quantization_lut,
     build_shannon_term_lut,
     compute_entropy_features,
     feature_names,
+    is_nested_grid_levels,
     normalized_entropy,
     quantize_pixels,
     region_edges,
     region_histograms,
+    resolve_entropy_backend,
     validate_bins,
     validate_grid_levels,
+    validate_nested_grid_levels,
 )
+from src.features.native_entropy import load_native_config
 
 
 class TestEntropyValidation(unittest.TestCase):
@@ -259,6 +265,97 @@ class TestLookUpTablesAndPlans(unittest.TestCase):
         feats_without_plan = compute_entropy_features(images, levels, bins, plan=None)
 
         np.testing.assert_array_equal(feats_with_plan, feats_without_plan)
+
+
+class TestEntropyBackends(unittest.TestCase):
+    """Test multi-backend dispatch, nesting checks, fail-fast errors, and numerical parity."""
+
+    def test_nesting_helpers_and_nlogn_lut(self) -> None:
+        """Nested grid checks and n*log2(n) LUT values match mathematical definitions."""
+        self.assertTrue(is_nested_grid_levels(128, [1, 2, 4, 8]))
+        self.assertTrue(is_nested_grid_levels(108, [1, 3, 9]))
+        self.assertFalse(is_nested_grid_levels(128, [3, 5]))
+        self.assertFalse(is_nested_grid_levels(100, [1, 2, 4, 8]))
+
+        self.assertEqual(validate_nested_grid_levels(128, [8, 4, 2, 1]), (8, 4, 2, 1))
+        with self.assertRaises(ValueError):
+            validate_nested_grid_levels(128, [3, 5])
+
+        lut = build_nlogn_lut(16)
+        self.assertEqual(lut.shape, (17,))
+        self.assertEqual(lut[0], 0.0)
+        self.assertAlmostEqual(float(lut[16]), 16.0 * math.log2(16), places=12)
+
+    def test_resolve_backend_auto_and_explicit_fail_fast(self) -> None:
+        """Auto falls back on non-nested/missing DLL; explicit fast backends fail fast."""
+        native_cfg = load_native_config(Path("configs/features/native_entropy.toml"), PROJECT_ROOT)
+        missing_dll = PROJECT_ROOT / "src/features/native/build/nonexistent_missing.dll"
+
+        # Non-nested [3, 5] falls back under auto, rejects explicit fast backends
+        self.assertEqual(
+            resolve_entropy_backend("auto", 128, [3, 5], 16, dll_path=native_cfg.dll_path),
+            "numpy_baseline",
+        )
+        for fast_backend in ("numpy_finest_pyramid", "numpy_fused_entropy", "c_single_pass"):
+            with self.assertRaises(ValueError):
+                resolve_entropy_backend(fast_backend, 128, [3, 5], 16, dll_path=native_cfg.dll_path)
+
+        # Missing DLL falls back to numpy_finest_pyramid under auto, raises under explicit c_single_pass
+        self.assertEqual(
+            resolve_entropy_backend("auto", 128, [1, 2, 4, 8], 16, dll_path=missing_dll),
+            "numpy_finest_pyramid",
+        )
+        with self.assertRaises(FileNotFoundError):
+            resolve_entropy_backend("c_single_pass", 128, [1, 2, 4, 8], 16, dll_path=missing_dll)
+
+        # Oversized g_max=32 exceeds C limit (16) -> auto falls back cleanly, explicit C fails fast
+        self.assertEqual(
+            resolve_entropy_backend("auto", 128, [1, 2, 4, 8, 16, 32], 16, dll_path=native_cfg.dll_path),
+            "numpy_finest_pyramid",
+        )
+        with self.assertRaises(ValueError):
+            resolve_entropy_backend(
+                "c_single_pass", 128, [1, 2, 4, 8, 16, 32], 16, dll_path=native_cfg.dll_path
+            )
+
+    def test_all_backends_numerical_parity(self) -> None:
+        """All 5 configured entropy backends produce identical results within 1e-12."""
+        rng = np.random.default_rng(7)
+        imgs = rng.integers(0, 256, size=(5, 128, 128), dtype=np.uint8)
+        imgs[0] = 42  # constant
+
+        ref = compute_entropy_features(imgs, [1, 2, 4, 8], 16, backend="numpy_baseline")
+        for b_name in ENTROPY_BACKENDS:
+            got = compute_entropy_features(imgs, [1, 2, 4, 8], 16, backend=b_name)
+            np.testing.assert_allclose(got, ref, atol=1e-12, err_msg=f"Parity failed for {b_name}")
+
+        # Bins=7, unordered levels
+        ref_u = compute_entropy_features(imgs, [8, 4, 2, 1], 7, backend="numpy_baseline")
+        for b_name in ("auto", "numpy_finest_pyramid", "numpy_fused_entropy", "c_single_pass"):
+            got_u = compute_entropy_features(imgs, [8, 4, 2, 1], 7, backend=b_name)
+            np.testing.assert_allclose(got_u, ref_u, atol=1e-12, err_msg=f"Unordered failed for {b_name}")
+
+        # N=0 empty
+        empty_got = compute_entropy_features(imgs[:0], [1, 2, 4, 8], 16, backend="c_single_pass")
+        self.assertEqual(empty_got.shape, (0, 85))
+
+    def test_explicit_plan_preserved_when_backend_omitted(self) -> None:
+        """Passing an explicit numpy_baseline plan with backend=None keeps numpy_baseline execution."""
+        plan_base = build_entropy_plan(64, [1, 2, 4], 16, backend="numpy_baseline")
+        self.assertEqual(plan_base.resolved_backend, "numpy_baseline")
+        self.assertEqual(len(plan_base.regions), 21)
+
+        rng = np.random.default_rng(11)
+        imgs = rng.integers(0, 256, size=(2, 64, 64), dtype=np.uint8)
+        out = compute_entropy_features(imgs, [1, 2, 4], 16, plan=plan_base)
+        ref = compute_entropy_features(imgs, [1, 2, 4], 16, backend="auto")
+        np.testing.assert_allclose(out, ref, atol=1e-12)
+
+        # Explicit different backend triggers rebuilding / overrides baseline plan
+        out_pyr = compute_entropy_features(
+            imgs, [1, 2, 4], 16, plan=plan_base, backend="numpy_finest_pyramid"
+        )
+        np.testing.assert_allclose(out_pyr, ref, atol=1e-12)
 
 
 if __name__ == "__main__":
