@@ -1,13 +1,12 @@
 # Evidencia y registro de revisión
 
-Esta carpeta conserva diagnósticos y resultados del proyecto. Para la síntesis científica de hipótesis y la comparativa pre-MCU ver [../HYPOTHESIS.md](../HYPOTHESIS.md); para la auditoría forense profunda ver [../REVIEW_01.md](../REVIEW_01.md). Los resultados pedagógicos de laboratorios siguen junto a cada laboratorio para evitar romper rutas, procedencia o hashes.
+Esta carpeta conserva diagnósticos y resultados del proyecto. Para la síntesis científica de hipótesis y la comparativa pre-MCU ver [../HYPOTHESIS.md](../HYPOTHESIS.md). Los resultados pedagógicos de laboratorios siguen junto a cada laboratorio para evitar romper rutas, procedencia o hashes.
 
 ## Dónde está cada evidencia
 
 | Ruta | Contenido y lectura recomendada |
 |---|---|
 | [../HYPOTHESIS.md](../HYPOTHESIS.md) | Verificación de hipótesis con resultados `seed=42` + backend C99 `entropy_pyramid` y análisis pre-MCU en puro Python vs C99 vs CNNs |
-| [../REVIEW_01.md](../REVIEW_01.md) | Auditoría científica y forense profunda sobre la instantánea `bf4a29f` y decisiones de diseño `N1–N8` |
 | [environment_debug.md](environment_debug.md) | Diagnóstico histórico del 2026-09-26: reparación CUDA y verificaciones; no es un benchmark |
 | `pytorch_cuda_install.log`, `cuda_verification.log`, `environment_verification.log` | Logs locales de instalación y verificación original |
 | [01/outputs/run_summary.json](../understanding/01_patch_partition/outputs/run_summary.json) | Seis casos de partición; cada carpeta de caso incluye rejilla, reconstrucción, coordenadas y métricas |

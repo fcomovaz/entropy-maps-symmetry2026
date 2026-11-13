@@ -3,10 +3,10 @@
 - **Synthesis Date:** 2026-11-11
 - **Evaluated Branch & Revision:** `main` @ `486c111` *(after merging `feat/fast-entropy-opt`: C99 `c_single_pass` kernel, pyramidal NumPy variants `V1/V2`, and fused linear classifier `lr_dot`)*
 - **Measured Protocol:** CPU `Intel(R) Core(TM) i7-7700HQ @ 2.80 GHz`, `threads = 1`, `batch_size = 1` (embedded latency) and `batch_size = 32` (throughput), `seed = 42` aligned across classical ML and CNN checkpoints (CUDA reference on NVIDIA GTX 1050 `cu126`).
-- **Related Documents:** [README.md](README.md), [RESUME.md](RESUME.md), [REVIEW_01.md](REVIEW_01.md) *(historical forensic audit at `bf4a29f`)*, and [understanding/13_entropy_maps_optimization/README.md](understanding/13_entropy_maps_optimization/README.md).
+- **Related Documents:** [README.md](README.md), [RESUME.md](RESUME.md), [results/classification/README.md](results/classification/README.md), and [understanding/13_entropy_maps_optimization/README.md](understanding/13_entropy_maps_optimization/README.md).
 
 > [!NOTE]
-> **Exact scope of on-disk artifacts (`486c111`):** Formal post-merge runs on `main` cover `kolektorsdd2` (`normal` and `inverted`) and `mvtec-ad_bottle` (`normal` and `inverted`), along with isolated pure-Python comparisons under `results/comparison_cpu_python/` (Git-ignored). Any reference to `mvtec-ad_tile` or the `--all-objects` Random Forest sweep explicitly originates from the historical `bf4a29f` snapshot audited in [REVIEW_01.md](REVIEW_01.md) and [results/classification/README.md](results/classification/README.md).
+> **Exact scope of on-disk artifacts (`486c111`):** Formal post-merge runs on `main` cover `kolektorsdd2` (`normal` and `inverted`) and `mvtec-ad_bottle` (`normal` and `inverted`), along with isolated pure-Python comparisons under `results/comparison_cpu_python/` (Git-ignored). Any reference to `mvtec-ad_tile` or the `--all-objects` Random Forest sweep explicitly originates from the historical `bf4a29f` snapshot documented in [results/classification/README.md](results/classification/README.md).
 
 ---
 
@@ -99,7 +99,7 @@ Results from [results/classification/](results/classification/README.md) and [ab
 | **`mvtec-ad_bottle`** | `lr` / `lr_dot` | `0.7333 / 0.9181` | `0.7333 / 0.9130` | **`0.8000 / 0.9231`** | **`+0.0667`** | **`0.0317`** | `0.2216` | `x9 = 19.33%` perm. (`2.15%/feat`, **`2.26×`** density). Axes: **`asym_tb 54.25%`**, `asym_lr 32.38%`, `asym_rot180 13.37%`. Top-3: `asym_tb_8x8` (`9.17%`), `E_2x2_r1_c0` (`7.31%`), `asym_lr_8x8` (`5.64%`). |
 | **`mvtec-ad_bottle`** | `rf` *(100t)* | `0.5263 / 0.8696` | `0.6923 / 0.8980` | `0.7273 / 0.9030` | **`+0.2010`** | `5.443` *(rf)* | `5.653` *(rf)* | `x9 = 38.12%` Gini (**`5.82×`** density: `4.24%` vs `0.73%/feat`). Axes: `asym_tb 35.18%`, `asym_lr 34.73%`, `asym_rot180 30.09%`. |
 | **`mvtec-ad_bottle`** | `dt` *(depth 3)* | `0.6364 / 0.7525` | `0.5882 / 0.7584` | `0.5833 / 0.6614` | `-0.0530` | — | — | In `ablation_quality_vs_cost.csv` (retrained), `dt x85` scores `0.5714` due to feature-tie randomness without `random_state` in [`build_classifier`](src/models/descriptor_classifier.py#L931-L937). |
-| *Historical `bf4a29f` (`mvtec-ad_tile`)* | `lr` / `rf` / `dt` | `0.733 / 0.435 / 0.313` | `0.833 / 0.857 / 0.727` | `0.865 / 0.824 / 0.839` | `+0.132 / +0.389 / +0.526` | — | — | Historical snapshot in [REVIEW_01.md](REVIEW_01.md) (`tile` not re-evaluated with CNNs at `486c111`). |
+| *Historical `bf4a29f` (`mvtec-ad_tile`)* | `lr` / `rf` / `dt` | `0.733 / 0.435 / 0.313` | `0.833 / 0.857 / 0.727` | `0.865 / 0.824 / 0.839` | `+0.132 / +0.389 / +0.526` | — | — | Historical `bf4a29f` snapshot ([results/classification/README.md](results/classification/README.md); `tile` not re-evaluated with CNNs at `486c111`). |
 
 ---
 

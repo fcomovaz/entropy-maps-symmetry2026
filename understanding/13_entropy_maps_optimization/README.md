@@ -8,7 +8,7 @@
 
 El descriptor formal actual (`compute_entropy_features` en `src/features/entropy_maps.py`) **ya precalcula las coordenadas geométricas** (`EntropyPlan.regions`, 85 cajas `RegionSpec` para niveles `[1, 2, 4, 8]`) y los Lookup Tables de cuantización y entropía.
 
-Sin embargo, el perfilado previo (`REVIEW_01.md`) mostró que `compute_entropy_features` sigue iterando en Python sobre las 85 regiones individuales:
+Sin embargo, el perfilado granular por etapas ([Lab 12](../12_profiling_stages/README.md) y `results/profiling/`) mostró que `compute_entropy_features` sigue iterando en Python sobre las 85 regiones individuales:
 1. Cada iteración hace un *slice* no contiguo (`quantized[:, y0:y1, x0:x1]`), copia/cast a `int32`, cálculo de offsets e invocación separada a `np.bincount`, lookup `term_lut[counts]`, suma y regla equiprobable.
 2. En `batch_size = 1`, el costo queda dominado por la latencia fija de despacho por llamada (~85 micro-llamadas NumPy + gap de despacho Python).
 3. Cada píxel de la imagen cuantizada se lee **4 veces** (una por escala `1x1`, `2x2`, `4x4`, `8x8`), aunque los histogramas por conteo entero son **estrictamente aditivos**.
