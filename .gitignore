@@ -18,12 +18,14 @@ results/classification/*
 !results/cnn/
 results/cnn/*
 !results/cnn/.gitkeep
+!results/cnn/README.md
 !results/comparison/
 results/comparison/*
 !results/comparison/README.md
 !results/comparison_cpu/
 results/comparison_cpu/*
 !results/comparison_cpu/.gitkeep
+!results/comparison_cpu/README.md
 !results/profiling/
 results/profiling/*
 !results/profiling/*/
