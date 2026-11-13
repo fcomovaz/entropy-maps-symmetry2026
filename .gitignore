@@ -50,6 +50,7 @@ data/csv/*
 memory/*
 !memory/.gitkeep
 understanding/13_entropy_maps_optimization/native/build/
+understanding/14_ml_classifiers_mcu/build/
 src/features/native/build/
 *.dll
 *.lib
