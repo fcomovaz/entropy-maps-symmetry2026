@@ -1,0 +1,13 @@
+dataset_tag,inverted,batch_size,threads,entropy_backend,n_images_loaded,t_descriptor_ms_median,t_descriptor_ms_iqr,t_descriptor_ci95_low_ms,t_descriptor_ci95_high_ms,inter_run_cv_pct
+kolektorsdd2,False,1,1,c_single_pass,200,0.489350,0.258250,0.476336,0.498704,26.669060
+kolektorsdd2,False,32,1,c_single_pass,200,0.040142,0.023713,0.037873,0.043755,24.301641
+mvtec-ad_bottle,False,1,1,c_single_pass,200,0.280700,0.196550,0.273795,0.291700,2.422215
+mvtec-ad_bottle,False,32,1,c_single_pass,200,0.032609,0.019552,0.031119,0.034801,20.237083
+mvtec-ad_tile,False,1,1,c_single_pass,200,0.357050,0.241800,0.326999,0.403218,20.129495
+mvtec-ad_tile,False,32,1,c_single_pass,200,0.053250,0.017687,0.051437,0.055209,9.591636
+kolektorsdd2-inverted,True,1,1,c_single_pass,200,0.230500,0.126975,0.217299,0.233251,37.827205
+kolektorsdd2-inverted,True,32,1,c_single_pass,200,0.036466,0.018977,0.034948,0.037238,9.003422
+mvtec-ad_bottle-inverted,True,1,1,c_single_pass,200,0.376900,0.301050,0.339396,0.407351,28.786402
+mvtec-ad_bottle-inverted,True,32,1,c_single_pass,200,0.046989,0.023438,0.044331,0.049509,8.969044
+mvtec-ad_tile-inverted,True,1,1,c_single_pass,200,0.255600,0.197650,0.250597,0.263700,7.271817
+mvtec-ad_tile-inverted,True,32,1,c_single_pass,200,0.029270,0.021759,0.027475,0.031191,16.348604

@@ -32,8 +32,9 @@ El proyecto ha completado la exploración por componentes, la experimentación f
 5. **Fase 5 — Experimentación formal y profiling en CPU (Completada):**
    - Clasificación supervisada ligera (`dt`, `knn`, `lr`, `lr_dot`, `rf`), ablaciones $\mathbf{x}_{85}$ vs $\mathbf{x}_9$ vs $\mathbf{x}_{94}$ y comparación 100 % CPU justa frente a las 7 CNNs ligeras en `experiments/`.
    - Descomposición granular por etapas de $\mathbf{x}_{94}$ y capas PyTorch en [12](12_profiling_stages/README.md), identificando el cuello de botella de las 85 rebanadas Python/NumPy y el wrapper de `scikit-learn`.
-6. **Fase 6 — Optimización algorítmica y kernel C99 Pre-MCU (Completada):**
+6. **Fase 6 — Optimización algorítmica y kernel C99 Pre-MCU (Completada + exploración ML embebible 14):**
    - Validación matemática y experimental de paso único en grilla más fina con pirámide aditiva en NumPy puro (`numpy_finest_pyramid`) y kernel C99 portable (`c_single_pass`), más el núcleo lineal plegado `lr_dot` ([13](13_entropy_maps_optimization/README.md)), promovidos al pipeline formal `src/`.
+   - Comparativa exploratoria (sin modificar `src/`) de 9 clasificadores ML portables a C99 (`mlp_16_dot`, `mlp_16_skip_dot`, `mlp_32_16_dot`, `lr_l1_dot`, `lda_shrink_dot`, `lsvc_dot`, `gnb_quad`, `dt_core`, `gbdt_tiny_core`) frente a `lr_dot`, `dt` y `rf` en [14](14_ml_classifiers_mcu/README.md).
 
 ---
 
@@ -56,6 +57,7 @@ Todos los laboratorios residen en carpetas hermanas dentro de `code/understandin
 | [11_verify_kolektorsdd2_csv/](11_verify_kolektorsdd2_csv/README.md) | Control de integridad CSV KolektorSDD2 | `data/csv/kolektorsdd2(-inverted).csv` | Validación 16389 cols y `csv_roundtrip.png` |
 | [12_profiling_stages/](12_profiling_stages/README.md) | Profiling manual por etapa ($\mathbf{x}_{94}$) y capa (`ds_cnn`) en CPU | Sintético o PNG `128x128` | Desglose `perf_counter_ns`, `cProfile`, `torch.profiler` y figura apilada |
 | [13_entropy_maps_optimization/](13_entropy_maps_optimization/README.md) | Paso único en grilla más fina, pirámide aditiva NumPy (`V1/V2`) y kernel C99 (`V3`) + `lr_dot` | `real:mvtec-ad` (`n=200`, `128x128`) | 13 tests de paridad ($\le 1.89\times10^{-15}$), `benchmark_*.csv` y 7+1 figuras |
+| [14_ml_classifiers_mcu/](14_ml_classifiers_mcu/README.md) | Clasificadores ML ligeros plegados y kernels C99 embebibles (`0 malloc`, MLPs, L1, LDA, SVC, GNB cuad., GBDT) sin tocar `src/` | Particiones canónicas `seed=42` (`kolektorsdd2`, `bottle`, `tile`, normal/inv. + 15 objetos MVTec-AD) | 6 tests de paridad/Flash/C99, CSVs comparativos, `sample_weights_mvtec_bottle.h` y 4 figuras |
 
 Además existe [`07_entropy_maps_vectorized/explain_entropy_maps.py`](07_entropy_maps_vectorized/explain_entropy_maps.py) como guion explicativo visual de la vectorización de mapas $\mathbf{x}_{85}$.
 
@@ -119,6 +121,8 @@ Píxeles crudos
   - En la implementación baseline, la extracción de $\mathbf{x}_{94}$ invertía la mayor parte del tiempo en 85 iteraciones Python (`slice` + `np.bincount`, con `8x8` dominando), el *gap* de despacho inter-etapa y el wrapper `Pipeline.predict` de `scikit-learn` (`StandardScaler` + validación), ocultando el costo real de un producto punto de 94 dimensiones.
 - **Optimización single-pass y núcleo C99 pre-MCU (13):**
   - Al calcular histogramas únicamente sobre la grilla más fina ($8\times8$) en una sola lectura y obtener $4\times4$, $2\times2$ y $1\times1$ por suma exacta de bloques hijo, **NumPy puro (`numpy_finest_pyramid`)** acelera $\mathbf{x}_{85}$ en `9.40x` y el kernel **C99 (`c_single_pass`, sin `malloc` en batch=1)** alcanza `92.65x` (`0.024 ms` vs `2.23 ms`) manteniendo paridad numérica $\le 1.89\times10^{-15}$. El plegado algebraico de `StandardScaler` en un producto punto directo (`lr_dot`) elimina el overhead de `scikit-learn`.
+- **Clasificadores ML alternativos portables a C99 sin modificar `src/` (14):**
+  - Plegar `StandardScaler` en MLPs ReLU (`6.0–14.0 KB` Flash, `64–192 B` SRAM, `0 <math.h>` en umbral) eleva el F1 medio en los 15 objetos MVTec-AD a `0.6905` (`mlp_16_skip_dot`) frente a `0.6486` (`lr_dot`) y `0.5178` (`rf`), y en `kolektorsdd2` a `F1=0.5000` / `PR-AUC=0.5936` frente a `lr_dot` (`0.4265` / `0.4360`). Todos los núcleos C99 logran `100%` de acuerdo de etiqueta y corren en `0.019–4.02 us` (`< 1.5%` de `T_desc`). `lr_l1_dot` recorta los pesos activos a `41.1/94` en promedio (`0.32 KB`), y `gnb_quad` revela cancelación de ULP `float32` cuando el offset log-ratio alcanza `~1.1e4` pese a conservar `100%` de acuerdo binario.
 
 ---
 
@@ -133,7 +137,7 @@ Píxeles crudos
 
 ## Reproducibilidad y ejecución
 
-Los scripts de comprensión usan rutas relativas al proyecto y fijan semillas reproducibles (20260928 en 02/03; 20261001 en 05/06/07; 42 en 04, 12 y 13).
+Los scripts de comprensión usan rutas relativas al proyecto y fijan semillas reproducibles (20260928 en 02/03; 20261001 en 05/06/07; 42 en 04, 12, 13 y 14).
 
 Para ejecutar los laboratorios individuales o sus tests manuales (PowerShell desde carpeta `code/`):
 ```powershell
@@ -144,6 +148,7 @@ Para ejecutar los laboratorios individuales o sus tests manuales (PowerShell des
 .\.venv\Scripts\python.exe -m unittest understanding/06_entropy_pyramid_descriptor/tests/test_descriptor.py
 $env:PYTHONPATH = (Get-Location).Path; .\.venv\Scripts\python.exe -m unittest understanding/07_descriptor_behavior/tests/test_behavior_helpers.py
 .\.venv\Scripts\python.exe -m unittest understanding/13_entropy_maps_optimization/tests/test_entropy_variants.py
+.\.venv\Scripts\python.exe -m unittest understanding/14_ml_classifiers_mcu/tests/test_ml_classifiers_mcu.py
 
 # Demos y benchmarks de comprensión
 .\.venv\Scripts\python.exe understanding/06_entropy_pyramid_descriptor/run_demo.py
@@ -169,4 +174,9 @@ $env:PYTHONPATH = (Get-Location).Path; .\.venv\Scripts\python.exe understanding/
 .\.venv\Scripts\python.exe understanding/13_entropy_maps_optimization/explain_single_pass.py
 .\.venv\Scripts\python.exe understanding/13_entropy_maps_optimization/benchmark_entropy_variants.py --config configs/optimization/entropy_maps.toml
 .\.venv\Scripts\python.exe understanding/13_entropy_maps_optimization/plot_entropy_optimization.py --config configs/optimization/entropy_maps.toml
+
+# Lab 14: Tests, benchmark exploratorio de clasificadores ML portables a C99 (sin tocar src/) y figuras
+.\.venv\Scripts\python.exe -m unittest understanding/14_ml_classifiers_mcu/tests/test_ml_classifiers_mcu.py -v
+.\.venv\Scripts\python.exe understanding/14_ml_classifiers_mcu/benchmark_classifiers.py --config configs/understanding/ml_classifiers_mcu.toml --include-inverted
+.\.venv\Scripts\python.exe understanding/14_ml_classifiers_mcu/plot_results.py --config configs/understanding/ml_classifiers_mcu.toml
 ```

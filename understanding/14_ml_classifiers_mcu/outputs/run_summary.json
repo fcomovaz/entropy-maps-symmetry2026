@@ -1,0 +1,28 @@
+{
+  "completed_at_utc": "2026-11-13T07:20:10+00:00",
+  "config_path": "D:\\Publications\\2026-10-Symmetry-Entropy\\code\\configs\\understanding\\ml_classifiers_mcu.toml",
+  "output_dir": "D:\\Publications\\2026-10-Symmetry-Entropy\\code\\understanding\\14_ml_classifiers_mcu\\outputs",
+  "seed": 42,
+  "threads": 1,
+  "native_c99_loaded": true,
+  "native_build_metadata": {
+    "built_at_utc": "2026-11-13T07:14:07+00:00",
+    "binary_path": "D:\\Publications\\2026-10-Symmetry-Entropy\\code\\understanding\\14_ml_classifiers_mcu\\build\\mcu_classifiers.dll",
+    "source_file": "D:\\Publications\\2026-10-Symmetry-Entropy\\code\\understanding\\14_ml_classifiers_mcu\\c_kernels\\mcu_classifiers.c",
+    "compiler_path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\18\\BuildTools\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
+    "compiler_version": "Microsoft (R) C/C++ Optimizing Compiler Version 19.51.36244 for x64",
+    "compiler_flags": [
+      "/nologo",
+      "/O2",
+      "/fp:precise",
+      "/W4",
+      "/LD"
+    ],
+    "vcvars64_path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\18\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat"
+  },
+  "include_inverted": true,
+  "mvtec_sweep_executed": true,
+  "primary_rows_count": 144,
+  "sweep_rows_count": 192,
+  "src_unmodified_verified_by_isolation": true
+}
