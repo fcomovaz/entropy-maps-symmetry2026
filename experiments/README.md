@@ -1,6 +1,20 @@
 # Experimentos científicos
 
-Registro y puntos de entrada CLI para los experimentos reproducibles del proyecto.
+Registro y puntos de entrada CLI para los experimentos reproducibles del proyecto (invocar siempre como módulo `.\.venv\Scripts\python.exe -m experiments.<modulo>` desde `code/`).
+
+## Índice rápido (Experimentos 01–09)
+
+| Experimento | Módulo CLI (`experiments/`) | Configuración TOML principal | Salida principal |
+|---|---|---|---|
+| **01.** Preprocesado MVTec-AD (`128×128`) | `preprocess_mvtec_ad` | `configs/preprocessing/mvtec_ad.toml` | `data/preprocessed/mvtec-ad[-inverted]/` |
+| **02.** Exportación CSV MVTec-AD (`16,391` cols) | `export_mvtec_ad_csv` | `configs/csv/mvtec_ad.toml` | `data/csv/mvtec-ad[-inverted].csv` |
+| **03.** Preprocesado KolektorSDD2 (`128×128`) | `preprocess_kolektorsdd2` | `configs/preprocessing/kolektorsdd2.toml` | `data/preprocessed/KolektorSDD2[-inverted]/` |
+| **04.** Exportación CSV KolektorSDD2 (`16,389` cols) | `export_kolektorsdd2_csv` | `configs/csv/kolektorsdd2.toml` | `data/csv/kolektorsdd2[-inverted].csv` |
+| **05.** Mapas de entropía multiescala ($\mathbf{x}_{85}$) | `export_entropy_maps` | `configs/entropy/*.toml` | `data/csv/*-entropy.csv` + `.json` |
+| **06.** Asimetrías espaciales ($\mathbf{x}_{85} \to \mathbf{x}_{94}$) | `append_asymmetry_features` | `configs/asymmetry/*.toml` | `data/csv/*-entropy-full.csv` + `.json` |
+| **07.** Clasificación ML, ablación y explicabilidad | `evaluate_descriptors` | `configs/classification/*.toml` | `results/classification/` |
+| **08.** Zoo de 7 CNNs ligeras (y legado *mixed*) | `evaluate_cnn`, `compare_baseline_vs_cnn` | `configs/cnn/*.toml` | `results/cnn/`, `results/comparison/` *(deprecated)* |
+| **09.** Benchmark 100 % CPU justo y profiling profundo | `benchmark_cpu_fair`, `profile_pipelines` | `configs/profiling/*.toml` | `results/comparison_cpu/`, `results/profiling/` |
 
 ---
 
@@ -371,7 +385,7 @@ Para cada corrida se crea una subcarpeta en `results/classification/<dataset>[_i
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier all
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier all --inverted
 
-# O evaluar clasificadores individuales (`dt`, `knn`, `lr`, `lr_dot`, `rf`):
+# O evaluar clasificadores individuales (`dt`, `knn`, `lr`, `lr_dot`, `rf`; `lr` admite `--linear-mode dot_core`):
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier rf
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier knn
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier dt
@@ -500,17 +514,17 @@ Corrige el sesgo *mixed-device* de `results/comparison/` midiendo el pipeline ta
 
 ### Salidas generadas
 
-- **Fase A (`results/comparison_cpu/`):**
+- **Fase A (`results/comparison_cpu/` — o directorio indicado en `--output-dir`):**
   - `<tag>_baseline_vs_cnn_cpu.csv` y (opcional) `<tag>_cuda_reference.csv`.
   - `summary_all_datasets.csv` (tabla agregada de mediana `t_total` y `F1` entre datasets/objetos).
-  - `pareto_cpu_t1.png` (y por cada conteo de hilos): frontera de Pareto (`F1`, `ROC-AUC`, `Throughput`).
+  - `<tag>_pareto_threads{1,2,4}.png` (y por cada conteo de hilos): frontera de Pareto (`F1`, `ROC-AUC`, `Throughput`).
 - **Fase B (`results/profiling/<tag>/`):**
   - `environment.json` (CPU, núcleos físicos/lógicos, frecuencia, plan de energía Windows, RAM, Git commit, versiones, `parallel_info`).
   - `descriptor_stage_times.csv`, `cprofile_descriptor.txt`, `descriptor_scalability.csv` (barrido `image_size`, `bins`, `grid_levels`).
   - `classifier_times.csv`, `classifier_thread_scaling.csv`.
-  - `cnn_layer_times_<model>.csv`, `cnn_aten_ops_<model>.csv`, `chrome_trace_<model>.json`, `cnn_architectures_summary.csv`, `cnn_thread_scaling.csv` (incluyendo *cold start* de checkpoint + primera inferencia y verificación de overhead de *hooks* `<= 15 %`).
+  - `cnn_layer_times_<model>.csv`, `cnn_aten_ops_<model>.csv`, `cnn_aten_table_<model>.txt`, `cnn_chrome_trace_<model>.json`, `cnn_architectures_summary.csv`, `cnn_thread_scaling.csv` (incluyendo *cold start* de checkpoint + primera inferencia y verificación de overhead de *hooks* `<= 15 %`).
   - `ablation_quality_vs_cost.csv` ($\Delta\text{F1} / \Delta\text{ms}$ entre `x85_only`, `x9_only` y `x94_full`) y `statistical_tests.csv` (test U de Mann-Whitney).
-  - 6 figuras PNG (`01_x94_stage_breakdown.png` ... `06_throughput_batch32.png`) y reporte `README.md` poblado automáticamente con los números medidos.
+  - 6 figuras PNG (`fig1_x94_stage_breakdown.png`, `fig2_cnn_layer_heatmap.png`, `fig3_pareto_cpu_1t_b1.png`, `fig4_thread_scaling.png`, `fig5_descriptor_scalability.png`, `fig6_throughput_batch32.png`) y reporte `README.md` poblado automáticamente con los números medidos.
 
 ### Comandos de ejecución manual (PowerShell desde carpeta `code/`)
 

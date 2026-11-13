@@ -22,9 +22,10 @@ Set-Location D:\Publications\2026-10-Symmetry-Entropy\code
 .\.venv\Scripts\python.exe understanding/06_entropy_pyramid_descriptor/tests/test_descriptor.py
 $env:PYTHONPATH = (Get-Location).Path; .\.venv\Scripts\python.exe understanding/07_descriptor_behavior/tests/test_behavior_helpers.py
 .\.venv\Scripts\python.exe -m unittest understanding/13_entropy_maps_optimization/tests/test_entropy_variants.py -v
+.\.venv\Scripts\python.exe -m unittest understanding/14_ml_classifiers_mcu/tests/test_ml_classifiers_mcu.py -v
 ```
 
-Resultado esperado: `Environment verification: PASS`, `No broken requirements found.`, **208 tests formales** en 22 módulos de `tests/` ([tests/README.md](tests/README.md)) y **86 tests de laboratorio** (`5` en `03`, `8` suites/`140` subcasos en `04`, `20` en `05`, `25` en `06`, `15`/`279` escenas en `07`, `13` en `13`). En este equipo los tests CUDA deben ejecutarse, no omitirse; `test_environment.py` exige CUDA real.
+Resultado esperado: `Environment verification: PASS`, `No broken requirements found.`, **208 tests formales** en 22 módulos de `tests/` ([tests/README.md](tests/README.md)) y **92 tests de laboratorio** (`5` en `03`, `8` suites/`140` subcasos en `04`, `20` en `05`, `25` en `06`, `15`/`279` escenas en `07`, `13` en `13`, `6` en `14`). En este equipo los tests CUDA deben ejecutarse, no omitirse; `test_environment.py` exige CUDA real.
 
 Los tests de entropía `03` necesitan las salidas de `01`, ya conservadas; si faltan, ejecutar primero `understanding/01_patch_partition/patch_partition.py --patch-size 64`.
 
@@ -81,13 +82,13 @@ py -3.11 -m venv .venv
 
 ## Carpetas (relativas a `code/`)
 
-* [configs/](configs/base.toml): configuraciones TOML declarativas (`base.toml`, `preprocessing/`, `csv/`, `entropy/`, `asymmetry/`, `classification/`, `cnn/`, `profiling/`, `features/`, `optimization/`) y `logging.py`. Ningún módulo de `src/` hardcodea parámetros o rutas.
+* [configs/](configs/README.md): configuraciones TOML declarativas (`base.toml`, `preprocessing/`, `csv/`, `entropy/`, `asymmetry/`, `classification/`, `cnn/`, `profiling/`, `features/`, `optimization/`, `understanding/`) y `logging.py`. Ningún módulo de `src/` hardcodea parámetros o rutas.
 * [src/](src/README.md): módulos formales reutilizables (`preprocessing/`, `datasets/`, `features/` incl. C99 `entropy_pyramid`, `models/` incl. `LinearDotCoreClassifier` y `cnn/`, `profiling/`).
 * [experiments/](experiments/README.md): puntos de entrada CLI para todas las corridas reproducibles.
-* [understanding/](understanding/README.md): trece laboratorios pedagógicos (`01_patch_partition/` a `13_entropy_maps_optimization/`, más `07_entropy_maps_vectorized/`).
-* [tests/](tests/README.md): verificación CUDA (`test_environment.py`) y 22 suites formales (`208` casos `unittest`).
-* [results/](results/README.md): diagnósticos, logs, clasificación (`results/classification/`), checkpoints CNN (`results/cnn/`), comparación 100 % CPU justa con C99 (`results/comparison_cpu/`), comparativa Python puro (`results/comparison_cpu_python/`, ignorada por Git), profiling científico (`results/profiling/`) y legado `comparison/` (*deprecated*).
-* `notebooks/`: cuaderno de ejecución completa en Colab ([Entropy_Maps_Full_Run.ipynb](notebooks/Entropy_Maps_Full_Run.ipynb)).
+* [understanding/](understanding/README.md): catorce laboratorios pedagógicos (`01_patch_partition/` a `14_ml_classifiers_mcu/`, más `07_entropy_maps_vectorized/`).
+* [tests/](tests/README.md): verificación CUDA (`test_environment.py`), 22 suites formales (`208` casos `unittest`) y `92` tests pedagógicos en `understanding/`.
+* [results/](results/README.md): diagnósticos, logs, clasificación ([results/classification/](results/classification/README.md)), checkpoints CNN ([results/cnn/](results/cnn/README.md)), comparación 100 % CPU justa con C99 ([results/comparison_cpu/](results/comparison_cpu/README.md)), comparativa Python puro (`results/comparison_cpu_python/`, ignorada por Git), profiling científico (`results/profiling/`) y legado [results/comparison/](results/comparison/README.md) (*deprecated*).
+* [notebooks/](notebooks/README.md): cuaderno de ejecución completa en Colab ([Entropy_Maps_Full_Run.ipynb](notebooks/Entropy_Maps_Full_Run.ipynb)).
 * [data/](data/README.md): `raw/` (no incluido en Git), `preprocessed/` y `csv/`.
 * `memory/`: exportador de `README*.md` a `memory/` para sincronización con NotebookLM (`export_readmes.ps1`).
 
@@ -307,7 +308,7 @@ Aísla lo que se pierde al no usar la DLL C99 (salida local ignorada por Git):
 | Mapa de código, grafo y reglas que muerden | [RESUME.md](RESUME.md) |
 | Reglas de desarrollo del repositorio | [AGENTS.md](AGENTS.md) |
 
-**Límites abiertos:** los tiempos corresponden a x86-64 de escritorio (no MCU físico); $\mathbf{x}_{94}$ pierde en F1 frente a CNNs en microfisuras sub-celda (`kolektorsdd2`, $H_{\text{univ}}$ refutada); quedan pendientes el port C99 de `asymmetry_g2/4/8` + `lr_dot`, barridos multi-seed / multi-categoría con guarda de no-degeneración en `val_f1` y selectores dinámicos de regiones.
+**Límites abiertos:** los tiempos corresponden a x86-64 de escritorio (no MCU físico); $\mathbf{x}_{94}$ pierde en F1 frente a CNNs en microfisuras sub-celda (`kolektorsdd2`, $H_{\text{univ}}$ refutada); quedan pendientes promover clasificadores no lineales/dispersos explorados en [Lab 14](understanding/14_ml_classifiers_mcu/README.md) (`mlp_16_dot`, `mlp_16_skip_dot`, `lr_l1_dot`, etc.), el port C99 completo de `asymmetry_g2/4/8` + modelo, barridos multi-seed / multi-categoría con guarda de no-degeneración en `val_f1` y selectores dinámicos de regiones.
 
 ---
 

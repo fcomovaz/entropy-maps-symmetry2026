@@ -1,3 +1,32 @@
+# Datos del proyecto (`data/`)
+
+Los archivos pesados de imágenes y CSV están excluidos de Git en [../.gitignore](../.gitignore) (se conservan únicamente este archivo y los `.gitkeep`), con rutas y variantes configuradas en [../configs/base.toml](../configs/base.toml).
+
+## Estructura y artefactos locales
+
+```text
+data/
+├── raw/            # Datasets originales sin modificar (colocar manualmente antes de preprocesar)
+│   ├── mvtec-ad/<objeto>/{train/good, test/<defecto>, ground_truth/<defecto>}
+│   └── KolektorSDD2/{train, test}/N.png + N_GT.png
+├── preprocessed/   # Imágenes 128x128 escala de grises ('L') con letterbox centrado (pad=0)
+│   ├── mvtec-ad/                  # Conserva máscaras binarias {0, 255} (NEAREST)
+│   ├── mvtec-ad-inverted/         # Imágenes 255 - I antes de padding; máscaras intactas
+│   ├── KolektorSDD2/              # Separado en good/defect por máscara nativa (sin máscaras en salida)
+│   └── KolektorSDD2-inverted/     # Variante 255 - I antes de padding; lateral en pad=0
+└── csv/            # Exportaciones tabulares y descriptores derivados (normal e -inverted)
+    ├── mvtec-ad[-inverted].csv                 # 16,391 cols x 6,612 filas (px_00000..px_16383)
+    ├── mvtec-ad[-inverted]-entropy.csv/.json   # 85 características de entropía (x85, bins=16)
+    ├── mvtec-ad[-inverted]-entropy-full.csv/.json      # 94 características (schema x94-v1)
+    ├── kolektorsdd2[-inverted].csv             # 16,389 cols x 3,335 filas (px_00000..px_16383)
+    ├── kolektorsdd2[-inverted]-entropy.csv/.json       # 85 características de entropía (x85)
+    └── kolektorsdd2[-inverted]-entropy-full.csv/.json  # 94 características (schema x94-v1)
+```
+
+Para generar `preprocessed/` y `csv/` a partir de `raw/`, seguir [../README.md](../README.md) o [../experiments/README.md](../experiments/README.md).
+
+---
+
 # Download MVTEC-AD Dataset
 
 

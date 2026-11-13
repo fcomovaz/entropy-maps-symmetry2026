@@ -24,3 +24,4 @@ Utilizar los directorios generados por la **Fase A y Fase B (`task_08`)**:
 - `kolektorsdd2_baseline_vs_cnn.csv` y `kolektorsdd2_baseline_vs_cnn.png`
 - `kolektorsdd2-inverted_baseline_vs_cnn.csv` y `kolektorsdd2-inverted_baseline_vs_cnn.png`
 - `mvtec-ad_bottle_baseline_vs_cnn.csv` y `mvtec-ad_bottle_baseline_vs_cnn.png`
+- `mvtec-ad-inverted_bottle_baseline_vs_cnn.csv` y `mvtec-ad-inverted_bottle_baseline_vs_cnn.png`

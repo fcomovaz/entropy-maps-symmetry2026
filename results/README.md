@@ -23,18 +23,21 @@ Esta carpeta conserva diagnósticos y resultados del proyecto. Para la síntesis
 | [11_verify_kolektorsdd2_csv](../understanding/11_verify_kolektorsdd2_csv/README.md) | Control de integridad tabular KolektorSDD2 (16389 cols, 3335 filas, round-trip bit a bit con diff=0) |
 | [12_profiling_stages](../understanding/12_profiling_stages/README.md) | Disección pedagógica por etapas de `x94`, overhead de `sklearn` y capas PyTorch CNN |
 | [13_entropy_maps_optimization](../understanding/13_entropy_maps_optimization/README.md) | Variantes piramidales NumPy (`V1/V2`) y kernel C99 de una sola pasada (`V3`, `92.65×` sobre `V0` en `x85`) |
+| [14_ml_classifiers_mcu](../understanding/14_ml_classifiers_mcu/README.md) | Comparativa exploratoria (sin tocar `src/`) de 9 clasificadores ML plegados y kernels C99 embebibles (`0 malloc`) sobre `seed=42` y 15 objetos MVTec-AD (`understanding/14_ml_classifiers_mcu/outputs/`) |
 | [classification/README.md](classification/README.md) | Resultados medidos de clasificación supervisada (`dt`, `knn`, `lr`, `lr_dot`, `rf`), ablación $\mathbf{x}_{85}$ vs $\mathbf{x}_9$, matrices de confusión y `normal` vs `inverted` |
-| `cnn/` | Checkpoints (`checkpoint.pt`), curvas y `metrics_summary.json` locales (gitignored) entrenados en CUDA con `seed=42` (`experiments/evaluate_cnn.py`) |
+| [cnn/README.md](cnn/README.md) | Checkpoints (`checkpoint.pt`), curvas y `metrics_summary.json` locales (gitignored) entrenados en CUDA con `seed=42` (`experiments/evaluate_cnn.py`) |
 | [comparison/README.md](comparison/README.md) | **Legado `mixed-device (deprecated)`:** CSVs/PNGs de `experiments/compare_baseline_vs_cnn.py` refrescados con `c_single_pass`, pero que siguen mezclando latencia CNN en CUDA con ML en CPU; no usar para comparaciones CPU |
-| `comparison_cpu/` | Comparación oficial **100% CPU justa** (`experiments/benchmark_cpu_fair.py`, backend `auto` $\rightarrow$ C99 `c_single_pass` + `lr_dot`): CSVs `<tag>_baseline_vs_cnn_cpu.csv`, `<tag>_cuda_reference.csv`, Pareto PNGs y `summary_all_datasets.csv` |
+| [comparison_cpu/README.md](comparison_cpu/README.md) | Comparación oficial **100% CPU justa** (`experiments/benchmark_cpu_fair.py`, backend `auto` $\rightarrow$ C99 `c_single_pass` + `lr_dot`): CSVs `<tag>_baseline_vs_cnn_cpu.csv`, `<tag>_cuda_reference.csv`, Pareto PNGs (`_threads{1,2,4}.png`) y `summary_all_datasets.csv` |
 | `comparison_cpu_python/` | Salida local pre-MCU **100% Python/NumPy puro** (`--entropy-backend numpy_finest_pyramid` y `numpy_baseline`, `--no-cuda-reference`), ignorada por Git (`results/*`) |
-| `profiling/` | Reportes de profiling científico profundo (`experiments/profile_pipelines.py`): subcarpetas `<tag>/` con `environment.json`, desgloses por etapa (`x94`) y capa (`cnn`), ATen ops, `cProfile`, pruebas Mann-Whitney U, ablación $\Delta\text{F1}/\Delta\text{ms}$, 6 figuras y `README.md` de hallazgos (rastreado) |
+| `profiling/` | Reportes de profiling científico profundo (`experiments/profile_pipelines.py`): subcarpetas `<tag>/` (`kolektorsdd2` y `mvtec-ad_bottle` completos; `-inverted` verificación corta) con `environment.json`, desgloses por etapa (`x94`) y capa (`cnn`), ATen ops, `cProfile`, pruebas Mann-Whitney U, ablación $\Delta\text{F1}/\Delta\text{ms}$, 6 figuras (`fig1..fig6`) y `README.md` de hallazgos (rastreado) |
 
 Los checkpoints sintéticos y el fixture de `04/` no son resultados de detección real.
 Los CSV/JSON de tiempos describen el equipo y protocolo registrados, no hardware
 embebido. El repositorio Git está activo y `.gitignore` excluye los artefactos pesados locales bajo `results/*` (conservando este índice, los `README.md` de subcarpetas y `results/profiling/*/README.md`), `data/`, `comparison_cpu_python/` y los binarios compilados nativos; `.gitignore` no constituye un respaldo, por lo que conviene conservar `data/` local para reproducir sin descargas externas.
 
-## Revisión de estructura y documentación · 2026-09-28
+## Registro histórico de revisión · 2026-09-28
+
+*(Nota histórica: esta sección conserva intacto el acta de la auditoría inicial del 2026-09-28 sobre `01–04` y los 12 documentos originales de esa fecha.)*
 
 Se revisaron reglas, árbol de archivos, scripts, tests, dependencias directas y
 evidencia de los cuatro laboratorios. Se actualizaron los índices raíz/code/

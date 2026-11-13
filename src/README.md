@@ -148,7 +148,7 @@ Módulos formales para benchmarking justo **100% CPU**, perfilado granular por e
 
 ## Principios de diseño
 
-- Sin rutas, parámetros ni vocabularios hardcodeados: toda configuración externa reside en `configs/*.toml`.
+- Sin rutas, parámetros ni vocabularios hardcodeados: toda configuración externa reside en [configs/](../configs/README.md).
 - Tipado estricto (`from __future__ import annotations`), dataclasses inmutables (`@dataclass(frozen=True, slots=True)`).
-- Logging estructurado centralizado (`logging.getLogger("research")`); sin `print`.
-- Pruebas unitarias asociadas en `tests/`.
+- Logging estructurado centralizado vía [`configs/logging.py`](../configs/logging.py) (`logging.getLogger("research")`); sin `print`.
+- Puntos de entrada reproducibles en [experiments/](../experiments/README.md), verificación automática en [tests/](../tests/README.md) y veredictos experimentales en [HYPOTHESIS.md](../HYPOTHESIS.md).

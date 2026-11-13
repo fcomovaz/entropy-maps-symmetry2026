@@ -2,7 +2,7 @@
 
 Este directorio contiene la evidencia experimental cuantitativa (`.json`, `.csv`) y visual (`.png`) generada por `experiments/evaluate_descriptors.py` sobre los datasets tabulares (`kolektorsdd2`, `kolektorsdd2-inverted`, `mvtec-ad` y `mvtec-ad-inverted`).
 
-> **Nota sobre hiperparámetros y alcance de las carpetas:** Actualmente el flujo soporta cinco clasificadores (`dt`, `knn`, `lr`, `lr_dot` y `rf`). En `configs/classification/kolektorsdd2.toml`, `rf` usa `n_estimators = 200, max_depth = 6` (`dt max_depth = 16`); en `configs/classification/mvtec_ad.toml`, la configuración vigente fija `rf` en `n_estimators = 100, max_depth = 12` (`dt max_depth = 3`). Las secciones 2–4 conservan el registro diagnóstico histórico del barrido inicial `rf` con 200 árboles sobre las 15 categorías de MVTec-AD (`mvtec_all_objects_rf_summary.csv`, generado únicamente al invocar `--all-objects`).
+> **Nota sobre hiperparámetros y alcance en disco:** Actualmente el flujo soporta cinco clasificadores (`dt`, `knn`, `lr`, `lr_dot` y `rf`). En disco se conservan las corridas post-merge `seed = 42` sobre `kolektorsdd2` (normal e invertido, los 5 modelos) y `mvtec-ad_bottle` (normal e invertido, los 5 modelos). En `configs/classification/kolektorsdd2.toml`, `rf` usa `n_estimators = 200, max_depth = 6` (`dt max_depth = 16`); en `configs/classification/mvtec_ad.toml`, la configuración vigente fija `rf` en `n_estimators = 100, max_depth = 12` (`dt max_depth = 3`). Las secciones 2–4 conservan el registro diagnóstico histórico del barrido inicial `rf` con 200 árboles sobre las 15 categorías de MVTec-AD (`mvtec_all_objects_rf_summary.csv`, reproducible ejecutando `--all-objects`).
 
 ---
 
