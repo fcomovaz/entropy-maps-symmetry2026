@@ -1,0 +1,177 @@
+# Lab 14: Exploratory evaluation & C99 MCU-portability benchmark for ML classifiers on x94.
+# All datasets reuse canonical seed=42 train/test partitions from src.models.descriptor_classifier
+# without modifying src/.
+
+[experiment]
+seed = 42
+output_dir = "understanding/14_ml_classifiers_mcu/outputs"
+float_precision = 6
+dpi = 160
+export_sample_header_dataset = "mvtec-ad_bottle"
+export_sample_header_models = ["lr_l1_dot", "gnb_quad", "mlp_16_dot", "gbdt_tiny_core"]
+
+[descriptor_reference]
+entropy_backend = "auto"
+image_size = 128
+bins = 16
+grid_levels = [1, 2, 4, 8]
+asymmetry_scales = [2, 4, 8]
+asymmetry_kinds = ["lr", "tb", "rot180"]
+n_real_images = 200
+
+[profiling]
+threads = 1
+warmup_iters = 50
+timed_iters = 300
+batch_timed_iters = 100
+repeats = 3
+batch_sizes = [1, 32]
+disable_gc = true
+bootstrap_resamples = 1000
+confidence_level = 0.95
+mann_whitney_alpha = 0.05
+reference_baseline_model = "lr_dot"
+heavy_baseline_model = "rf"
+
+[thresholds]
+parity_abs_tol_f64 = 1e-10
+parity_abs_tol_f32 = 1e-4
+c_parity_abs_tol_f32 = 1e-4
+c_parity_rel_tol_f32 = 1e-6
+zero_weight_eps = 1e-12
+
+[native]
+enabled = true
+source_file = "understanding/14_ml_classifiers_mcu/c_kernels/mcu_classifiers.c"
+header_file = "understanding/14_ml_classifiers_mcu/c_kernels/mcu_classifiers.h"
+build_dir = "understanding/14_ml_classifiers_mcu/build"
+dll_name = "mcu_classifiers.dll"
+so_name = "libmcu_classifiers.so"
+build_info_name = "build_info.json"
+vswhere_hint = "%ProgramFiles(x86)%\\Microsoft Visual Studio\\Installer\\vswhere.exe"
+c_bench_inner_iters = 2000
+
+[[targets]]
+tag = "kolektorsdd2"
+classification_config = "configs/classification/kolektorsdd2.toml"
+object_name = ""
+image_dir = "data/preprocessed/KolektorSDD2"
+image_dir_inverted = "data/preprocessed/KolektorSDD2-inverted"
+benchmark_latency = true
+
+[[targets]]
+tag = "mvtec-ad_bottle"
+classification_config = "configs/classification/mvtec_ad.toml"
+object_name = "bottle"
+image_dir = "data/preprocessed/mvtec-ad/bottle"
+image_dir_inverted = "data/preprocessed/mvtec-ad-inverted/bottle"
+benchmark_latency = true
+
+[[targets]]
+tag = "mvtec-ad_tile"
+classification_config = "configs/classification/mvtec_ad.toml"
+object_name = "tile"
+image_dir = "data/preprocessed/mvtec-ad/tile"
+image_dir_inverted = "data/preprocessed/mvtec-ad-inverted/tile"
+benchmark_latency = true
+
+[mvtec_sweep]
+enabled = true
+classification_config = "configs/classification/mvtec_ad.toml"
+objects = [
+    "bottle",
+    "cable",
+    "capsule",
+    "carpet",
+    "grid",
+    "hazelnut",
+    "leather",
+    "metal_nut",
+    "pill",
+    "screw",
+    "tile",
+    "toothbrush",
+    "transistor",
+    "wood",
+    "zipper",
+]
+
+[models]
+active = [
+    "lr_dot",
+    "dt",
+    "rf",
+    "lr_l1_dot",
+    "lda_shrink_dot",
+    "lsvc_dot",
+    "gnb_quad",
+    "dt_core",
+    "gbdt_tiny_core",
+    "mlp_16_dot",
+    "mlp_16_skip_dot",
+    "mlp_32_16_dot",
+]
+
+[models.lr_l1_dot]
+C = 0.5
+solver = "liblinear"
+class_weight = "balanced"
+max_iter = 10000
+scale_features = true
+
+[models.lda_shrink_dot]
+solver = "lsqr"
+shrinkage = "auto"
+priors = [0.5, 0.5]
+
+[models.lsvc_dot]
+C = 0.25
+class_weight = "balanced"
+max_iter = 10000
+scale_features = true
+
+[models.gnb_quad]
+priors = [0.5, 0.5]
+var_smoothing = 1e-2
+
+[models.dt_core]
+max_depth = 4
+min_samples_leaf = 2
+class_weight = "balanced"
+
+[models.gbdt_tiny_core]
+n_estimators = 20
+max_depth = 3
+learning_rate = 0.1
+subsample = 0.8
+use_balanced_sample_weight = true
+
+[models.mlp_16_dot]
+hidden_dims = [16]
+use_skip = false
+epochs = 200
+learning_rate = 0.002
+weight_decay = 0.05
+dropout = 0.1
+positive_weight_mode = "balanced"
+train_threads = 1
+
+[models.mlp_16_skip_dot]
+hidden_dims = [16]
+use_skip = true
+epochs = 200
+learning_rate = 0.002
+weight_decay = 0.05
+dropout = 0.1
+positive_weight_mode = "balanced"
+train_threads = 1
+
+[models.mlp_32_16_dot]
+hidden_dims = [32, 16]
+use_skip = false
+epochs = 200
+learning_rate = 0.001
+weight_decay = 0.05
+dropout = 0.1
+positive_weight_mode = "balanced"
+train_threads = 1
