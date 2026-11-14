@@ -17,6 +17,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 
 from src.models.descriptor_classifier import LinearDotCoreClassifier
+from src.models.mlp_dot import MlpDotCoreClassifier
 
 from .timing import (
     LatencyStats,
@@ -109,6 +110,15 @@ def count_classical_model_params(model: ClassifierMixin | Pipeline) -> Classifie
         coef_sz = int(core.w_eff_.size)
         total = coef_sz + 1
         note = f"LinearDotCore w_eff({coef_sz})+b_eff(1); scaler folded at fit (scaler_params=0)"
+    elif isinstance(core, MlpDotCoreClassifier):
+        w1_sz = int(core.w1_eff_.size)
+        b1_sz = int(core.b1_eff_.size)
+        w2_sz = int(core.w2_eff_.size)
+        total = w1_sz + b1_sz + w2_sz + 1
+        note = (
+            f"MlpDotCore w1_eff({w1_sz})+b1_eff({b1_sz})+w2_eff({w2_sz})+b2_eff(1); "
+            "scaler folded at fit (scaler_params=0)"
+        )
     elif isinstance(core, DecisionTreeClassifier):
         nodes = int(core.tree_.node_count)
         leaves = int(core.tree_.n_leaves)
@@ -175,6 +185,14 @@ def estimate_classical_inference_ops(
         macs = int(core.w_eff_.size)
         flops = 2 * macs
         basis = f"Analytical estimate: folded dot product ({macs} MACs, scaler folded at fit)"
+    elif isinstance(core, MlpDotCoreClassifier):
+        macs = int(core.w1_eff_.size + core.w2_eff_.size)
+        h_dim = int(core.b1_eff_.size)
+        flops = 2 * macs + h_dim
+        basis = (
+            f"Analytical estimate: folded 1-hidden ReLU MLP ({macs} MACs + {h_dim} ReLU, "
+            "scaler folded at fit)"
+        )
     elif isinstance(core, DecisionTreeClassifier):
         avg_cmp = max(1.0, _mean_expected_tree_depth(core.tree_))
         macs = 0
@@ -344,6 +362,30 @@ def profile_classifier(
             c0, c1 = core.classes_[0], core.classes_[1]
             dir_ms = measure_indexed_latencies(
                 fn=lambda idx: np.where((batches[idx % n_batches] @ w_vec + b_val) > 0.0, c1, c0),
+                warmup_iters=warmup_iters,
+                timed_iters=timed_iters,
+                disable_gc=disable_gc,
+            )
+            direct_stats = summarize_latencies(
+                dir_ms,
+                per_sample_divisor=batch_size,
+                bootstrap_resamples=bootstrap_resamples,
+                confidence_level=confidence_level,
+                seed=seed,
+            )
+        elif isinstance(core, MlpDotCoreClassifier):
+            w1_t = np.ascontiguousarray(core.w1_eff_.T, dtype=np.float64)
+            b1_vec = np.ascontiguousarray(core.b1_eff_, dtype=np.float64)
+            w2_vec = np.ascontiguousarray(core.w2_eff_, dtype=np.float64)
+            b2_val = float(core.b2_eff_)
+            c0, c1 = core.classes_[0], core.classes_[1]
+            dir_ms = measure_indexed_latencies(
+                fn=lambda idx: np.where(
+                    (np.maximum(0.0, batches[idx % n_batches] @ w1_t + b1_vec) @ w2_vec + b2_val)
+                    > 0.0,
+                    c1,
+                    c0,
+                ),
                 warmup_iters=warmup_iters,
                 timed_iters=timed_iters,
                 disable_gc=disable_gc,

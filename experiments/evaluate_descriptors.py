@@ -68,9 +68,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--classifier",
         type=str,
-        choices=["rf", "knn", "dt", "lr", "lr_dot", "all"],
+        choices=["rf", "knn", "dt", "lr", "lr_dot", "mlp_16_dot", "all"],
         default=None,
-        help="Classifier to evaluate: 'lr', 'lr_dot', 'rf', 'knn', 'dt', or 'all' to evaluate all available classifiers in sequence. Defaults to TOML setting.",
+        help=(
+            "Classifier to evaluate: 'lr', 'lr_dot', 'mlp_16_dot', 'rf', 'knn', 'dt', "
+            "or 'all' to evaluate all available classifiers in sequence. Defaults to TOML setting."
+        ),
     )
     parser.add_argument(
         "--linear-mode",

@@ -64,6 +64,15 @@ max_iter = 10000
 scale_features = true
 linear_mode = "sklearn"
 
+[classification.models.mlp_16_dot]
+hidden_dims = [16]
+epochs = 200
+learning_rate = 0.002
+weight_decay = 0.05
+dropout = 0.1
+positive_weight_mode = "balanced"
+train_threads = 1
+
 [classification.explainability]
 enabled = true
 permutation_repeats = 10
