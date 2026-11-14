@@ -1,0 +1,33 @@
+# Understanding Lab 15: Fixed-point arithmetic, LUT Shannon entropy, BN folding, and requantization.
+# Paths are relative to the repository 'code/' root.
+
+[experiment]
+name = "15_c_migration_fixed_point"
+seed = 42
+output_dir = "understanding/15_c_migration_fixed_point/outputs"
+dpi = 160
+
+[dataset]
+preprocessed_dir = "data/preprocessed/KolektorSDD2"
+metadata_csv = "data/csv/kolektorsdd2.csv"
+split = "test"
+sample_count = 8
+
+[descriptor]
+image_size = 128
+num_bins = 16
+grid_levels = [1, 2, 4, 8]
+asymmetry_scales = [2, 4, 8]
+asymmetry_kinds = ["lr", "tb", "rot180"]
+
+[fixed_point]
+q_frac_bits = 15
+log2_mantissa_bits = 8
+accum_bits = 64
+
+[cnn_sample]
+checkpoint_path = "results/cnn/kolektorsdd2/full/ultra_tiny/checkpoint.pt"
+architecture = "ultra_tiny"
+input_size = 128
+normalize_mean = 0.5
+normalize_std = 0.5

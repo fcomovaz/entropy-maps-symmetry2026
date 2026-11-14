@@ -23,9 +23,10 @@ Set-Location D:\Publications\2026-10-Symmetry-Entropy\code
 $env:PYTHONPATH = (Get-Location).Path; .\.venv\Scripts\python.exe understanding/07_descriptor_behavior/tests/test_behavior_helpers.py
 .\.venv\Scripts\python.exe -m unittest understanding/13_entropy_maps_optimization/tests/test_entropy_variants.py -v
 .\.venv\Scripts\python.exe -m unittest understanding/14_ml_classifiers_mcu/tests/test_ml_classifiers_mcu.py -v
+.\.venv\Scripts\python.exe -m unittest understanding/15_c_migration_fixed_point/tests/test_c_migration_fixed_point.py -v
 ```
 
-Resultado esperado: `Environment verification: PASS`, `No broken requirements found.`, **208 tests formales** en 22 módulos de `tests/` ([tests/README.md](tests/README.md)) y **92 tests de laboratorio** (`5` en `03`, `8` suites/`140` subcasos en `04`, `20` en `05`, `25` en `06`, `15`/`279` escenas en `07`, `13` en `13`, `6` en `14`). En este equipo los tests CUDA deben ejecutarse, no omitirse; `test_environment.py` exige CUDA real.
+Resultado esperado: `Environment verification: PASS`, `No broken requirements found.`, **227 tests formales** en 29 módulos `unittest` de `tests/` ([tests/README.md](tests/README.md)) y **92+ tests de laboratorio** (`03`, `04`, `05`, `06`, `07`, `13`, `14`, `15`). En este equipo los tests CUDA deben ejecutarse, no omitirse; `test_environment.py` exige CUDA real.
 
 Los tests de entropía `03` necesitan las salidas de `01`, ya conservadas; si faltan, ejecutar primero `understanding/01_patch_partition/patch_partition.py --patch-size 64`.
 
@@ -83,10 +84,11 @@ py -3.11 -m venv .venv
 ## Carpetas (relativas a `code/`)
 
 * [configs/](configs/README.md): configuraciones TOML declarativas (`base.toml`, `preprocessing/`, `csv/`, `entropy/`, `asymmetry/`, `classification/`, `cnn/`, `profiling/`, `features/`, `optimization/`, `understanding/`) y `logging.py`. Ningún módulo de `src/` hardcodea parámetros o rutas.
-* [src/](src/README.md): módulos formales reutilizables (`preprocessing/`, `datasets/`, `features/` incl. C99 `entropy_pyramid`, `models/` incl. `LinearDotCoreClassifier` y `cnn/`, `profiling/`).
-* [experiments/](experiments/README.md): puntos de entrada CLI para todas las corridas reproducibles.
-* [understanding/](understanding/README.md): catorce laboratorios pedagógicos (`01_patch_partition/` a `14_ml_classifiers_mcu/`, más `07_entropy_maps_vectorized/`).
-* [tests/](tests/README.md): verificación CUDA (`test_environment.py`), 22 suites formales (`208` casos `unittest`) y `92` tests pedagógicos en `understanding/`.
+* [src/](src/README.md): módulos formales reutilizables (`preprocessing/`, `datasets/`, `features/` incl. C99 `entropy_pyramid`, `models/` incl. `LinearDotCoreClassifier`, `MlpDotCoreClassifier` y `cnn/`, `profiling/`, `c_export/`).
+* [c_imp/](c_imp/README.md): implementación C99 portable `f32` y `q15` sin `malloc` (`runtime/`, `app/desktop_main.c`, `tests/test_runtime.c`) para portación pre-ESP32-CAM.
+* [experiments/](experiments/README.md): puntos de entrada CLI para todas las corridas reproducibles (incluyendo `export_c_pipeline`, `verify_c_pipeline` y `visualize_c_pipeline`).
+* [understanding/](understanding/README.md): quince laboratorios pedagógicos (`01_patch_partition/` a `15_c_migration_fixed_point/`, más `07_entropy_maps_vectorized/`).
+* [tests/](tests/README.md): verificación CUDA (`test_environment.py`), 29 suites formales (`227` casos `unittest`) y pruebas pedagógicas en `understanding/`.
 * [results/](results/README.md): diagnósticos, logs, clasificación ([results/classification/](results/classification/README.md)), checkpoints CNN ([results/cnn/](results/cnn/README.md)), comparación 100 % CPU justa con C99 ([results/comparison_cpu/](results/comparison_cpu/README.md)), comparativa Python puro (`results/comparison_cpu_python/`, ignorada por Git), profiling científico (`results/profiling/`) y legado [results/comparison/](results/comparison/README.md) (*deprecated*).
 * [notebooks/](notebooks/README.md): cuaderno de ejecución completa en Colab ([Entropy_Maps_Full_Run.ipynb](notebooks/Entropy_Maps_Full_Run.ipynb)).
 * [data/](data/README.md): `raw/` (no incluido en Git), `preprocessed/` y `csv/`.
@@ -297,7 +299,23 @@ Aísla lo que se pierde al no usar la DLL C99 (salida local ignorada por Git):
 
 **Referencia esperada:** `lr_dot` total $\approx 0.795\text{ ms}$ (`kolektorsdd2`) / $0.972\text{ ms}$ (`bottle`) con `numpy_finest_pyramid`, y $\approx 2.81\text{–}2.87\text{ ms}$ con `numpy_baseline` (más lento que `ultra_tiny`). La calidad predictiva es idéntica al backend C99.
 
-### 9. Dónde leer resultados y límites conocidos
+### 9. Exportación C99, verificación de paridad y visualización (`c_imp/`)
+
+**Qué hace.** Exporta a C99 portable (`float32` + punto fijo `Q15` sin `malloc`), compila los binarios desktop con MSVC `cl.exe`, verifica paridad exacta Python-vs-C (`q15` bit-exacto con `0` diff) junto con latencias (`--benchmark`), y renderiza tablas resumen (`summary_models_metrics.csv`, `summary_report.md`) y hasta 6 figuras diagnósticas (`fig1`–`fig6`) en `results/c_imp/<target>/figures/`. Guía detallada en [c_imp/README.md](c_imp/README.md).
+
+```powershell
+# KolektorSDD2: exportar, verificar paridad + benchmark, validar inputs y generar figuras
+.\.venv\Scripts\python.exe -m experiments.export_c_pipeline --config configs/c_imp/kolektorsdd2.toml
+.\.venv\Scripts\python.exe -m experiments.verify_c_pipeline --config configs/c_imp/kolektorsdd2.toml --benchmark
+.\.venv\Scripts\python.exe -m experiments.visualize_c_pipeline --config configs/c_imp/kolektorsdd2.toml --dry-run
+.\.venv\Scripts\python.exe -m experiments.visualize_c_pipeline --config configs/c_imp/kolektorsdd2.toml
+
+# MVTec-AD (ej. bottle): exportar y encadenar verificación + benchmark + visualización (--visualize)
+.\.venv\Scripts\python.exe -m experiments.export_c_pipeline --config configs/c_imp/mvtec_ad.toml --object bottle
+.\.venv\Scripts\python.exe -m experiments.verify_c_pipeline --config configs/c_imp/mvtec_ad.toml --object bottle --benchmark --visualize
+```
+
+### 10. Dónde leer resultados y límites conocidos
 
 | Consulta | Documento |
 |---|---|

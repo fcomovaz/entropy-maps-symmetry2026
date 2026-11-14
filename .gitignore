@@ -59,3 +59,12 @@ src/features/native/build/
 *.exp
 *.obj
 
+
+# C99 generated headers/sources, desktop parity binaries, and compiler intermediates
+c_imp/generated/
+c_imp/build/
+*.exe
+*.pdb
+*.obj
+*.lib
+*.exp

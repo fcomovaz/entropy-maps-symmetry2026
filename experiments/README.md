@@ -15,6 +15,7 @@ Registro y puntos de entrada CLI para los experimentos reproducibles del proyect
 | **07.** Clasificación ML, ablación y explicabilidad | `evaluate_descriptors` | `configs/classification/*.toml` | `results/classification/` |
 | **08.** Zoo de 7 CNNs ligeras (y legado *mixed*) | `evaluate_cnn`, `compare_baseline_vs_cnn` | `configs/cnn/*.toml` | `results/cnn/`, `results/comparison/` *(deprecated)* |
 | **09.** Benchmark 100 % CPU justo y profiling profundo | `benchmark_cpu_fair`, `profile_pipelines` | `configs/profiling/*.toml` | `results/comparison_cpu/`, `results/profiling/` |
+| **10.** Exportación, paridad y visualización C99 (`f32` + `q15`) | `export_c_pipeline`, `verify_c_pipeline`, `visualize_c_pipeline` | `configs/c_imp/*.toml` | `c_imp/generated/`, `c_imp/build/`, `results/c_imp/` |
 
 ---
 
@@ -563,6 +564,33 @@ Corrige el sesgo *mixed-device* de `results/comparison/` midiendo el pipeline ta
 .\.venv\Scripts\python.exe -m experiments.profile_pipelines --config configs/profiling/mvtec_ad.toml --objects bottle
 .\.venv\Scripts\python.exe -m experiments.profile_pipelines --config configs/profiling/kolektorsdd2.toml --inverted
 .\.venv\Scripts\python.exe -m experiments.profile_pipelines --config configs/profiling/mvtec_ad.toml --objects bottle --inverted
+```
+
+---
+
+## Experimento 10: Exportación C99, Paridad Numérica y Visualización Diagnóstica
+
+Pipeline reproducible de exportación C99 portable pre-ESP32 (`float32` + punto fijo `Q15` con acumulador `int64_t` sin `<math.h>` ni asignación dinámica), compilación nativa MSVC x64, auditoría de paridad numérica Python-vs-C, profiling de memoria Flash/SRAM/PSRAM y generación de figuras diagnósticas sobre los CSVs generados (`c_imp/generated/<target>/` y `results/c_imp/<target>/`).
+
+Ver guía completa de opciones, ejecución de binarios nativos y pruebas de Lab 15 en [`c_imp/README.md`](../c_imp/README.md).
+
+### Comandos principales (PowerShell desde carpeta `code/`)
+
+```powershell
+# 1. Validación dry-run y exportación completa (LUTs, x94, lr_dot, mlp_16_dot, 7 CNNs y vectores golden)
+.\.venv\Scripts\python.exe -m experiments.export_c_pipeline --config configs/c_imp/kolektorsdd2.toml --dry-run
+.\.venv\Scripts\python.exe -m experiments.export_c_pipeline --config configs/c_imp/kolektorsdd2.toml
+
+# 2. Compilación C99, verificación bit-exact Q15 / float32 y benchmark de latencia
+.\.venv\Scripts\python.exe -m experiments.verify_c_pipeline --config configs/c_imp/kolektorsdd2.toml --benchmark
+
+# 3. Generación de figuras PNG (fig1..fig6), summary_models_metrics.csv y summary_report.md
+.\.venv\Scripts\python.exe -m experiments.visualize_c_pipeline --config configs/c_imp/kolektorsdd2.toml --dry-run
+.\.venv\Scripts\python.exe -m experiments.visualize_c_pipeline --config configs/c_imp/kolektorsdd2.toml
+
+# 4. Encadenado en un solo paso (--visualize tras exportar o verificar) y variante MVTec-AD
+.\.venv\Scripts\python.exe -m experiments.export_c_pipeline --config configs/c_imp/mvtec_ad.toml --object bottle --visualize
+.\.venv\Scripts\python.exe -m experiments.verify_c_pipeline --config configs/c_imp/mvtec_ad.toml --object bottle --benchmark --visualize
 ```
 
 

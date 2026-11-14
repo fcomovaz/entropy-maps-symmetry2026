@@ -45,6 +45,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from src.features.asymmetry_maps import asymmetry_column_names, entropy_column_names
+from src.models.mlp_dot import MlpDotCoreClassifier, MlpHyperparams
 
 logger = logging.getLogger("research")
 
@@ -235,6 +236,7 @@ class ClassificationConfig:
     knn_params: KnnHyperparams
     dt_params: DtHyperparams
     lr_params: LrHyperparams
+    mlp_params: MlpHyperparams
     explainability_enabled: bool
     permutation_repeats: int
     top_k_features: int
@@ -260,7 +262,7 @@ class ClassificationConfig:
     @property
     def available_classifiers(self) -> tuple[str, ...]:
         """Return tuple of supported classifier names configured in this pipeline."""
-        return ("lr", "lr_dot", "dt", "knn", "rf")
+        return ("lr", "lr_dot", "mlp_16_dot", "dt", "knn", "rf")
 
     def effective_results_dir(
         self, object_name: str | None, classifier_name: str
@@ -323,9 +325,9 @@ def load_classification_config(
         raise ValueError("'overwrite' in [classification] must be a boolean")
     if isinstance(seed_raw, bool) or not isinstance(seed_raw, int):
         raise ValueError("'seed' in [classification] must be an integer")
-    if default_classifier not in {"rf", "knn", "dt", "lr", "lr_dot"}:
+    if default_classifier not in {"rf", "knn", "dt", "lr", "lr_dot", "mlp_16_dot"}:
         raise ValueError(
-            f"'default_classifier' must be 'rf', 'knn', 'dt', 'lr', or 'lr_dot', got '{default_classifier}'"
+            f"'default_classifier' must be 'rf', 'knn', 'dt', 'lr', 'lr_dot', or 'mlp_16_dot', got '{default_classifier}'"
         )
 
     # Data section
@@ -433,6 +435,51 @@ def load_classification_config(
             max_iter=1000,
             linear_mode="sklearn",
         )
+
+    # MLP 1-hidden dot section (optional for backward compatibility with existing configs)
+    mlp_table_obj = models_table_obj.get("mlp_16_dot")
+    if mlp_table_obj is not None:
+        if not isinstance(mlp_table_obj, dict):
+            raise ValueError("[classification.models.mlp_16_dot] must be a table")
+        raw_hidden = _require(
+            mlp_table_obj, "hidden_dims", "[classification.models.mlp_16_dot]"
+        )
+        if not isinstance(raw_hidden, list) or not raw_hidden:
+            raise ValueError(
+                "[classification.models.mlp_16_dot].hidden_dims must be a non-empty list"
+            )
+        hidden_dims = tuple(int(h) for h in raw_hidden)
+        epochs_val = int(_require(mlp_table_obj, "epochs", "[classification.models.mlp_16_dot]"))
+        lr_val = float(
+            _require(mlp_table_obj, "learning_rate", "[classification.models.mlp_16_dot]")
+        )
+        wd_val = float(
+            _require(mlp_table_obj, "weight_decay", "[classification.models.mlp_16_dot]")
+        )
+        dropout_val = float(
+            _require(mlp_table_obj, "dropout", "[classification.models.mlp_16_dot]")
+        )
+        pos_mode = str(
+            _require(
+                mlp_table_obj, "positive_weight_mode", "[classification.models.mlp_16_dot]"
+            )
+        )
+        threads_val = int(
+            _require(mlp_table_obj, "train_threads", "[classification.models.mlp_16_dot]")
+        )
+        if any(h < 1 for h in hidden_dims) or epochs_val < 1 or lr_val <= 0.0:
+            raise ValueError("Invalid hyperparameters in [classification.models.mlp_16_dot]")
+        mlp_params = MlpHyperparams(
+            hidden_dims=hidden_dims,
+            epochs=epochs_val,
+            learning_rate=lr_val,
+            weight_decay=wd_val,
+            dropout=dropout_val,
+            positive_weight_mode=pos_mode,
+            train_threads=threads_val,
+        )
+    else:
+        mlp_params = MlpHyperparams()
 
     # DT section (optional)
     dt_table_obj = models_table_obj.get("dt")
@@ -643,6 +690,7 @@ def load_classification_config(
         knn_params=knn_params,
         dt_params=dt_params,
         lr_params=lr_params,
+        mlp_params=mlp_params,
         explainability_enabled=explainability_enabled,
         permutation_repeats=permutation_repeats,
         top_k_features=top_k_features,
@@ -943,6 +991,17 @@ def build_classifier(
             class_weight=cfg.lr_params.class_weight,
             max_iter=cfg.lr_params.max_iter,
             scale_features=cfg.lr_params.scale_features,
+            random_state=cfg.seed,
+        )
+    if cls_key == "mlp_16_dot":
+        return MlpDotCoreClassifier(
+            hidden_dims=cfg.mlp_params.hidden_dims,
+            epochs=cfg.mlp_params.epochs,
+            learning_rate=cfg.mlp_params.learning_rate,
+            weight_decay=cfg.mlp_params.weight_decay,
+            dropout=cfg.mlp_params.dropout,
+            positive_weight_mode=cfg.mlp_params.positive_weight_mode,
+            train_threads=cfg.mlp_params.train_threads,
             random_state=cfg.seed,
         )
     if cls_key == "lr":

@@ -1,0 +1,84 @@
+# C99 pipeline export & verification configuration for MVTec-AD (object selectable via --object).
+# All C numeric constants derive from this file or from the existing TOML configs it references.
+# Relative paths are anchored to the repository 'code/' root.
+
+[c_imp]
+target_tag = "mvtec_ad"
+object_name = "bottle"
+seed = 42
+inverted = false
+entropy_config = "configs/entropy/mvtec_ad.toml"
+asymmetry_config = "configs/asymmetry/mvtec_ad.toml"
+classification_config = "configs/classification/mvtec_ad.toml"
+cnn_config = "configs/cnn/mvtec_ad.toml"
+
+[c_imp.paths]
+runtime_dir = "c_imp/runtime"
+app_dir = "c_imp/app"
+c_tests_dir = "c_imp/tests"
+generated_dir = "c_imp/generated"
+build_dir = "c_imp/build"
+results_dir = "results/c_imp"
+
+[c_imp.numeric]
+modes = ["f32", "q15"]
+feature_frac_bits = 15
+accumulator_bits = 64
+weight_storage_bits = 16
+rounding = "half_up"
+
+[c_imp.descriptor]
+shannon_lut_mode = "log2_mantissa"
+log2_mantissa_bits = 8
+
+[c_imp.classifier]
+models = ["lr_dot", "mlp_16_dot"]
+metrics_crosscheck_dir = "results/classification"
+metrics_crosscheck_abs_tol = 1e-6
+
+[c_imp.cnn]
+models = [
+    "ultra_tiny",
+    "ds_cnn",
+    "tiny_cnn",
+    "mobilenet_like",
+    "tiny_resnet",
+    "small_cnn",
+    "torchvision_mobilenet",
+]
+allowed_weight_formats = ["q15", "int8_per_channel"]
+flash_budget_bytes = 2097152
+sram_budget_bytes = 200000
+psram_budget_bytes = 3000000
+checkpoint_variant = "bottle"
+calibration_split = "train"
+calibration_max_images = 256
+activation_range_percentile = 100.0
+weight_granularity = "per_output_channel"
+input_frac_bits = 15
+fuse_conv_relu_maxpool = false
+
+[c_imp.test_vectors]
+split = "test"
+max_images = 0
+embed_headers_count = 4
+
+[c_imp.build]
+compiler = "msvc"
+c_standard_flag = "/std:c11"
+compiler_flags = ["/O2", "/W4", "/fp:precise", "/nologo"]
+vswhere_hint = "%ProgramFiles(x86)%/Microsoft Visual Studio/Installer/vswhere.exe"
+executable_name = "cimp_pipeline"
+
+[c_imp.verification]
+f32_descriptor_abs_tol = 1e-5
+f32_logit_abs_tol = 1e-4
+q15_must_be_bit_exact_vs_python_model = true
+q15_descriptor_report_only = true
+timing_warmup_iters = 50
+timing_timed_iters = 300
+
+[c_imp.visualization]
+output_subdir = "figures"
+dpi = 160
+top_k_worst_errors = 10

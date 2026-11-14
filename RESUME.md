@@ -57,10 +57,17 @@ code/
 │   │   ├── asymmetry_maps.py        2D reconstruction & 9 spatial asymmetry residuals (LR, TB, R180)
 │   │   └── asymmetry_csv.py         streaming CSV appender (x85 -> x94, schema x94-v1)
 │   ├── models/
-│   │   ├── descriptor_classifier.py dt, knn, lr, LinearDotCoreClassifier (lr_dot), rf, ablation, explainability
+│   │   ├── descriptor_classifier.py dt, knn, lr, LinearDotCoreClassifier (lr_dot), mlp_16_dot, rf, ablation, explainability
+│   │   ├── mlp_dot.py               MlpDotCoreClassifier (promoted from Lab 14)
 │   │   ├── classification_plots.py  CM+ROC/PR, ablation, importance breakdown, 2D heatmaps
 │   │   └── cnn/                     architectures/ (7 CNNs + common/registry), config.py, data.py, train.py, evaluate.py, benchmark.py, report.py
-│   └── profiling/                   config.py, timing.py, environment.py, descriptor_stages.py, classifier_profile.py, cnn_layers.py, report.py
+│   ├── profiling/                   config.py, timing.py, environment.py, descriptor_stages.py, classifier_profile.py, cnn_layers.py, report.py
+│   └── c_export/                    config, fixed_point, c_writer, luts, descriptor_reference, test_vectors, linear_export, cnn_{graph,quantize,codegen}, memory_plan, toolchain, build_c, parity, visualize_{data,plots}
+├── c_imp/                           portable zero-malloc C99 desktop/pre-ESP32 pipeline (f32 + q15)
+│   ├── runtime/                     cimp_fixed_point.h, cimp_tensor.h, cimp_platform.{h,c}, cimp_descriptor.{h,c}, infra_{sklearn,pytorch}.{h,c}, cimp_pipeline.{h,c}
+│   ├── app/desktop_main.c           desktop parity & timing CLI
+│   ├── tests/test_runtime.c         standalone C99 unit tests
+│   └── generated/                   auto-generated headers, golden CSVs & CNN sources (generated/ & build/ gitignored)
 ├── experiments/                     CLI entry points (`python -m experiments.<name>`)
 │   ├── preprocess_{mvtec_ad,kolektorsdd2}.py
 │   ├── export_{mvtec_ad,kolektorsdd2}_csv.py
@@ -70,19 +77,23 @@ code/
 │   ├── evaluate_cnn.py
 │   ├── benchmark_cpu_fair.py        Phase A: 100% CPU-fair ML vs. CNN benchmark (--entropy-backend)
 │   ├── profile_pipelines.py         Phase B: stage/layer/ATen/Mann-Whitney U & ablation profiling
+│   ├── export_c_pipeline.py         C99 LUT/vector/classifier/CNN codegen & test vector export
+│   ├── verify_c_pipeline.py         MSVC compile + Python-vs-C bit-exact parity & desktop timing
+│   ├── visualize_c_pipeline.py      6 diagnostic PNG figures & readable summary CSV/Markdown reports
 │   └── compare_baseline_vs_cnn.py   legacy mixed-device generator (deprecated for CPU latency claims)
 ├── notebooks/
 │   └── Entropy_Maps_Full_Run.ipynb  full Colab execution notebook (from preprocessed datasets)
-├── tests/                           23 test files: test_environment.py (CUDA) + 22 unittest modules (208 cases)
+├── tests/                           30 test files: test_environment.py (CUDA) + 29 unittest modules (227 cases)
 │   ├── test_{preprocessing,kolektorsdd2,csv_export,kolektorsdd2_csv_export}.py
 │   ├── test_{entropy_maps,native_entropy,entropy_csv,asymmetry_maps,asymmetry_csv,descriptor_classifier}.py
 │   ├── test_cnn_{architectures,config,data,train,evaluate,cli}.py
-│   └── test_profiling_{config,timing,descriptor_stages,classifier,cnn_layers}.py, test_benchmark_cpu_fair_cli.py
+│   ├── test_profiling_{config,timing,descriptor_stages,classifier,cnn_layers}.py, test_benchmark_cpu_fair_cli.py
+│   └── test_c_export_{config,fixed_point,luts,linear,cnn_graph,visualize}.py, test_c_pipeline_parity.py
 ├── data/                            raw/, preprocessed/, csv/ (datasets gitignored; .gitkeep & README.md tracked)
-├── results/                         environment_debug.md, classification/, cnn/, comparison_cpu/, profiling/, comparison/ (deprecated)
+├── results/                         environment_debug.md, classification/, cnn/, comparison_cpu/, profiling/, c_imp/, comparison/ (deprecated)
 ├── memory/                          NotebookLM README exporter (export_readmes.ps1, run_canonical_experiments.ps1, archive_and_reset.ps1)
-├── tasks/                           historical planning specifications (task_01..task_10, review_01)
-└── understanding/                   14 pedagogical laboratories (`01`..`14`) + `07_entropy_maps_vectorized/`
+├── tasks/                           historical planning specifications (task_01..task_11, review_01)
+└── understanding/                   15 pedagogical laboratories (`01`..`15`) + `07_entropy_maps_vectorized/`
 ```
 
 ---
