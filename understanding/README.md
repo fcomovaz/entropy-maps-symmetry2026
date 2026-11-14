@@ -58,6 +58,7 @@ Todos los laboratorios residen en carpetas hermanas dentro de `code/understandin
 | [12_profiling_stages/](12_profiling_stages/README.md) | Profiling manual por etapa ($\mathbf{x}_{94}$) y capa (`ds_cnn`) en CPU | Sintético o PNG `128x128` | Desglose `perf_counter_ns`, `cProfile`, `torch.profiler` y figura apilada |
 | [13_entropy_maps_optimization/](13_entropy_maps_optimization/README.md) | Paso único en grilla más fina, pirámide aditiva NumPy (`V1/V2`) y kernel C99 (`V3`) + `lr_dot` | `real:mvtec-ad` (`n=200`, `128x128`) | 13 tests de paridad ($\le 1.89\times10^{-15}$), `benchmark_*.csv` y 7+1 figuras |
 | [14_ml_classifiers_mcu/](14_ml_classifiers_mcu/README.md) | Clasificadores ML ligeros plegados y kernels C99 embebibles (`0 malloc`, MLPs, L1, LDA, SVC, GNB cuad., GBDT) sin tocar `src/` | Particiones canónicas `seed=42` (`kolektorsdd2`, `bottle`, `tile`, normal/inv. + 15 objetos MVTec-AD) | 6 tests de paridad/Flash/C99, CSVs comparativos, `sample_weights_mvtec_bottle.h` y 4 figuras |
+| [15_c_migration_fixed_point/](15_c_migration_fixed_point/README.md) | Comprensión pre-C de formatos `Qm.n`, modos de LUT Shannon en entero, plegado Conv+BN y recuantización | Config TOML + muestras `128x128` (`KolektorSDD2` o sintético) | 4 scripts interactivos, tablas de error `Qm.n`, figuras PNG y 4 tests unitarios |
 
 Además existe [`07_entropy_maps_vectorized/explain_entropy_maps.py`](07_entropy_maps_vectorized/explain_entropy_maps.py) como guion explicativo visual de la vectorización de mapas $\mathbf{x}_{85}$.
 
