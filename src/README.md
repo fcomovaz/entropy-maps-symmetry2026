@@ -87,7 +87,7 @@ Clasificación supervisada ligera, ablación de subconjuntos y explicabilidad es
   - `load_classification_config(config_path, project_root)`: carga y validación inmutable (`ClassificationConfig`) anclada a `configs/base.toml` y `configs/asymmetry/*.toml`.
   - `resolve_feature_groups(header, cfg)`: validación y resolución determinista de subconjuntos (`x94_full`, `x85_only`, `x9_only`, `E_1x1..E_8x8`, `asym_2x2..asym_8x8`, `asym_lr`, `asym_tb`, `asym_rot180`).
   - `load_and_split_descriptors(cfg, object_name=None, subset_name=None)`: filtrado en memoria de particiones permitidas (excluyendo estrictamente `ground_truth`), selección de objeto en MVTec-AD y partición `presplit` (KolektorSDD2) o `stratified` reproducible en memoria (MVTec-AD) sin mutar los archivos CSV en disco.
-  - `build_classifier(classifier_name, cfg, linear_mode=None)`: construcción de `RandomForestClassifier`, `DecisionTreeClassifier`, `Pipeline(StandardScaler + KNeighborsClassifier | LogisticRegression)` o núcleo lineal plegado `LinearDotCoreClassifier` (`lr_dot`, donde escala y sesgo del `StandardScaler` se fusionan algebraicamente en `w_eff @ x + b_eff`).
+  - `build_classifier(classifier_name, cfg, linear_mode=None)`: construcción de `RandomForestClassifier`, `DecisionTreeClassifier`, `Pipeline(StandardScaler + KNeighborsClassifier | LogisticRegression)`, núcleo lineal plegado `LinearDotCoreClassifier` (`lr_dot`) y MLP ReLU de 1 capa oculta plegado `MlpDotCoreClassifier` (`mlp_16_dot` en `mlp_dot.py`, donde escala y sesgo del `StandardScaler` se fusionan algebraicamente en la primera capa lineal).
   - `train_and_evaluate(partition, classifier_name, cfg, subset_name=None)`: entrenamiento, evaluación de métricas (`Accuracy`, `Balanced Accuracy`, `Precision`, `Recall`, `F1`, `ROC-AUC`, `PR-AUC`, matriz de confusión) y separación de tiempos (`T_model_train`, `T_model_inference`, `ms/sample`).
   - `run_subset_ablation(cfg, object_name, classifier_name, base_partition=None)`: evaluación comparativa de subconjuntos sobre la misma partición exacta para cuantificar la ganancia de simetría $\Delta\text{F1}(\mathbf{x}_{94} - \mathbf{x}_{85})$ y la escala de entropía óptima.
   - `compute_explainability(model, partition, cfg)`: motor de explicabilidad (impureza Gini MDI para Random Forest; importancia por permutación en test o distancia discriminante de Fisher para k-NN) con desglose por familia ($\mathbf{x}_{85}$ vs $\mathbf{x}_9$), por escala ($1\times1, 2\times2, 4\times4, 8\times8$), por eje de simetría (`lr`, `tb`, `rot180`) y reconstrucción de mapas de calor espaciales 2D ($2\times2, 4\times4, 8\times8$).
@@ -143,6 +143,16 @@ Módulos formales para benchmarking justo **100% CPU**, perfilado granular por e
   - `measure_cnn_preprocess_latency(...)`, `measure_checkpoint_cold_start(...)` (deserialización + primera inferencia vs estacionario), `profile_cnn_layers(...)` (hooks *pre/post* por módulo hoja + `torch.profiler` ATen + trazas Chrome + FLOPs/activaciones por capa + verificación de overhead de hooks) y `profile_cnn_thread_scaling(...)`.
 - `report.py`:
   - Escritores CSV deterministas (`comparison_cpu.csv`, `summary_all_datasets.csv`, `descriptor_stage_times.csv`, `descriptor_scalability.csv`, `classifier_times.csv`, `cnn_layer_times_*.csv`, `cnn_aten_ops_*.csv`, `cnn_architectures_summary.csv`, `ablation_quality_vs_cost.csv`, `statistical_tests.csv`), frontera de Pareto (`compute_pareto_frontier_indices`), renderizado de 6 figuras científicas (`generate_profiling_figures`, `plot_cpu_comparison_pareto`) y generador del reporte `write_profiling_readme(...)`.
+
+### 7. `src/c_export/`
+
+Exportación determinista C99, cuantización fija pre-ESP32, verificación de paridad Python-vs-C y visualización diagnóstica:
+
+- `config.py`: `load_c_imp_config(config_path, project_root, object_name=None, inverted=None)` y dataclasses inmutables (`CImpConfig`, `CImpVisualization`, `DescriptorSpec`, etc.) anclados a los TOML existentes como única fuente de verdad.
+- `fixed_point.py`, `luts.py`, `descriptor_reference.py`: espejo aritmético Q15 (`int64_t` + redondeo `half_up`), LUTs Shannon/quantización C99 y extracción de referencia $\mathbf{x}_{94}$.
+- `linear_export.py`, `cnn_graph.py`, `cnn_quantize.py`, `cnn_codegen.py`, `memory_plan.py`: exportación de clasificadores plegados (`lr_dot`, `mlp_16_dot`), grafo estático y cuantización (`q15` / `int8_per_channel`) del zoo de 7 CNNs con análisis de liveness para arena estática Flash/SRAM/PSRAM.
+- `test_vectors.py`, `toolchain.py`, `build_c.py`, `parity.py`: exportación de vectores golden `golden_*.csv`, compilación vía MSVC `cl.exe`, verificación de paridad numérica y cronometraje C99.
+- `visualize_data.py`, `visualize_plots.py`: carga unificada (`load_target_bundle`), agregación de métricas `f32`/`Q15`/paridad/memoria/latencia/descriptor (`write_summary_tables` -> `summary_models_metrics.csv`, `summary_report.md`) y generación de hasta 6 figuras diagnósticas PNG (`generate_c_pipeline_visualizations`).
 
 ---
 

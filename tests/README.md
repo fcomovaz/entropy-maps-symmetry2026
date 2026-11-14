@@ -1,6 +1,6 @@
 # Pruebas del proyecto (`tests/`)
 
-Suites de pruebas automáticas, unitarias y de integración del proyecto: **`test_environment.py`** (CUDA real) + **22 módulos `unittest` (`208` tests formales)** en `tests/`, junto con **7 suites pedagógicas (`92` tests de laboratorio)** en `understanding/`.
+Suites de pruebas automáticas, unitarias y de integración del proyecto: **`test_environment.py`** (CUDA real) + **29 módulos `unittest`** en `tests/`, junto con **8 suites pedagógicas** en `understanding/`.
 
 ---
 
@@ -55,6 +55,10 @@ $env:PYTHONPATH = (Get-Location).Path; .\.venv\Scripts\python.exe understanding/
 .\.venv\Scripts\python.exe understanding/07_entropy_maps_vectorized/explain_entropy_maps.py
 .\.venv\Scripts\python.exe understanding/13_entropy_maps_optimization/tests/test_entropy_variants.py
 .\.venv\Scripts\python.exe -m unittest understanding/14_ml_classifiers_mcu/tests/test_ml_classifiers_mcu.py -v
+
+# 10. Pruebas de exportación C99, punto fijo Q15, paridad y visualización (task_11)
+.\.venv\Scripts\python.exe -m unittest understanding/15_c_migration_fixed_point/tests/test_c_migration_fixed_point.py -v
+.\.venv\Scripts\python.exe -m unittest discover -s tests -p "test_c_*.py" -v
 ```
 
 ---
@@ -93,3 +97,4 @@ $env:PYTHONPATH = (Get-Location).Path; .\.venv\Scripts\python.exe understanding/
 | `07/tests/test_behavior_helpers.py` | 15 tests: respuesta de x94 ante ruido, desenfoque, contraste y defectos sintéticos | Caracterización de límites y sensibilidad (invocar con `PYTHONPATH` en `code/`) |
 | `13/tests/test_entropy_variants.py` | 13 tests: paridad numérica `V0–V3` ($\le 10^{-12}$), pirámides anidadas, `bins` arbitrarios y C99 zero-alloc | Valida `numpy_finest_pyramid`, `numpy_fused_entropy` y `entropy_pyramid.dll` |
 | `14/tests/test_ml_classifiers_mcu.py` | 6 tests: paridad algebraica `float64/float32/C99`, determinismo de MLPs, contabilidad exacta de Flash/MAC y borde L1 `nnz=0` | Valida clasificadores plegados (`ml_classifiers_mcu`) y `mcu_classifiers.c` sin tocar `src/` |
+| `test_c_export_*.py` (`config`, `fixed_point`, `luts`, `linear`, `cnn_graph`, `visualize`) y `test_c_pipeline_parity.py` | Carga TOML C99 + `[c_imp.visualization]`, redondeo Q15, LUTs Shannon, clasificadores plegados, grafo/cuantización CNN, paridad E2E MSVC C99-vs-Python y renderizado de figuras/tablas resumen | Cobertura formal de `src/c_export/` y `experiments/*_c_pipeline.py` en `TemporaryDirectory` |
