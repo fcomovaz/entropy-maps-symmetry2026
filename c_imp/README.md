@@ -31,7 +31,7 @@ c_imp/
 │   └── desktop_main.c         # CLI desktop de paridad y benchmarking
 ├── tests/
 │   └── test_runtime.c         # Tests unitarios C99 independientes de código generado
-├── generated/                 # Headers/fuentes C99 autogenerados por src/c_export (por target)
+├── generated/                 # Headers/fuentes C99 autogenerados por src/c_export por target (ignorado por Git)
 └── build/                     # Binarios .exe/.obj/.pdb compilados en escritorio (ignorado por Git)
 ```
 

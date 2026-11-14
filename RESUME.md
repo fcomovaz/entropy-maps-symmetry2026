@@ -67,7 +67,7 @@ code/
 │   ├── runtime/                     cimp_fixed_point.h, cimp_tensor.h, cimp_platform.{h,c}, cimp_descriptor.{h,c}, infra_{sklearn,pytorch}.{h,c}, cimp_pipeline.{h,c}
 │   ├── app/desktop_main.c           desktop parity & timing CLI
 │   ├── tests/test_runtime.c         standalone C99 unit tests
-│   └── generated/                   auto-generated headers, golden CSVs & CNN sources (build/ gitignored)
+│   └── generated/                   auto-generated headers, golden CSVs & CNN sources (generated/ & build/ gitignored)
 ├── experiments/                     CLI entry points (`python -m experiments.<name>`)
 │   ├── preprocess_{mvtec_ad,kolektorsdd2}.py
 │   ├── export_{mvtec_ad,kolektorsdd2}_csv.py

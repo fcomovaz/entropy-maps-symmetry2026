@@ -60,7 +60,8 @@ src/features/native/build/
 *.obj
 
 
-# C99 desktop parity binaries and compiler intermediates (task_11 §6.4)
+# C99 generated headers/sources, desktop parity binaries, and compiler intermediates
+c_imp/generated/
 c_imp/build/
 *.exe
 *.pdb
