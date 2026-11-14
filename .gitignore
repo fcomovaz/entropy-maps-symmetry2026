@@ -59,3 +59,11 @@ src/features/native/build/
 *.exp
 *.obj
 
+
+# C99 desktop parity binaries and compiler intermediates (task_11 §6.4)
+c_imp/build/
+*.exe
+*.pdb
+*.obj
+*.lib
+*.exp
