@@ -26,7 +26,7 @@ $env:PYTHONPATH = (Get-Location).Path; .\.venv\Scripts\python.exe understanding/
 .\.venv\Scripts\python.exe -m unittest understanding/15_c_migration_fixed_point/tests/test_c_migration_fixed_point.py -v
 ```
 
-Resultado esperado: `Environment verification: PASS`, `No broken requirements found.`, **227 tests formales** en 29 módulos `unittest` de `tests/` ([tests/README.md](tests/README.md)) y **92+ tests de laboratorio** (`03`, `04`, `05`, `06`, `07`, `13`, `14`, `15`). En este equipo los tests CUDA deben ejecutarse, no omitirse; `test_environment.py` exige CUDA real.
+Resultado esperado: `Environment verification: PASS`, `No broken requirements found.`, **227 tests formales** en 29 módulos `unittest` de `tests/` ([tests/README.md](tests/README.md)), **96 tests de laboratorio** (`03`: 5, `04`: 8, `05`: 20, `06`: 25, `07`: 15, `13`: 13, `14`: 6, `15`: 4) y las comprobaciones C99 en `c_imp/tests/test_runtime.c`. En este equipo los tests CUDA deben ejecutarse, no omitirse; `test_environment.py` exige CUDA real.
 
 Los tests de entropía `03` necesitan las salidas de `01`, ya conservadas; si faltan, ejecutar primero `understanding/01_patch_partition/patch_partition.py --patch-size 64`.
 
@@ -83,13 +83,13 @@ py -3.11 -m venv .venv
 
 ## Carpetas (relativas a `code/`)
 
-* [configs/](configs/README.md): configuraciones TOML declarativas (`base.toml`, `preprocessing/`, `csv/`, `entropy/`, `asymmetry/`, `classification/`, `cnn/`, `profiling/`, `features/`, `optimization/`, `understanding/`) y `logging.py`. Ningún módulo de `src/` hardcodea parámetros o rutas.
+* [configs/](configs/README.md): configuraciones TOML declarativas (`base.toml`, `preprocessing/`, `csv/`, `entropy/`, `asymmetry/`, `classification/`, `cnn/`, `profiling/`, `features/`, `optimization/`, `c_imp/`, `understanding/`) y `logging.py`. Ningún módulo de `src/` hardcodea parámetros o rutas.
 * [src/](src/README.md): módulos formales reutilizables (`preprocessing/`, `datasets/`, `features/` incl. C99 `entropy_pyramid`, `models/` incl. `LinearDotCoreClassifier`, `MlpDotCoreClassifier` y `cnn/`, `profiling/`, `c_export/`).
 * [c_imp/](c_imp/README.md): implementación C99 portable `f32` y `q15` sin `malloc` (`runtime/`, `app/desktop_main.c`, `tests/test_runtime.c`) para portación pre-ESP32-CAM.
 * [experiments/](experiments/README.md): puntos de entrada CLI para todas las corridas reproducibles (incluyendo `export_c_pipeline`, `verify_c_pipeline` y `visualize_c_pipeline`).
 * [understanding/](understanding/README.md): quince laboratorios pedagógicos (`01_patch_partition/` a `15_c_migration_fixed_point/`, más `07_entropy_maps_vectorized/`).
-* [tests/](tests/README.md): verificación CUDA (`test_environment.py`), 29 suites formales (`227` casos `unittest`) y pruebas pedagógicas en `understanding/`.
-* [results/](results/README.md): diagnósticos, logs, clasificación ([results/classification/](results/classification/README.md)), checkpoints CNN ([results/cnn/](results/cnn/README.md)), comparación 100 % CPU justa con C99 ([results/comparison_cpu/](results/comparison_cpu/README.md)), comparativa Python puro (`results/comparison_cpu_python/`, ignorada por Git), profiling científico (`results/profiling/`) y legado [results/comparison/](results/comparison/README.md) (*deprecated*).
+* [tests/](tests/README.md): verificación CUDA (`test_environment.py`), 29 suites formales (`227` casos `unittest`) y pruebas pedagógicas en `understanding/` (`96` casos).
+* [results/](results/README.md): diagnósticos, logs, clasificación ([results/classification/](results/classification/README.md)), checkpoints CNN ([results/cnn/](results/cnn/README.md)), comparación 100 % CPU justa con C99 ([results/comparison_cpu/](results/comparison_cpu/README.md)), comparativa Python puro (`results/comparison_cpu_python/`, ignorada por Git), profiling científico (`results/profiling/`), resultados de portación C99 ([results/c_imp/](results/c_imp/README.md)) y legado [results/comparison/](results/comparison/README.md) (*deprecated*).
 * [notebooks/](notebooks/README.md): cuaderno de ejecución completa en Colab ([Entropy_Maps_Full_Run.ipynb](notebooks/Entropy_Maps_Full_Run.ipynb)).
 * [data/](data/README.md): `raw/` (no incluido en Git), `preprocessed/` y `csv/`.
 * `memory/`: exportador de `README*.md` a `memory/` para sincronización con NotebookLM (`export_readmes.ps1`).
@@ -187,10 +187,10 @@ donde $T_{\text{LR}}: c \mapsto g-1-c$, $T_{\text{TB}}: r \mapsto g-1-r$ y $T_{\
 
 ### 5. Clasificadores clásicos, ablación y explicabilidad
 
-**Qué hace.** Entrena `dt`, `knn`, `lr`, `lr_dot` y `rf` sobre $\mathbf{x}_{94}$ (`good = 0`, `defect = 1`) y ejecuta ablación automática sobre `x85_only`, `x9_only`, `x94_full`, `E_1x1`, `E_2x2`, `E_4x4` y `E_8x8`.
+**Qué hace.** Entrena `dt`, `knn`, `lr`, `lr_dot`, `mlp_16_dot` y `rf` sobre $\mathbf{x}_{94}$ (`good = 0`, `defect = 1`) y ejecuta ablación automática sobre `x85_only`, `x9_only`, `x94_full`, `E_1x1`, `E_2x2`, `E_4x4` y `E_8x8` (en disco dentro de `results/classification/` se conservan las 5 corridas clásicas `dt..rf`; `mlp_16_dot` cuenta además con evaluación C99 en `results/c_imp/`).
 
 * **Splits:** KolektorSDD2 usa el split oficial `train`/`test` (`presplit`). MVTec-AD descarta en memoria filas `split == "ground_truth"` y aplica partición estratificada `80/20` en memoria por objeto (`seed = 42`), sin modificar los CSV en disco (el `train` oficial de MVTec solo contiene piezas `good`).
-* **Predicción:** umbral fijo $\hat{p} \ge 0.50$. **`lr_dot`** (`LinearDotCoreClassifier`) pliega algebraicamente `StandardScaler` + `LogisticRegression` en un único producto punto: $w'_i = w_i / \sigma_i$, $b' = b - \sum_i w_i \mu_i / \sigma_i$ (numéricamente idéntico a `lr` $< 10^{-12}$, `95` parámetros).
+* **Predicción:** umbral fijo $\hat{p} \ge 0.50$. **`lr_dot`** (`LinearDotCoreClassifier`) pliega algebraicamente `StandardScaler` + `LogisticRegression` en un único producto punto: $w'_i = w_i / \sigma_i$, $b' = b - \sum_i w_i \mu_i / \sigma_i$ (numéricamente idéntico a `lr` $< 10^{-12}$, `95` parámetros), y **`mlp_16_dot`** (`MlpDotCoreClassifier`) pliega igualmente `StandardScaler` dentro de su capa oculta de 16 neuronas ReLU (`1,537` parámetros).
 * **Ganancia de simetría y azar:** $\Delta F_1 = F_1(\mathbf{x}_{94}) - F_1(\mathbf{x}_{85})$. La cuota por azar de $\mathbf{x}_9$ es $9 / 94 = 9.57\,\%$.
 
 ```powershell
@@ -301,7 +301,7 @@ Aísla lo que se pierde al no usar la DLL C99 (salida local ignorada por Git):
 
 ### 9. Exportación C99, verificación de paridad y visualización (`c_imp/`)
 
-**Qué hace.** Exporta a C99 portable (`float32` + punto fijo `Q15` sin `malloc`), compila los binarios desktop con MSVC `cl.exe`, verifica paridad exacta Python-vs-C (`q15` bit-exacto con `0` diff) junto con latencias (`--benchmark`), y renderiza tablas resumen (`summary_models_metrics.csv`, `summary_report.md`) y hasta 6 figuras diagnósticas (`fig1`–`fig6`) en `results/c_imp/<target>/figures/`. Guía detallada en [c_imp/README.md](c_imp/README.md).
+**Qué hace.** Exporta a C99 portable (`float32` + punto fijo `Q15` sin `malloc`), compila los binarios desktop con MSVC `cl.exe`, verifica paridad exacta Python-vs-C (`q15` bit-exacto con `0` diff) junto con latencias (`--benchmark`), y renderiza tablas resumen (`summary_models_metrics.csv`, `summary_report.md`) y hasta 6 figuras diagnósticas (`fig1`–`fig6`) en `results/c_imp/<target>/figures/`. Guía de ejecución en [c_imp/README.md](c_imp/README.md) y síntesis auditada de resultados en [results/c_imp/README.md](results/c_imp/README.md).
 
 ```powershell
 # KolektorSDD2: exportar, verificar paridad + benchmark, validar inputs y generar figuras
@@ -322,11 +322,12 @@ Aísla lo que se pierde al no usar la DLL C99 (salida local ignorada por Git):
 | Veredictos de hipótesis, tablas y checklist MCU | [HYPOTHESIS.md](HYPOTHESIS.md) |
 | Explicación de figuras y tablas de clasificación | [results/classification/README.md](results/classification/README.md) |
 | Hallazgos de profiling por dataset | `results/profiling/<tag>/README.md` |
+| Auditoría y métricas C99 (`f32`/`Q15` + ESP32-CAM) | [results/c_imp/README.md](results/c_imp/README.md) |
 | Todos los flags CLI por script | [experiments/README.md](experiments/README.md) |
 | Mapa de código, grafo y reglas que muerden | [RESUME.md](RESUME.md) |
 | Reglas de desarrollo del repositorio | [AGENTS.md](AGENTS.md) |
 
-**Límites abiertos:** los tiempos corresponden a x86-64 de escritorio (no MCU físico); $\mathbf{x}_{94}$ pierde en F1 frente a CNNs en microfisuras sub-celda (`kolektorsdd2`, $H_{\text{univ}}$ refutada); quedan pendientes promover clasificadores no lineales/dispersos explorados en [Lab 14](understanding/14_ml_classifiers_mcu/README.md) (`mlp_16_dot`, `mlp_16_skip_dot`, `lr_l1_dot`, etc.), el port C99 completo de `asymmetry_g2/4/8` + modelo, barridos multi-seed / multi-categoría con guarda de no-degeneración en `val_f1` y selectores dinámicos de regiones.
+**Límites abiertos:** los tiempos medidos corresponden a x86-64 de escritorio (no a ESP32-CAM físico, pendiente en Etapa 12); $\mathbf{x}_{94}$ pierde en F1 frente a CNNs en microfisuras sub-celda (`kolektorsdd2`, $H_{\text{univ}}$ refutada); de [Lab 14](understanding/14_ml_classifiers_mcu/README.md) ya se promovió `mlp_16_dot` (y se portó a C99 en `c_imp/` junto con `x94`, `lr_dot` y las 7 CNNs), quedando pendientes otros candidatos (`mlp_16_skip_dot`, `mlp_32_16_dot`, `lr_l1_dot`, etc.), barridos multi-seed / multi-categoría con guarda de no-degeneración en `val_f1` (`M2`) y selectores dinámicos de regiones.
 
 ---
 

@@ -1,6 +1,6 @@
 # Pruebas del proyecto (`tests/`)
 
-Suites de pruebas automáticas, unitarias y de integración del proyecto: **`test_environment.py`** (CUDA real) + **29 módulos `unittest`** en `tests/`, junto con **8 suites pedagógicas** en `understanding/`.
+Suites de pruebas automáticas, unitarias y de integración del proyecto: **`test_environment.py`** (CUDA real) + **29 módulos `unittest`** (`227` casos) en `tests/`, junto con **8 suites pedagógicas** (`96` casos) en `understanding/` y los tests C99 standalone en [`c_imp/tests/test_runtime.c`](../c_imp/tests/test_runtime.c).
 
 ---
 
@@ -90,6 +90,7 @@ $env:PYTHONPATH = (Get-Location).Path; .\.venv\Scripts\python.exe understanding/
 | `test_profiling_classifier.py` | Paridad numérica, conteo real de parámetros (`scaler_params=0`), FLOPs/MACs analíticos y profiling de `lr_dot` frente a `lr` sklearn | Cobertura de `src/profiling/classifier_profile.py` |
 | `test_profiling_cnn_layers.py` | Reporte completo de módulos hoja en CNN sintética en CPU sin CUDA, overhead de *hooks* acotado, `torch.profiler` ATen y *cold start* | Cobertura de `src/profiling/cnn_layers.py` |
 | `test_benchmark_cpu_fair_cli.py` | Ejecución `--dry-run` de Fase A/B (código `0`), imposición estricta de `device=cpu`, rechazo fail-fast de `--device cuda` y errores por checkpoints faltantes | Cobertura CLI de `benchmark_cpu_fair.py` y `profile_pipelines.py` |
+| `test_c_export_*.py` (`config`, `fixed_point`, `luts`, `linear`, `cnn_graph`, `visualize`) y `test_c_pipeline_parity.py` | Carga TOML C99 + `[c_imp.visualization]`, redondeo Q15, LUTs Shannon, clasificadores plegados (`lr_dot`, `mlp_16_dot`), grafo/cuantización CNN, paridad E2E MSVC C99-vs-Python y renderizado de figuras/tablas resumen | Cobertura formal de `src/c_export/`, `src/models/mlp_dot.py` y `experiments/*_c_pipeline.py` en `TemporaryDirectory` |
 | `03/test_entropy.py` | 5 tests: formulaciones Shannon E1–E5, cotas, LUTs y rankings | Utiliza artefactos cacheados de 01 |
 | `04/tests/test_models.py` | 8 tests: shapes, backward/Adam, parámetros y capas depthwise en 7 CNNs | CPU obligatorio, CUDA probado en hardware compatible |
 | `05/tests/test_symmetry_features.py` | 20 tests: simetrías LR/TB/R180, desigualdades y rangos de asimetría | Verificación matemática de residuos espaciales |
@@ -97,4 +98,4 @@ $env:PYTHONPATH = (Get-Location).Path; .\.venv\Scripts\python.exe understanding/
 | `07/tests/test_behavior_helpers.py` | 15 tests: respuesta de x94 ante ruido, desenfoque, contraste y defectos sintéticos | Caracterización de límites y sensibilidad (invocar con `PYTHONPATH` en `code/`) |
 | `13/tests/test_entropy_variants.py` | 13 tests: paridad numérica `V0–V3` ($\le 10^{-12}$), pirámides anidadas, `bins` arbitrarios y C99 zero-alloc | Valida `numpy_finest_pyramid`, `numpy_fused_entropy` y `entropy_pyramid.dll` |
 | `14/tests/test_ml_classifiers_mcu.py` | 6 tests: paridad algebraica `float64/float32/C99`, determinismo de MLPs, contabilidad exacta de Flash/MAC y borde L1 `nnz=0` | Valida clasificadores plegados (`ml_classifiers_mcu`) y `mcu_classifiers.c` sin tocar `src/` |
-| `test_c_export_*.py` (`config`, `fixed_point`, `luts`, `linear`, `cnn_graph`, `visualize`) y `test_c_pipeline_parity.py` | Carga TOML C99 + `[c_imp.visualization]`, redondeo Q15, LUTs Shannon, clasificadores plegados, grafo/cuantización CNN, paridad E2E MSVC C99-vs-Python y renderizado de figuras/tablas resumen | Cobertura formal de `src/c_export/` y `experiments/*_c_pipeline.py` en `TemporaryDirectory` |
+| `15/tests/test_c_migration_fixed_point.py` | 4 tests: saturación/redondeo `Q15`, cotas de error de los 3 modos de LUT Shannon, plegado analítico `Conv2d + BatchNorm2d` y recuantización con acumuladores `int64_t` | Valida fundamentos numéricos pre-C en `15_c_migration_fixed_point/` |

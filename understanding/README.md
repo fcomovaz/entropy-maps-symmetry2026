@@ -8,12 +8,12 @@ No es código de producción: una implementación migra a `src/` únicamente cua
 
 ## Estado general: ¿En qué fase estamos?
 
-El proyecto ha completado la exploración por componentes, la experimentación formal en datasets reales y la optimización del descriptor en Python/NumPy puro y C99 nativo, preparándose para la portación final a microcontrolador:
+El proyecto ha completado la exploración por componentes, la experimentación formal en datasets reales, la optimización del descriptor en Python/NumPy puro y C99 nativo, y la migración a C99 portable `f32`/`Q15` verificada en escritorio, preparándose para la medición final en microcontrolador físico (ESP32-CAM):
 
 ```
-[ Fase 1: Primitivas ] -> [ Fase 2: CNNs ] -> [ Fase 3: x94 ] -> [ Fase 4: Datasets ] -> [ Fase 5: Experimentos ] -> [ Fase 6: Opt. CPU / C99 ]
-     (01, 02, 03)               (04)            (05, 06, 07)      (08, 09, 10, 11)        (12 + experiments/)        (13 + src/ optimizado)
-      COMPLETADA             COMPLETADA          COMPLETADA          COMPLETADA               COMPLETADA                COMPLETADA (Pre-MCU)
+[ Fase 1-5: Primitivas, CNNs, x94, Datasets, Profiling ] -> [ Fase 6: Opt. CPU / ML MCU ] -> [ Fase 7: Migración C99 f32/Q15 ]
+              (01..12 + experiments/)                          (13, 14 + src/)                 (15 + src/c_export/ + c_imp/)
+                    COMPLETADA                                    COMPLETADA                     COMPLETADA (Desktop Pre-MCU)
 ```
 
 1. **Fase 1 — Primitivas matemáticas y computacionales (Completada):**
@@ -32,9 +32,11 @@ El proyecto ha completado la exploración por componentes, la experimentación f
 5. **Fase 5 — Experimentación formal y profiling en CPU (Completada):**
    - Clasificación supervisada ligera (`dt`, `knn`, `lr`, `lr_dot`, `rf`), ablaciones $\mathbf{x}_{85}$ vs $\mathbf{x}_9$ vs $\mathbf{x}_{94}$ y comparación 100 % CPU justa frente a las 7 CNNs ligeras en `experiments/`.
    - Descomposición granular por etapas de $\mathbf{x}_{94}$ y capas PyTorch en [12](12_profiling_stages/README.md), identificando el cuello de botella de las 85 rebanadas Python/NumPy y el wrapper de `scikit-learn`.
-6. **Fase 6 — Optimización algorítmica y kernel C99 Pre-MCU (Completada + exploración ML embebible 14):**
+6. **Fase 6 — Optimización algorítmica y clasificadores ML embebibles (Completada):**
    - Validación matemática y experimental de paso único en grilla más fina con pirámide aditiva en NumPy puro (`numpy_finest_pyramid`) y kernel C99 portable (`c_single_pass`), más el núcleo lineal plegado `lr_dot` ([13](13_entropy_maps_optimization/README.md)), promovidos al pipeline formal `src/`.
-   - Comparativa exploratoria (sin modificar `src/`) de 9 clasificadores ML portables a C99 (`mlp_16_dot`, `mlp_16_skip_dot`, `mlp_32_16_dot`, `lr_l1_dot`, `lda_shrink_dot`, `lsvc_dot`, `gnb_quad`, `dt_core`, `gbdt_tiny_core`) frente a `lr_dot`, `dt` y `rf` en [14](14_ml_classifiers_mcu/README.md).
+   - Comparativa exploratoria (sin modificar `src/`) de 9 clasificadores ML portables a C99 frente a `lr_dot`, `dt` y `rf` en [14](14_ml_classifiers_mcu/README.md), promoviendo `mlp_16_dot` (`MlpDotCoreClassifier`) a `src/models/mlp_dot.py`.
+7. **Fase 7 — Aritmética fija `Q15`, LUTs compactas y migración C99 portable pre-ESP32 (Completada en escritorio):**
+   - Estudio previo de formatos `Qm.n`, modos de LUT Shannon (`nlogn_full` ~64 KB, `term_per_level` ~44 KB, `log2_mantissa` 514 B), plegado `Conv2d + BatchNorm2d` y acumuladores `int64_t` en [15](15_c_migration_fixed_point/README.md), materializado en `src/c_export/` y `c_imp/` (resultados auditados en [../results/c_imp/README.md](../results/c_imp/README.md)).
 
 ---
 
@@ -85,9 +87,9 @@ Píxeles crudos
                  │
                  └───> [11] KolektorSDD2 serializado en CSV (16389 cols, row-major)
                              │
-                             └───> [12] Profiling por etapas  ──>  [13] Optimización single-pass (Py + C99)
-                                         │                                  │
-                                         └──────────> Pipeline formal en src/ y experiments/ <──────────────┘
+                             └───> [12] Profiling por etapas  ──>  [13] Optimización single-pass (Py + C99)  ──>  [14] Clasificadores MCU  ──>  [15] Punto fijo Q15 / LUTs
+                                         │                                  │                                   │                             │
+                                         └──────────────────────────────> Pipeline formal en src/, experiments/ y c_imp/ <──────────────────────────┘
 ```
 
 ---
@@ -125,20 +127,23 @@ Píxeles crudos
 - **Clasificadores ML alternativos portables a C99 sin modificar `src/` (14):**
   - Plegar `StandardScaler` en MLPs ReLU (`6.0–14.0 KB` Flash, `64–192 B` SRAM, `0 <math.h>` en umbral) eleva el F1 medio en los 15 objetos MVTec-AD a `0.6905` (`mlp_16_skip_dot`) frente a `0.6486` (`lr_dot`) y `0.5178` (`rf`), y en `kolektorsdd2` a `F1=0.5000` / `PR-AUC=0.5936` frente a `lr_dot` (`0.4265` / `0.4360`). Todos los núcleos C99 logran `100%` de acuerdo de etiqueta y corren en `0.019–4.02 us` (`< 1.5%` de `T_desc`). `lr_l1_dot` recorta los pesos activos a `41.1/94` en promedio (`0.32 KB`), y `gnb_quad` revela cancelación de ULP `float32` cuando el offset log-ratio alcanza `~1.1e4` pese a conservar `100%` de acuerdo binario.
 
+- **Aritmética fija Q15, LUTs Shannon y BN-folding pre-ESP32 (15):**
+  - La cuantización `Q0.15` satura `1.0` en `32767` con error `< 5e-5`; la LUT `log2_mantissa` (`257` entradas, `~514 B` Flash) reduce >100× la memoria frente a `nlogn_full` (`~64 KB`) manteniendo residuales medios `~7.6e-6` frente a `float64`. El plegado analítico `Conv2d + BatchNorm2d` logra equivalencia `< 1e-6`, y los acumuladores `int64_t` evitan desbordamientos de `int32_t` cuando el *fan-in* `Cin*k^2` crece.
+
 ---
 
 ## Qué está verificado y qué sigue abierto hacia el paper y el MCU
 
 1. **Capacidad predictiva real y ablación (`Completado` — ver [`../HYPOTHESIS.md`](../HYPOTHESIS.md)):** evaluado en MVTec-AD y KolektorSDD2 con clasificadores ligeros (`dt`, `knn`, `lr`, `lr_dot`, `rf`) frente a 7 CNNs ligeras. Confirmado el aporte de $\mathbf{x}_9$ sobre $\mathbf{x}_{85}$ y la invarianza fotométrica en imágenes sin padding; refutada la superioridad universal frente a CNNs en micro-fisuras sub-celda (`KolektorSDD2`).
-2. **Evaluación justa de coste total ($T_{\text{total}}$) en CPU (`Completado`):** medido extremo a extremo (`T_descriptor + T_model`) en Python puro (`numpy_baseline`, `numpy_finest_pyramid`) y con entropía en C99 (`c_single_pass`), demostrando que la asimetría $\mathbf{x}_9$ en NumPy pasa a ser el siguiente candidato natural para migrar a C junto con `entropy_pyramid.c`.
-3. **Migración completa a C/C++ en microcontrolador (MCU):** portar las 9 asimetrías (`2x2`, `4x4`, `8x8`) y los coeficientes plegados `lr_dot` junto al kernel C99 de entropía ya libre de heap (`entropy_pyramid.c`), evaluando Flash/SRAM y precisión fija en hardware embebido real.
+2. **Evaluación justa de coste total ($T_{\text{total}}$) en CPU (`Completado`):** medido extremo a extremo (`T_descriptor + T_model`) en Python puro (`numpy_baseline`, `numpy_finest_pyramid`) y con entropía en C99 (`c_single_pass`).
+3. **Migración completa a C99 portable `f32`/`Q15` en escritorio (`Completado` — ver [`../results/c_imp/README.md`](../results/c_imp/README.md)):** portados `x94` completo (incluyendo `asymmetry_g2/4/8`), `lr_dot`, `mlp_16_dot` y las 7 CNNs en `c_imp/` con cero `malloc` y paridad `Q15` bit-exacta (`0` LSB de diferencia C vs Python). Queda pendiente la **Etapa 12**: medición de ciclos, latencia Flash vs PSRAM y consumo energético en **hardware físico ESP32-CAM**.
 4. **Ablación de grilla fina ($16\times16$) y ruteo adaptativo por entropía:** estudiar si extender la pirámide a `g=16` (`8x8` px por celda) o usar $\mathbf{x}_{85}$ como selector rápido de parches (`top-k / threshold`) antes de una CNN reduce falsos negativos en fisuras de 1–2 px.
 
 ---
 
 ## Reproducibilidad y ejecución
 
-Los scripts de comprensión usan rutas relativas al proyecto y fijan semillas reproducibles (20260928 en 02/03; 20261001 en 05/06/07; 42 en 04, 12, 13 y 14).
+Los scripts de comprensión usan rutas relativas al proyecto y fijan semillas reproducibles (20260928 en 02/03; 20261001 en 05/06/07; 42 en 04, 12, 13, 14 y 15).
 
 Para ejecutar los laboratorios individuales o sus tests manuales (PowerShell desde carpeta `code/`):
 ```powershell
@@ -150,6 +155,7 @@ Para ejecutar los laboratorios individuales o sus tests manuales (PowerShell des
 $env:PYTHONPATH = (Get-Location).Path; .\.venv\Scripts\python.exe -m unittest understanding/07_descriptor_behavior/tests/test_behavior_helpers.py
 .\.venv\Scripts\python.exe -m unittest understanding/13_entropy_maps_optimization/tests/test_entropy_variants.py
 .\.venv\Scripts\python.exe -m unittest understanding/14_ml_classifiers_mcu/tests/test_ml_classifiers_mcu.py
+.\.venv\Scripts\python.exe -m unittest discover understanding/15_c_migration_fixed_point/tests -v
 
 # Demos y benchmarks de comprensión
 .\.venv\Scripts\python.exe understanding/06_entropy_pyramid_descriptor/run_demo.py
@@ -180,4 +186,11 @@ $env:PYTHONPATH = (Get-Location).Path; .\.venv\Scripts\python.exe understanding/
 .\.venv\Scripts\python.exe -m unittest understanding/14_ml_classifiers_mcu/tests/test_ml_classifiers_mcu.py -v
 .\.venv\Scripts\python.exe understanding/14_ml_classifiers_mcu/benchmark_classifiers.py --config configs/understanding/ml_classifiers_mcu.toml --include-inverted
 .\.venv\Scripts\python.exe understanding/14_ml_classifiers_mcu/plot_results.py --config configs/understanding/ml_classifiers_mcu.toml
+
+# Lab 15: Tests y estudio de punto fijo Q15, LUTs Shannon, BN folding y recuantización int64
+.\.venv\Scripts\python.exe -m unittest discover understanding/15_c_migration_fixed_point/tests -v
+.\.venv\Scripts\python.exe understanding/15_c_migration_fixed_point/01_q_formats.py --config configs/understanding/c_migration_fixed_point.toml
+.\.venv\Scripts\python.exe understanding/15_c_migration_fixed_point/02_entropy_fixed_point.py --config configs/understanding/c_migration_fixed_point.toml
+.\.venv\Scripts\python.exe understanding/15_c_migration_fixed_point/03_bn_folding.py --config configs/understanding/c_migration_fixed_point.toml
+.\.venv\Scripts\python.exe understanding/15_c_migration_fixed_point/04_requantization.py --config configs/understanding/c_migration_fixed_point.toml
 ```

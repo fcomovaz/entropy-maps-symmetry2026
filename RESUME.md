@@ -1,6 +1,6 @@
 # RESUME.md — project state for any agent
 
-- **Last reviewed:** 2026-11-13
+- **Last reviewed:** 2026-11-15
 - **Provisional project name:** *Entropy-Aware Region Selection for Efficient Embedded Vision* (`2026-10-Symmetry-Entropy`)
 - **Repository root:** `code/` (`D:\Publications\2026-10-Symmetry-Entropy\code`)
 
@@ -18,7 +18,7 @@ Core claim evaluated: describing images / selecting informative regions via mult
 
 ## 2. Current state in one paragraph
 
-Fourteen pedagogical laboratories exist under `understanding/` (`01`–`14`, plus `07_entropy_maps_vectorized/`). Labs `01`–`04` cover primitives (patch partitioning, histograms, Shannon entropy benchmarks, and 7 lightweight CNNs). Labs `05`–`07` define and stress-test the canonical 94-feature descriptor `image -> x94` (`schema x94-v1`: 85 multiscale entropies + 9 spatial asymmetry residuals across 279 synthetic scenes). Labs `08`–`12` validate dataset standardization, pixel CSV round-trips, spatial visualizations, and stage/layer CPU bottlenecks, Lab `13` proves single-pass bottom-up histogram summation and Shannon LUTs in pure NumPy (`9.40x`) and heap-free C99 (`92.65x`, `0.024 ms` for `x85`), and Lab `14` benchmarks MCU-portable folded C99 classifiers (`mlp_16_dot`, `mlp_16_skip_dot`, `mlp_32_16_dot`, `lr_l1_dot`, `lda_shrink_dot`, `lsvc_dot`, `gnb_quad`, `dt_core`, `gbdt_tiny_core`) against unmodified `src/` baselines (`lr_dot`, `dt`, `rf`). Formal production modules live in `src/` (`preprocessing/`, `datasets/`, `features/` with 5 entropy backends including `c_single_pass` + `numpy_finest_pyramid`, `models/` with `dt`, `knn`, `lr`, algebraically folded `lr_dot`, `rf`, ablation, explainability, and 7 CNNs, and `profiling/`). CLI entry points in `experiments/` (plus `notebooks/Entropy_Maps_Full_Run.ipynb` for Colab runs) execute dataset preprocessing, CSV/feature export, `seed=42` aligned ML/CNN evaluation on `kolektorsdd2` and `mvtec-ad_bottle` (normal + inverted), 100% CPU-fair comparisons (`results/comparison_cpu/`), isolated pure-Python CPU comparisons (`results/comparison_cpu_python/`), and deep statistical profiling (`results/profiling/`). Automated verification comprises **300 unit/integration tests + real CUDA environment check** (`208` formal tests across 22 suites in `tests/` + `92` lab tests in `understanding/`).
+Fifteen pedagogical laboratories exist under `understanding/` (`01`–`15`, plus `07_entropy_maps_vectorized/`). Labs `01`–`04` cover primitives (patch partitioning, histograms, Shannon entropy benchmarks, and 7 lightweight CNNs). Labs `05`–`07` define and stress-test the canonical 94-feature descriptor `image -> x94` (`schema x94-v1`: 85 multiscale entropies + 9 spatial asymmetry residuals across 279 synthetic scenes). Labs `08`–`12` validate dataset standardization, pixel CSV round-trips, spatial visualizations, and stage/layer CPU bottlenecks, Lab `13` proves single-pass bottom-up histogram summation and Shannon LUTs in pure NumPy (`9.40x`) and heap-free C99 (`92.65x`, `0.024 ms` for `x85`), Lab `14` benchmarks MCU-portable folded C99 classifiers (`mlp_16_dot`, `mlp_16_skip_dot`, `mlp_32_16_dot`, `lr_l1_dot`, `lda_shrink_dot`, `lsvc_dot`, `gnb_quad`, `dt_core`, `gbdt_tiny_core`) against unmodified `src/` baselines (`lr_dot`, `dt`, `rf`), and Lab `15` (`15_c_migration_fixed_point/`) validates `Qm.n` arithmetic, compact Shannon LUT modes (`log2_mantissa` 514 B), analytical Conv+BN folding, and `int64_t` accumulators prior to portable C99 codegen. Formal production modules live in `src/` (`preprocessing/`, `datasets/`, `features/` with 5 entropy backends including `c_single_pass` + `numpy_finest_pyramid`, `models/` with `dt`, `knn`, `lr`, algebraically folded `lr_dot`, promoted `mlp_16_dot` in `mlp_dot.py`, `rf`, ablation, explainability, and 7 CNNs, `profiling/`, and `c_export/`). CLI entry points in `experiments/` (plus `notebooks/Entropy_Maps_Full_Run.ipynb` for Colab runs) execute dataset preprocessing, CSV/feature export, `seed=42` aligned ML/CNN evaluation on `kolektorsdd2` and `mvtec-ad_bottle` (normal + inverted), 100% CPU-fair comparisons (`results/comparison_cpu/`), isolated pure-Python CPU comparisons (`results/comparison_cpu_python/`), deep statistical profiling (`results/profiling/`), and portable zero-malloc C99 (`f32` + `Q15`/`int8_per_channel`) export, MSVC parity verification, memory budgeting, and diagnostic visualization (`c_imp/` & `results/c_imp/README.md`). Automated verification comprises **323 unit/integration tests + real CUDA environment check + standalone C99 runtime checks** (`227` formal tests across 29 `unittest` modules in `tests/` + `96` lab tests across 8 suites in `understanding/`, plus `c_imp/tests/test_runtime.c`).
 
 ---
 
@@ -37,12 +37,13 @@ code/
 │   ├── logging.py                   centralized rotating logging setup
 │   ├── features/native_entropy.toml MSVC C99 DLL build flags & paths
 │   ├── optimization/entropy_maps.toml Lab 13 benchmark & sweep configuration
-│   ├── understanding/ml_classifiers_mcu.toml Lab 14 exploratory MCU classifiers benchmark config
+│   ├── c_imp/                         kolektorsdd2.toml, mvtec_ad.toml (ESP32-CAM budgets, Q15/LUT/parity & visualization)
+│   ├── understanding/                 ml_classifiers_mcu.toml (Lab 14), c_migration_fixed_point.toml (Lab 15)
 │   ├── preprocessing/               mvtec_ad.toml, kolektorsdd2.toml
 │   ├── csv/                         mvtec_ad.toml (16391 cols), kolektorsdd2.toml (16389 cols)
 │   ├── entropy/                     mvtec_ad.toml, kolektorsdd2.toml (x85 + backend selection)
 │   ├── asymmetry/                   mvtec_ad.toml, kolektorsdd2.toml (x85 -> x94)
-│   ├── classification/              mvtec_ad.toml, kolektorsdd2.toml (dt, knn, lr, lr_dot, rf)
+│   ├── classification/              mvtec_ad.toml, kolektorsdd2.toml (dt, knn, lr, lr_dot, mlp_16_dot, rf)
 │   ├── cnn/                         mvtec_ad.toml, kolektorsdd2.toml, colab.toml (7 CNNs, AdamW, val_f1)
 │   └── profiling/                   mvtec_ad.toml, kolektorsdd2.toml (100% CPU-fair & deep profiling)
 ├── src/                             formal reusable pipeline modules
@@ -90,7 +91,7 @@ code/
 │   ├── test_profiling_{config,timing,descriptor_stages,classifier,cnn_layers}.py, test_benchmark_cpu_fair_cli.py
 │   └── test_c_export_{config,fixed_point,luts,linear,cnn_graph,visualize}.py, test_c_pipeline_parity.py
 ├── data/                            raw/, preprocessed/, csv/ (datasets gitignored; .gitkeep & README.md tracked)
-├── results/                         environment_debug.md, classification/, cnn/, comparison_cpu/, profiling/, c_imp/, comparison/ (deprecated)
+├── results/                         environment_debug.md, classification/, cnn/, comparison_cpu/, profiling/, c_imp/README.md (outputs gitignored), comparison/ (deprecated)
 ├── memory/                          NotebookLM README exporter (export_readmes.ps1, run_canonical_experiments.ps1, archive_and_reset.ps1)
 ├── tasks/                           historical planning specifications (task_01..task_11, review_01)
 └── understanding/                   15 pedagogical laboratories (`01`..`15`) + `07_entropy_maps_vectorized/`
@@ -111,15 +112,18 @@ Understanding laboratories:
   12_profiling_stages      --->  src.features, src.models.cnn
   13_entropy_maps_opt      --->  src.features, src.models
   14_ml_classifiers_mcu    --->  src.models.descriptor_classifier, src.profiling, src.features.build_native (read-only over src/)
+  15_c_migration_fixed_pt  --->  src.features, src.models.{descriptor_classifier, cnn} (read-only pre-C99 numerical study)
 
-Formal pipeline (`src/` & `experiments/`):
+Formal pipeline (`src/`, `experiments/` & `c_imp/`):
   src.preprocessing.letterbox             --->  src.preprocessing.{mvtec_ad, kolektorsdd2}
   src.datasets.mvtec_ad_csv               --->  src.datasets.kolektorsdd2_csv
   src.features.native_entropy             --->  src.features.{entropy_maps, entropy_csv, build_native}
   src.features.asymmetry_maps             --->  src.features.asymmetry_csv, src.models.descriptor_classifier
+  src.models.mlp_dot                      --->  src.models.descriptor_classifier, src.c_export.linear_export
   src.models.descriptor_classifier       <--->  src.models.classification_plots
   src.models.descriptor_classifier        --->  src.models.cnn.{evaluate, report}
   src.features.* + src.models.*           --->  src.profiling.{config, descriptor_stages, classifier_profile, cnn_layers}
+  src.{features, models.*} + c_imp/       --->  src.c_export.*
   configs.logging + src.*                 --->  experiments/*
 ```
 
@@ -159,18 +163,20 @@ features 85-93: A_T(g) = sum |E[i,j] - T(E)[i,j]| / g^2  for T in {LR, TB, R180}
 * **12** — Stage-by-stage CPU dissection: reveals Python 85-region slice/`bincount` loop, inter-stage dispatch gap, and `sklearn` wrapper overhead vs. PyTorch `ATen`.
 * **13** — Single-pass bottom-up histogram pyramid + Shannon LUTs: `9.40x–10.49x` speedup in pure NumPy (`V1/V2`) and **`92.65x` in C99 (`V3`, `0.024 ms` for `x85`)** with $\le 1.89\times 10^{-15}$ parity (`13` tests).
 * **14** — MCU-portable folded MLPs & alternative classifiers (`mlp_16_dot`, `mlp_16_skip_dot`, `mlp_32_16_dot`, `lr_l1_dot`, `lda_shrink_dot`, `lsvc_dot`, `gnb_quad`, `dt_core`, `gbdt_tiny_core`) in pure `float32` C99 (`0 malloc`, `0 <math.h>` at threshold) without touching `src/`: folded MLPs reach `0.6905` mean F1 across 15 MVTec-AD objects (vs `0.6486` `lr_dot`, `0.5178` `rf`) and `0.5000` F1 / `0.5936` PR-AUC on `kolektorsdd2` (`< 6.4 KB` Flash, `0.019–4.02 us` C99, `100%` prediction parity, `6` tests).
+* **15** — Fixed-point `Qm.n` saturation/rounding (`half_up`), compact Shannon LUT modes (`nlogn_full` ~64 KB vs `term_per_level` ~44 KB vs `log2_mantissa` 514 B), analytical `Conv2d + BatchNorm2d` folding (`< 1e-6`), and `int64_t` accumulators preventing `int32_t` overflow past 2 Q15 MACs (`4` tests).
 
 ---
 
 ## 7. Completed vs. open gaps (priority order; see `HYPOTHESIS.md §4`)
 
-**Completed on `main` (verified 2026-11-11):**
-* Supervised ML (`dt`, `knn`, `lr`, folded `lr_dot`, `rf`) and 7-subset ablations (`x85_only`, `x9_only`, `x94_full`, `E_1x1..E_8x8`) on `kolektorsdd2` and `mvtec-ad_bottle` (normal + inverted).
+**Completed on `main` (verified 2026-11-11 through 2026-11-15):**
+* Supervised ML (`dt`, `knn`, `lr`, folded `lr_dot`, `rf`) and 7-subset ablations (`x85_only`, `x9_only`, `x94_full`, `E_1x1..E_8x8`) on `kolektorsdd2` and `mvtec-ad_bottle` (normal + inverted), plus promotion of `MlpDotCoreClassifier` (`mlp_16_dot`) into `src/models/mlp_dot.py`.
 * All 7 lightweight CNNs evaluated on identical `seed=42` splits (`kolektorsdd2` & `mvtec-ad_bottle`, normal + inverted).
 * Strictly fair 100% CPU end-to-end benchmarking (`T_total = T_descriptor + T_model`, `threads=1`, `B=1/32`) with C99 `x85` backend (`results/comparison_cpu/`), granular profiling (`results/profiling/`), and isolated pure-Python pre-MCU CPU comparison (`results/comparison_cpu_python/`).
+* Full standalone portable C99 migration (`f32` + `Q15`/`int8_per_channel`, zero `malloc`, `514 B` `log2_mantissa` LUT) covering `x94` (including `asymmetry_g2/4/8`), `lr_dot`, `mlp_16_dot`, and all 7 CNNs (`src/c_export/` + `c_imp/`), verified bit-exact (`0` raw `Q15` LSB diff, all `f32` gates passed) across `kolektorsdd2` (`N=1004`) and `mvtec_ad_bottle` (`N=59`), with desktop timings, ESP32-CAM memory budgets, and diagnostic findings consolidated in `results/c_imp/README.md`.
 
 **Remaining gaps (in priority order):**
-1. **Complete C99 port + real MCU benchmark:** Port `asymmetry_g2/4/8` (currently 74% of desktop descriptor latency), `lr_dot` weights (`94 + 1` floats), and compact `257`-entry `float32` Flash LUTs into standalone heap-free C99 alongside `entropy_pyramid.c`; measure Flash, peak SRAM, cycles/latency, and energy on real embedded hardware.
+1. **Real ESP32-CAM hardware benchmark (Stage 12) & minor C99 reporting polish:** Deploy and measure actual cycles/ms, internal SRAM (`<= 200000 B`, met only by `lr_dot`, `mlp_16_dot`, `ultra_tiny`) vs. PSRAM latency, and per-frame energy on physical ESP32-CAM hardware; optionally refine two minor visualization cosmetics noted in `results/c_imp/README.md` (reporting `weight_bits=32` vs `"q15"` label on `kolektorsdd2` tabular rows in `visualize_data.py`, and avoiding `tiny_cnn`/`small_cnn` Pareto annotation crossover in `visualize_plots.py`).
 2. **CNN threshold non-degeneracy guard & dual reporting (`M2`):** Add a guard in `find_optimal_threshold` (`src/models/cnn/evaluate.py`) against all-positive collapse on small validation splits (`bottle` `N_val=35`) and report both $\tau=0.50$ and calibrated $\tau^*$ side-by-side for ML and CNNs.
 3. **`DecisionTreeClassifier` determinism + multi-category/multi-seed sweeps (`M3`):** Pass `random_state=cfg.seed` in `build_classifier` (`src/models/descriptor_classifier.py`) to stop tie-breaking drift on `dt`, and complete `seed=42` (plus per-seed folders for multi-seed) CNN + CPU benchmarks on `mvtec-ad_tile` and additional categories.
 4. **Finer grids & dynamic region selection:** Ablate `[1, 2, 4, 8, 16]` vs. `x94-v1` on micro-cracks (`kolektorsdd2`), and implement entropy-aware top-$k$/threshold region selectors feeding downstream cropped classifiers (`T_total = T_selector + T_model`).

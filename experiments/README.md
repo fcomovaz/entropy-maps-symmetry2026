@@ -2,7 +2,7 @@
 
 Registro y puntos de entrada CLI para los experimentos reproducibles del proyecto (invocar siempre como módulo `.\.venv\Scripts\python.exe -m experiments.<modulo>` desde `code/`).
 
-## Índice rápido (Experimentos 01–09)
+## Índice rápido (Experimentos 01–10)
 
 | Experimento | Módulo CLI (`experiments/`) | Configuración TOML principal | Salida principal |
 |---|---|---|---|
@@ -310,7 +310,7 @@ Calcula las 9 medidas de asimetría espacial multiescala ($\mathbf{x}_9$) direct
 
 ## Experimento 07: Clasificación supervisada ligera, ablación de subconjuntos y explicabilidad espacial sobre descriptores $\mathbf{x}_{94}$
 
-Entrena y evalúa clasificadores supervisados ligeros (`RandomForestClassifier`, `KNeighborsClassifier`, `DecisionTreeClassifier`, `LogisticRegression` con `StandardScaler` y el núcleo plegado `lr_dot` vía `LinearDotCoreClassifier`) sobre el descriptor tabular completo $\mathbf{x}_{94} = [\mathbf{x}_{85}, \mathbf{x}_9]$, ejecutando automáticamente un estudio de ablación por subconjuntos (`x85_only`, `x9_only`, `x94_full` y cada escala individual $E^{(1)}, E^{(2)}, E^{(4)}, E^{(8)}$) y un análisis de explicabilidad espacial para cuantificar cuánto aportan las 9 medidas de asimetría ($\mathbf{x}_9$) y cuál mapa de entropía es más discriminativo.
+Entrena y evalúa clasificadores supervisados ligeros (`RandomForestClassifier`, `KNeighborsClassifier`, `DecisionTreeClassifier`, `LogisticRegression` con `StandardScaler`, núcleo plegado `lr_dot` vía `LinearDotCoreClassifier` y MLP plegado `mlp_16_dot` vía `MlpDotCoreClassifier`) sobre el descriptor tabular completo $\mathbf{x}_{94} = [\mathbf{x}_{85}, \mathbf{x}_9]$, ejecutando automáticamente un estudio de ablación por subconjuntos (`x85_only`, `x9_only`, `x94_full` y cada escala individual $E^{(1)}, E^{(2)}, E^{(4)}, E^{(8)}$) y un análisis de explicabilidad espacial para cuantificar cuánto aportan las 9 medidas de asimetría ($\mathbf{x}_9$) y cuál mapa de entropía es más discriminativo.
 
 ### Rol científico de cada dataset en la investigación (*Entropy Maps vs. Convoluciones*)
 
@@ -325,7 +325,7 @@ Entrena y evalúa clasificadores supervisados ligeros (`RandomForestClassifier`,
 
 ### Qué buscar e interpretar en cada archivo y gráfica generada (`results/classification/`)
 
-Para cada corrida se crea una subcarpeta en `results/classification/<dataset>[_inverted]/<objeto_o_full>_<dt|knn|lr|lr_dot|rf>/` con **4 archivos de datos** y **4 figuras PNG**:
+Para cada corrida se crea una subcarpeta en `results/classification/<dataset>[_inverted]/<objeto_o_full>_<dt|knn|lr|lr_dot|mlp_16_dot|rf>/` con **4 archivos de datos** y **4 figuras PNG**:
 
 1. **`confusion_matrix_and_curves.png` (Rendimiento predictivo global):**
    - **Panel izquierdo (Matriz de Confusión):** Muestra verdaderos negativos (`TN`, piezas buenas bien clasificadas), falsos positivos (`FP`, falsas alarmas), falsos negativos (`FN`, defectos no detectados) y verdaderos positivos (`TP`, defectos detectados), tanto en conteo absoluto como en porcentaje por fila (`Row %`).
@@ -386,12 +386,13 @@ Para cada corrida se crea una subcarpeta en `results/classification/<dataset>[_i
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier all
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier all --inverted
 
-# O evaluar clasificadores individuales (`dt`, `knn`, `lr`, `lr_dot`, `rf`; `lr` admite `--linear-mode dot_core`):
+# O evaluar clasificadores individuales (`dt`, `knn`, `lr`, `lr_dot`, `mlp_16_dot`, `rf`; `lr` admite `--linear-mode dot_core`):
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier rf
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier knn
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier dt
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier lr
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier lr_dot
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/kolektorsdd2.toml --classifier mlp_16_dot
 
 # 4. MVTec-AD por objeto individual (ej. bottle, tile, metal_nut, zipper; normal o --inverted)
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object bottle --classifier rf
@@ -572,7 +573,7 @@ Corrige el sesgo *mixed-device* de `results/comparison/` midiendo el pipeline ta
 
 Pipeline reproducible de exportación C99 portable pre-ESP32 (`float32` + punto fijo `Q15` con acumulador `int64_t` sin `<math.h>` ni asignación dinámica), compilación nativa MSVC x64, auditoría de paridad numérica Python-vs-C, profiling de memoria Flash/SRAM/PSRAM y generación de figuras diagnósticas sobre los CSVs generados (`c_imp/generated/<target>/` y `results/c_imp/<target>/`).
 
-Ver guía completa de opciones, ejecución de binarios nativos y pruebas de Lab 15 en [`c_imp/README.md`](../c_imp/README.md).
+Ver guía completa de opciones, ejecución de binarios nativos y pruebas de Lab 15 en [`c_imp/README.md`](../c_imp/README.md), y la auditoría consolidada de resultados `f32`/`Q15`, memoria ESP32-CAM y hallazgos diagnósticos en [`results/c_imp/README.md`](../results/c_imp/README.md).
 
 ### Comandos principales (PowerShell desde carpeta `code/`)
 

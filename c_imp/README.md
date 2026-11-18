@@ -164,7 +164,7 @@ En `--mode descriptor`, `--model` acepta `x94_only`, `lr_dot` o `mlp_16_dot`.
 
 - **Código C99 generado**: `c_imp/generated/<target>/` (~37 MB si se exportan las 7 CNNs completas, debido principalmente a `model_torchvision_mobilenet.c` ~30 MB).
 - **Binarios compilados**: `c_imp/build/<target>/cimp_pipeline.exe` y `c_imp/build/_runtime_tests/cimp_test_runtime.exe`.
-- **Reportes y vectores**: `results/c_imp/<target>/` (`memory_report.json`, `parity_report.json`, `timing_benchmark.csv`, `vectors/`, `c_outputs/`).
+- **Reportes y vectores**: `results/c_imp/<target>/` (`memory_report.json`, `parity_report.json`, `timing_benchmark.csv`, `vectors/`, `c_outputs/`). Ver la auditoría consolidada de resultados `f32`/`Q15`, presupuestos ESP32-CAM y hallazgos diagnósticos en [`../results/c_imp/README.md`](../results/c_imp/README.md).
 - **Figuras diagnósticas y resumen legible**: `results/c_imp/<target>/figures/` (`fig1_classification_f32_vs_q15.png` .. `fig6_x94_descriptor_insights.png`, `summary_models_metrics.csv`, `summary_report.md`; configurables en `[c_imp.visualization]`).
 
 Para limpiar los artefactos generados en PowerShell:
