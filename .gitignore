@@ -31,6 +31,9 @@ results/profiling/*
 !results/profiling/*/
 results/profiling/*/*
 !results/profiling/*/README.md
+!results/c_imp/
+results/c_imp/*
+!results/c_imp/README.md
 data/*
 !data/.gitkeep
 !data/README.md
