@@ -26,7 +26,7 @@ $env:PYTHONPATH = (Get-Location).Path; .\.venv\Scripts\python.exe understanding/
 .\.venv\Scripts\python.exe -m unittest understanding/15_c_migration_fixed_point/tests/test_c_migration_fixed_point.py -v
 ```
 
-Resultado esperado: `Environment verification: PASS`, `No broken requirements found.`, **227 tests formales** en 29 módulos `unittest` de `tests/` ([tests/README.md](tests/README.md)), **96 tests de laboratorio** (`03`: 5, `04`: 8, `05`: 20, `06`: 25, `07`: 15, `13`: 13, `14`: 6, `15`: 4) y las comprobaciones C99 en `c_imp/tests/test_runtime.c`. En este equipo los tests CUDA deben ejecutarse, no omitirse; `test_environment.py` exige CUDA real.
+Resultado esperado: `Environment verification: PASS`, `No broken requirements found.`, **247 tests formales** en 34 módulos `unittest` de `tests/` ([tests/README.md](tests/README.md), incluidos los 20 casos del banco MCU `tests/test_hw_*.py` ejecutables también con `pytest`), **96 tests de laboratorio** (`03`: 5, `04`: 8, `05`: 20, `06`: 25, `07`: 15, `13`: 13, `14`: 6, `15`: 4) y las comprobaciones C99 en `c_imp/tests/test_runtime.c` y `c_imp/tests/test_streaming.c`. En este equipo los tests CUDA deben ejecutarse, no omitirse; `test_environment.py` exige CUDA real.
 
 Los tests de entropía `03` necesitan las salidas de `01`, ya conservadas; si faltan, ejecutar primero `understanding/01_patch_partition/patch_partition.py --patch-size 64`.
 
@@ -85,11 +85,12 @@ py -3.11 -m venv .venv
 
 * [configs/](configs/README.md): configuraciones TOML declarativas (`base.toml`, `preprocessing/`, `csv/`, `entropy/`, `asymmetry/`, `classification/`, `cnn/`, `profiling/`, `features/`, `optimization/`, `c_imp/`, `understanding/`) y `logging.py`. Ningún módulo de `src/` hardcodea parámetros o rutas.
 * [src/](src/README.md): módulos formales reutilizables (`preprocessing/`, `datasets/`, `features/` incl. C99 `entropy_pyramid`, `models/` incl. `LinearDotCoreClassifier`, `MlpDotCoreClassifier` y `cnn/`, `profiling/`, `c_export/`).
-* [c_imp/](c_imp/README.md): implementación C99 portable `f32` y `q15` sin `malloc` (`runtime/`, `app/desktop_main.c`, `tests/test_runtime.c`) para portación pre-ESP32-CAM.
-* [experiments/](experiments/README.md): puntos de entrada CLI para todas las corridas reproducibles (incluyendo `export_c_pipeline`, `verify_c_pipeline` y `visualize_c_pipeline`).
+* [c_imp/](c_imp/README.md): implementación C99 portable `f32` y `q15` sin `malloc` (`runtime/`, `app/desktop_main.c`, `tests/test_runtime.c`, `tests/test_streaming.c`) con soporte MCU (`CIMP_ROM`, `CIMP_ENABLE_F32`, streaming Q15).
+* [hw_test/](hw_test/README.md): banco de pruebas hardware **PC → MCU → PC** (`firmware/` AVR/ESP8266/ESP32, `img2send/` y `src/hw_test/` para protocolo binario UART/TCP, compilación/flasheo vía `arduino-cli` y reporte Pareto).
+* [experiments/](experiments/README.md): puntos de entrada CLI para todas las corridas reproducibles (incluyendo `export_c_pipeline`, `verify_c_pipeline`, `visualize_c_pipeline` y `hw_test`).
 * [understanding/](understanding/README.md): quince laboratorios pedagógicos (`01_patch_partition/` a `15_c_migration_fixed_point/`, más `07_entropy_maps_vectorized/`).
-* [tests/](tests/README.md): verificación CUDA (`test_environment.py`), 29 suites formales (`227` casos `unittest`) y pruebas pedagógicas en `understanding/` (`96` casos).
-* [results/](results/README.md): diagnósticos, logs, clasificación ([results/classification/](results/classification/README.md)), checkpoints CNN ([results/cnn/](results/cnn/README.md)), comparación 100 % CPU justa con C99 ([results/comparison_cpu/](results/comparison_cpu/README.md)), comparativa Python puro (`results/comparison_cpu_python/`, ignorada por Git), profiling científico (`results/profiling/`), resultados de portación C99 ([results/c_imp/](results/c_imp/README.md)) y legado [results/comparison/](results/comparison/README.md) (*deprecated*).
+* [tests/](tests/README.md): verificación CUDA (`test_environment.py`), 34 suites formales (`247` casos `unittest`, incluidos `20` casos en `test_hw_*.py`) y pruebas pedagógicas en `understanding/` (`96` casos).
+* [results/](results/README.md): diagnósticos, logs, clasificación ([results/classification/](results/classification/README.md)), checkpoints CNN ([results/cnn/](results/cnn/README.md)), comparación 100 % CPU justa con C99 ([results/comparison_cpu/](results/comparison_cpu/README.md)), comparativa Python puro (`results/comparison_cpu_python/`, ignorada por Git), profiling científico (`results/profiling/`), resultados de portación C99 ([results/c_imp/](results/c_imp/README.md)), resultados y reporte de ajuste en microcontroladores ([results/hw_test/](results/hw_test/README.md)) y legado [results/comparison/](results/comparison/README.md) (*deprecated*).
 * [notebooks/](notebooks/README.md): cuaderno de ejecución completa en Colab ([Entropy_Maps_Full_Run.ipynb](notebooks/Entropy_Maps_Full_Run.ipynb)).
 * [data/](data/README.md): `raw/` (no incluido en Git), `preprocessed/` y `csv/`.
 * `memory/`: exportador de `README*.md` a `memory/` para sincronización con NotebookLM (`export_readmes.ps1`).
@@ -315,7 +316,35 @@ Aísla lo que se pierde al no usar la DLL C99 (salida local ignorada por Git):
 .\.venv\Scripts\python.exe -m experiments.verify_c_pipeline --config configs/c_imp/mvtec_ad.toml --object bottle --benchmark --visualize
 ```
 
-### 10. Dónde leer resultados y límites conocidos
+### 10. Banco de pruebas en microcontroladores (`hw_test/`)
+
+**Qué hace.** Toma el código generado de `c_imp/`, construye un firmware por modelo (`arduino-cli`), verifica presupuestos Flash/SRAM/PSRAM en `nano`, `uno`, `nodemcu` y `esp32cam`, envía imágenes `128×128` por UART o WiFi/TCP midiendo tiempos únicamente en el dispositivo, comprueba paridad frente a `golden_*.csv` y genera `results/hw_test/fit_report.{csv,md}`. Documentación operativa en inglés en [hw_test/README.md](hw_test/README.md) y resultados medidos en inglés en [results/hw_test/README.md](results/hw_test/README.md).
+
+```powershell
+# List configured boards, connected serial ports, and validated 128x128 'L' images; dry-run without hardware
+.\.venv\Scripts\python.exe -m experiments.hw_test boards --config configs/hw_test/boards.toml
+.\.venv\Scripts\python.exe -m experiments.hw_test images --config configs/hw_test/boards.toml --all
+.\.venv\Scripts\python.exe -m experiments.hw_test build --config configs/hw_test/boards.toml --board esp32cam --model lr_dot --mode q15 --dry-run
+
+# Flash and run real on-device UART inference (e.g. ESP32-CAM on COM3)
+.\.venv\Scripts\python.exe -m experiments.hw_test flash --config configs/hw_test/boards.toml --board esp32cam --model lr_dot --mode q15 --port COM3
+.\.venv\Scripts\python.exe -m experiments.hw_test send --config configs/hw_test/boards.toml --board esp32cam --model lr_dot --mode q15 --transport uart --port COM3 --all --dump-descriptor
+
+# Unattended cross-compile (e.g. Nano), multi-model bench on ESP32-CAM, and global fit report
+.\.venv\Scripts\python.exe -m experiments.hw_test bench --config configs/hw_test/boards.toml --board nano --compile-only
+.\.venv\Scripts\python.exe -m experiments.hw_test bench --config configs/hw_test/boards.toml --board esp32cam --transport uart --port COM3 --models lr_dot mlp_16_dot ultra_tiny --modes q15 f32 --all --no-prompt
+.\.venv\Scripts\python.exe -m experiments.hw_test report --config configs/hw_test/boards.toml
+
+# Clean generated staging builds and/or run reports (preserves results/hw_test/README.md and hw_test/img2send/)
+.\.venv\Scripts\python.exe -m experiments.hw_test clean --config configs/hw_test/boards.toml --dry-run
+.\.venv\Scripts\python.exe -m experiments.hw_test clean --config configs/hw_test/boards.toml --results-only --keep-build-cache
+.\.venv\Scripts\python.exe -m experiments.hw_test clean --config configs/hw_test/boards.toml
+
+# Unit and integration tests for the MCU bench (pytest or unittest)
+.\.venv\Scripts\python.exe -m pytest tests/test_hw_config.py tests/test_hw_protocol.py tests/test_hw_session.py tests/test_hw_cli.py tests/test_hw_fit.py -v
+```
+
+### 11. Dónde leer resultados y límites conocidos
 
 | Consulta | Documento |
 |---|---|
@@ -323,11 +352,13 @@ Aísla lo que se pierde al no usar la DLL C99 (salida local ignorada por Git):
 | Explicación de figuras y tablas de clasificación | [results/classification/README.md](results/classification/README.md) |
 | Hallazgos de profiling por dataset | `results/profiling/<tag>/README.md` |
 | Auditoría y métricas C99 (`f32`/`Q15` + ESP32-CAM) | [results/c_imp/README.md](results/c_imp/README.md) |
+| Operación, cableado y comandos del banco MCU | [hw_test/README.md](hw_test/README.md) |
+| Resultados compilados y mediciones físicas en MCU | [results/hw_test/README.md](results/hw_test/README.md) |
 | Todos los flags CLI por script | [experiments/README.md](experiments/README.md) |
 | Mapa de código, grafo y reglas que muerden | [RESUME.md](RESUME.md) |
 | Reglas de desarrollo del repositorio | [AGENTS.md](AGENTS.md) |
 
-**Límites abiertos:** los tiempos medidos corresponden a x86-64 de escritorio (no a ESP32-CAM físico, pendiente en Etapa 12); $\mathbf{x}_{94}$ pierde en F1 frente a CNNs en microfisuras sub-celda (`kolektorsdd2`, $H_{\text{univ}}$ refutada); de [Lab 14](understanding/14_ml_classifiers_mcu/README.md) ya se promovió `mlp_16_dot` (y se portó a C99 en `c_imp/` junto con `x94`, `lr_dot` y las 7 CNNs), quedando pendientes otros candidatos (`mlp_16_skip_dot`, `mlp_32_16_dot`, `lr_l1_dot`, etc.), barridos multi-seed / multi-categoría con guarda de no-degeneración en `val_f1` (`M2`) y selectores dinámicos de regiones.
+**Límites abiertos:** la ejecución física en hardware real quedó verificada en **ESP32-CAM (`COM3`, UART, 12 modelos/modos × 8 imágenes = 96/96 con 100 % de paridad; únicamente `lr_dot`, `mlp_16_dot` y `ultra_tiny/q15` son `fits_viable` $\le 500\text{ ms}$)**, mientras que **`nano`, `uno` y `nodemcu` (compilados en Stage 5), el transporte `WiFi/TCP` (requiere `configs/hw_test/secrets.toml`) y las 5 CNNs `f32` restantes en ESP32-CAM siguen pendientes de verificación física**; $\mathbf{x}_{94}$ pierde en F1 frente a CNNs en microfisuras sub-celda (`kolektorsdd2`, $H_{\text{univ}}$ refutada); de [Lab 14](understanding/14_ml_classifiers_mcu/README.md) ya se promovió `mlp_16_dot` (y se portó a C99 en `c_imp/` junto con `x94`, `lr_dot` y las 7 CNNs), quedando pendientes otros candidatos (`mlp_16_skip_dot`, `mlp_32_16_dot`, `lr_l1_dot`, etc.), barridos multi-seed / multi-categoría con guarda de no-degeneración en `val_f1` (`M2`) y selectores dinámicos de regiones.
 
 ---
 

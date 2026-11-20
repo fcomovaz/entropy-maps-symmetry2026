@@ -1,0 +1,194 @@
+# Microcontroller Hardware Test Bench (PC -> MCU -> PC) configuration.
+# All relative paths are resolved dynamically from the repository 'code/' root.
+# Stage 0 measured board limits come from `results/hw_test/README.md` using:
+#   arduino-cli 1.5.2-rc.1 | arduino:avr 1.8.8 | esp8266:esp8266 3.1.2 | esp32:esp32 3.3.11
+
+[hw_test]
+c_imp_config = "configs/c_imp/kolektorsdd2.toml"
+secrets_config = "configs/hw_test/secrets.toml"
+seed = 42
+
+[hw_test.paths]
+images_dir = "hw_test/img2send"
+firmware_dir = "hw_test/firmware"
+staging_dir = "hw_test/build"
+results_dir = "results/hw_test"
+runtime_dir = "c_imp/runtime"
+
+[hw_test.images]
+allowed_extensions = [".png"]
+width = 128
+height = 128
+mode = "L"
+
+[hw_test.protocol]
+magic = 0x5345
+version = 1
+ack_timeout_s = 2.0
+result_timeout_s = 15.0
+max_retries = 3
+
+[hw_test.timing]
+warmup_iters = 5
+timed_iters = 30
+
+[hw_test.fit]
+max_latency_ms = 500.0
+classification_results_dir = "results/classification"
+cnn_results_dir = "results/cnn"
+c_imp_results_dir = "results/c_imp"
+
+[hw_test.arduino_cli]
+executable = "arduino-cli"
+compile_extra_args = []
+
+[hw_test.boards.nano]
+# Stage 0 measured limits (arduino:avr 1.8.8, trivial sketch): text 444 / 30720 B, data 9 / 2048 B.
+# Stage 0 AVR streaming spike (CIMP_DescStream + lr_dot + PROGMEM): text 3864 / 30720 B, data 1432 / 2048 B (616 B stack margin).
+# Clone Nanos typically use old bootloader (cpu=atmega328old); switch to cpu=atmega328 if upload reports not in sync.
+fqbn = "arduino:avr:nano:cpu=atmega328old"
+firmware = "hw_avr"
+family = "avr"
+transports = ["uart"]
+uart_baud = 115200
+serial_reset_on_open = true
+boot_wait_s = 2.0
+physical_sram_bytes = 2048
+usable_sram_budget_bytes = 1792   # 2048 B physical SRAM minus 256 B minimum stack margin
+flash_app_bytes = 30720           # 32 KiB ATmega328P flash minus 2 KiB old bootloader (Stage 0 measured)
+psram_bytes = 0
+cpu_hz = 16000000
+streaming = true
+band_rows = 1                     # 1 row = 128 B pixel payload; protects 64 B AVR UART RX ring buffer
+max_payload_bytes = 132           # 4 B offset + 128 B row
+warmup_iters = 0                  # AVR compute-only single-pass streaming (no whole image stored)
+timed_iters = 1
+result_timeout_s = 15.0
+numeric_modes = ["q15"]
+models = ["lr_dot", "mlp_16_dot"]
+arena_location = "none"
+
+[hw_test.boards.uno]
+# Same ATmega328P MCU as Nano (2048 B SRAM), with smaller 512 B Optiboot bootloader -> 32256 B app flash.
+fqbn = "arduino:avr:uno"
+firmware = "hw_avr"
+family = "avr"
+transports = ["uart"]
+uart_baud = 115200
+serial_reset_on_open = true
+boot_wait_s = 2.0
+physical_sram_bytes = 2048
+usable_sram_budget_bytes = 1792   # 2048 B physical SRAM minus 256 B minimum stack margin
+flash_app_bytes = 32256           # 32 KiB ATmega328P flash minus 512 B Optiboot bootloader
+psram_bytes = 0
+cpu_hz = 16000000
+streaming = true
+band_rows = 1
+max_payload_bytes = 132           # 4 B offset + 128 B row
+warmup_iters = 0
+timed_iters = 1
+result_timeout_s = 15.0
+numeric_modes = ["q15"]
+models = ["lr_dot", "mlp_16_dot"]
+arena_location = "none"
+
+[hw_test.boards.nodemcu]
+# Stage 0 measured limits (esp8266:esp8266 3.1.2, trivial sketch):
+#   IROM = 231620 / 1048576 B, DRAM = 28008 / 80192 B (DATA=1496, RODATA=920, BSS=25592), IRAM = 59143 / 65536 B.
+# Plain const tables consume DRAM (.rodata) unless marked PROGMEM via CIMP_ROM.
+fqbn = "esp8266:esp8266:nodemcuv2"
+firmware = "hw_esp8266"
+family = "esp8266"
+transports = ["uart", "wifi"]
+uart_baud = 460800
+serial_reset_on_open = false
+boot_wait_s = 1.5
+tcp_port = 5000
+physical_sram_bytes = 80192       # Stage 0 measured ESP8266 DRAM ceiling
+usable_sram_budget_bytes = 45056  # ~44 KiB usable heap after SDK/WiFi/stack reserve (~40-45 KiB measured)
+flash_app_bytes = 1048576         # Stage 0 measured 1 MiB IROM app partition
+psram_bytes = 0
+cpu_hz = 80000000
+streaming = false
+band_rows = 8                     # 8 * 128 = 1024 B pixel payload per chunk
+max_payload_bytes = 1028          # 4 B offset + 1024 B band
+warmup_iters = 5
+timed_iters = 30
+result_timeout_s = 15.0
+numeric_modes = ["q15", "f32"]
+models = ["lr_dot", "mlp_16_dot"]
+arena_location = "none"
+
+[hw_test.boards.esp32cam]
+# Stage 0 measured limits (esp32:esp32 3.3.11, trivial sketch with PartitionScheme=huge_app):
+#   text = 267520 / 3145728 B, data = 22172 / 327680 B.
+# IMPORTANT: Do NOT append PSRAM=enabled to the FQBN; esp32:esp32 3.3.11 enables PSRAM automatically
+# in boards.txt for esp32cam and arduino-cli rejects PSRAM=enabled as an unknown board option.
+fqbn = "esp32:esp32:esp32cam:PartitionScheme=huge_app"
+firmware = "hw_esp32"
+family = "esp32"
+transports = ["uart", "wifi"]
+uart_baud = 460800
+# ESP32-CAM-MB (CH340 + esptool v5.3.1 on COM3) fails stub sync at 460800/230400; 115200 uploads reliably.
+upload_baud = 115200
+# ESP32-CAM-MB maps DTR/RTS to reset/GPIO0; keep false so serial open does not hold chip in reset/bootloader.
+serial_reset_on_open = false
+boot_wait_s = 2.0
+tcp_port = 5000
+physical_sram_bytes = 327680      # Stage 0 measured ESP32 internal static DRAM limit
+usable_sram_budget_bytes = 200000 # Matches c_imp sram_budget_bytes after FreeRTOS/WiFi/heap reserve
+flash_app_bytes = 3145728         # Stage 0 measured huge_app flash partition (3 MiB)
+psram_bytes = 4194304             # 4 MiB external SPI PSRAM on AI-Thinker ESP32-CAM
+cpu_hz = 240000000
+streaming = false
+band_rows = 8
+max_payload_bytes = 1028          # 4 B offset + 1024 B band
+warmup_iters = 3
+timed_iters = 10
+result_timeout_s = 30.0
+numeric_modes = ["q15", "f32"]
+models = [
+    "lr_dot",
+    "mlp_16_dot",
+    "ultra_tiny",
+    "ds_cnn",
+    "tiny_cnn",
+    "mobilenet_like",
+    "tiny_resnet",
+    "small_cnn",
+    "torchvision_mobilenet",
+]
+arena_location = "auto"
+
+[hw_test.boards.esp32cam.model_overrides.ds_cnn]
+warmup_iters = 1
+timed_iters = 5
+result_timeout_s = 120.0
+
+[hw_test.boards.esp32cam.model_overrides.tiny_cnn]
+warmup_iters = 1
+timed_iters = 5
+result_timeout_s = 120.0
+
+[hw_test.boards.esp32cam.model_overrides.mobilenet_like]
+warmup_iters = 1
+timed_iters = 5
+result_timeout_s = 120.0
+
+[hw_test.boards.esp32cam.model_overrides.tiny_resnet]
+warmup_iters = 1
+timed_iters = 5
+result_timeout_s = 120.0
+
+[hw_test.boards.esp32cam.model_overrides.small_cnn]
+warmup_iters = 1
+timed_iters = 5
+result_timeout_s = 120.0
+
+[hw_test.boards.esp32cam.model_overrides.torchvision_mobilenet]
+# Decision D3: torchvision_mobilenet uses q15/int8_per_channel only (no f32 weights/eval)
+# and requires longer timeout due to ~1.63 MB weights + PSRAM arena execution.
+numeric_modes = ["q15"]
+warmup_iters = 1
+timed_iters = 3
+result_timeout_s = 300.0

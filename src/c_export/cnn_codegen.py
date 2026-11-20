@@ -44,25 +44,25 @@ def _emit_conv_params_c(
     assert op.weights is not None and op.bias is not None
     assert qop.bias_acc is not None
     blocks = [
-        format_c_array(f"{prefix}_OP{idx}_W_F32", op.weights, "float", per_line=8),
-        format_c_array(f"{prefix}_OP{idx}_B_F32", op.bias, "float", per_line=8),
+        format_c_array(f"{prefix}_OP{idx}_W_F32", op.weights, "float", per_line=8, rom=True, guard_macro="CIMP_ENABLE_F32"),
+        format_c_array(f"{prefix}_OP{idx}_B_F32", op.bias, "float", per_line=8, rom=True, guard_macro="CIMP_ENABLE_F32"),
     ]
     if qop.weight_format == "int8_per_channel":
         assert qop.w_q8 is not None and qop.mul_per_ch is not None and qop.shift_per_ch is not None
         blocks.extend(
             [
-                format_c_array(f"{prefix}_OP{idx}_W_Q8", qop.w_q8, "int8_t", per_line=16),
-                format_c_array(f"{prefix}_OP{idx}_B_ACC", qop.bias_acc, "int64_t", per_line=6),
-                format_c_array(f"{prefix}_OP{idx}_MUL_CH", qop.mul_per_ch, "int32_t", per_line=8),
-                format_c_array(f"{prefix}_OP{idx}_SHIFT_CH", qop.shift_per_ch, "int8_t", per_line=16),
+                format_c_array(f"{prefix}_OP{idx}_W_Q8", qop.w_q8, "int8_t", per_line=16, rom=True),
+                format_c_array(f"{prefix}_OP{idx}_B_ACC", qop.bias_acc, "int64_t", per_line=6, rom=True),
+                format_c_array(f"{prefix}_OP{idx}_MUL_CH", qop.mul_per_ch, "int32_t", per_line=8, rom=True),
+                format_c_array(f"{prefix}_OP{idx}_SHIFT_CH", qop.shift_per_ch, "int8_t", per_line=16, rom=True),
             ]
         )
     else:
         assert qop.w_q15 is not None
         blocks.extend(
             [
-                format_c_array(f"{prefix}_OP{idx}_W_Q15", qop.w_q15, "q15_t", per_line=12),
-                format_c_array(f"{prefix}_OP{idx}_B_ACC", qop.bias_acc, "int64_t", per_line=6),
+                format_c_array(f"{prefix}_OP{idx}_W_Q15", qop.w_q15, "q15_t", per_line=12, rom=True),
+                format_c_array(f"{prefix}_OP{idx}_B_ACC", qop.bias_acc, "int64_t", per_line=6, rom=True),
             ]
         )
     return blocks
@@ -239,6 +239,9 @@ def emit_cnn_model(
     num_classes = graph.ops[-1].out_shape[0]
 
     header_body = (
+        f"#ifdef __cplusplus\n"
+        f'extern "C" {{\n'
+        f"#endif\n\n"
         f"#define {prefix}_INPUT_C {c_in}\n"
         f"#define {prefix}_INPUT_H {h_in}\n"
         f"#define {prefix}_INPUT_W {w_in}\n"
@@ -250,36 +253,43 @@ def emit_cnn_model(
         f"#define {prefix}_THRESHOLD_LOGIT_F32 ({format_c_float(graph.threshold_logit)})\n"
         f"#define {prefix}_OUT_FRAC {qmodel.output_frac}\n"
         f"#define {prefix}_THRESHOLD_LOGIT_Q ((int32_t){qmodel.threshold_logit_q})\n\n"
+        f"#if CIMP_ENABLE_F32\n"
         f"int cimp_{model_name}_forward_f32(\n"
         f"    const uint8_t *img_u8,\n"
         f"    uint8_t *arena,\n"
         f"    size_t arena_bytes,\n"
         f"    float *out_logits\n"
-        f");\n\n"
+        f");\n"
+        f"#endif /* CIMP_ENABLE_F32 */\n\n"
         f"int cimp_{model_name}_forward_q15(\n"
         f"    const uint8_t *img_u8,\n"
         f"    uint8_t *arena,\n"
         f"    size_t arena_bytes,\n"
         f"    int32_t *out_logits_q\n"
         f");\n\n"
+        f"#if CIMP_ENABLE_F32\n"
         f"int cimp_{model_name}_classify_f32(\n"
         f"    const uint8_t *img_u8,\n"
         f"    uint8_t *arena,\n"
         f"    size_t arena_bytes,\n"
         f"    float *out_margin\n"
-        f");\n\n"
+        f");\n"
+        f"#endif /* CIMP_ENABLE_F32 */\n\n"
         f"int cimp_{model_name}_classify_q15(\n"
         f"    const uint8_t *img_u8,\n"
         f"    uint8_t *arena,\n"
         f"    size_t arena_bytes,\n"
         f"    int32_t *out_margin_q\n"
-        f");"
+        f");\n\n"
+        f"#ifdef __cplusplus\n"
+        f"}}\n"
+        f"#endif"
     )
     header_path = cfg.generated_dir / f"model_{model_name}.h"
     header_sha = write_header(
         path=header_path,
         guard=f"CIMP_MODEL_{upper}_H",
-        includes=("<stddef.h>", "<stdint.h>"),
+        includes=("<stddef.h>", "<stdint.h>", '"cimp_fixed_point.h"'),
         body=header_body,
         provenance_lines=(
             f"CNN Model: {model_name} | target={cfg.effective_target_tag}",
@@ -290,7 +300,7 @@ def emit_cnn_model(
     )
 
     param_sections = [
-        format_c_array(f"{prefix}_NORM_LUT_Q15", qmodel.norm_lut_q15, "q15_t", per_line=12)
+        format_c_array(f"{prefix}_NORM_LUT_Q15", qmodel.norm_lut_q15, "q15_t", per_line=12, rom=True)
     ]
     for idx, (op, qop) in enumerate(zip(graph.ops, qmodel.ops)):
         if op.op_type in ("conv2d", "dwconv2d", "linear"):
@@ -315,6 +325,7 @@ def emit_cnn_model(
     ]
 
     fns_body = (
+        f"#if CIMP_ENABLE_F32\n"
         f"int cimp_{model_name}_forward_f32(\n"
         f"    const uint8_t *img_u8,\n"
         f"    uint8_t *arena,\n"
@@ -333,7 +344,8 @@ def emit_cnn_model(
         + f"    for (int32_t k = 0; k < {num_classes}; ++k) {{\n"
         + f"        out_logits[k] = logits_src[k];\n"
         + f"    }}\n"
-        + "    return CIMP_OK;\n}\n\n"
+        + "    return CIMP_OK;\n}\n"
+        + "#endif /* CIMP_ENABLE_F32 */\n\n"
         + f"int cimp_{model_name}_forward_q15(\n"
         + f"    const uint8_t *img_u8,\n"
         + f"    uint8_t *arena,\n"
@@ -353,6 +365,7 @@ def emit_cnn_model(
         + f"        out_logits_q[k] = logits_src[k];\n"
         + f"    }}\n"
         + "    return CIMP_OK;\n}\n\n"
+        + f"#if CIMP_ENABLE_F32\n"
         + f"int cimp_{model_name}_classify_f32(\n"
         + f"    const uint8_t *img_u8,\n"
         + f"    uint8_t *arena,\n"
@@ -369,7 +382,8 @@ def emit_cnn_model(
         + f"        *out_margin = margin;\n"
         + f"    }}\n"
         + f"    return (margin > {prefix}_THRESHOLD_LOGIT_F32) ? 1 : 0;\n"
-        + "}\n\n"
+        + "}\n"
+        + "#endif /* CIMP_ENABLE_F32 */\n\n"
         + f"int cimp_{model_name}_classify_q15(\n"
         + f"    const uint8_t *img_u8,\n"
         + f"    uint8_t *arena,\n"

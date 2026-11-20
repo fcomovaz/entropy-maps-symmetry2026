@@ -34,6 +34,9 @@ results/profiling/*/*
 !results/c_imp/
 results/c_imp/*
 !results/c_imp/README.md
+!results/hw_test/
+results/hw_test/*
+!results/hw_test/README.md
 data/*
 !data/.gitkeep
 !data/README.md
@@ -71,3 +74,7 @@ c_imp/build/
 *.obj
 *.lib
 *.exp
+
+# Hardware test secrets and Arduino staging/build intermediates
+configs/hw_test/secrets.toml
+hw_test/build/

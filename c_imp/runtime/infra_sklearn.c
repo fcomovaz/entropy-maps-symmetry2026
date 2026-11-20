@@ -6,10 +6,11 @@
 
 #include "cimp_tensor.h"
 
+#if CIMP_ENABLE_F32
 float cimp_dense_dot_f32(const float *x, const float *w, float b, size_t n) {
     double acc = (double)b;
     for (size_t i = 0; i < n; ++i) {
-        acc += (double)x[i] * (double)w[i];
+        acc += (double)x[i] * (double)CIMP_ROM_READ_F32(&w[i]);
     }
     return (float)acc;
 }
@@ -28,6 +29,7 @@ int cimp_dense_classify_f32(
     }
     return (logit > threshold) ? 1 : 0;
 }
+#endif
 
 int32_t cimp_dense_dot_q15(
     const q15_t *x_q,
@@ -38,7 +40,7 @@ int32_t cimp_dense_dot_q15(
 ) {
     int64_t acc = b_acc;
     for (size_t i = 0; i < n; ++i) {
-        acc += (int64_t)x_q[i] * (int64_t)w_q[i];
+        acc += (int64_t)x_q[i] * (int64_t)CIMP_ROM_READ_I16(&w_q[i]);
     }
     return cimp_sat32(cimp_round_shift_right_i64(acc, (int32_t)out_shift));
 }
@@ -52,7 +54,7 @@ int32_t cimp_dense_dot_q15_w32(
 ) {
     int64_t acc = b_acc;
     for (size_t i = 0; i < n; ++i) {
-        acc += (int64_t)x_q[i] * (int64_t)w_q[i];
+        acc += (int64_t)x_q[i] * (int64_t)CIMP_ROM_READ_I32(&w_q[i]);
     }
     return cimp_sat32(cimp_round_shift_right_i64(acc, (int32_t)out_shift));
 }
@@ -79,6 +81,7 @@ int cimp_dense_classify_q15(
     return (logit_q > threshold_q) ? 1 : 0;
 }
 
+#if CIMP_ENABLE_F32
 float cimp_mlp_1hidden_f32(
     const float *x,
     const float *w1,
@@ -91,16 +94,16 @@ float cimp_mlp_1hidden_f32(
 ) {
     for (size_t h = 0; h < d_hidden; ++h) {
         const float *w_row = w1 + h * d_in;
-        double acc = (double)b1[h];
+        double acc = (double)CIMP_ROM_READ_F32(&b1[h]);
         for (size_t i = 0; i < d_in; ++i) {
-            acc += (double)x[i] * (double)w_row[i];
+            acc += (double)x[i] * (double)CIMP_ROM_READ_F32(&w_row[i]);
         }
         float z = (float)acc;
         hidden_buf[h] = (z > 0.0f) ? z : 0.0f;
     }
     double out_acc = (double)b2;
     for (size_t h = 0; h < d_hidden; ++h) {
-        out_acc += (double)hidden_buf[h] * (double)w2[h];
+        out_acc += (double)hidden_buf[h] * (double)CIMP_ROM_READ_F32(&w2[h]);
     }
     return (float)out_acc;
 }
@@ -123,6 +126,7 @@ int cimp_mlp_1hidden_classify_f32(
     }
     return (logit > threshold) ? 1 : 0;
 }
+#endif
 
 int32_t cimp_mlp_1hidden_q15(
     const q15_t *x_q,
@@ -142,9 +146,9 @@ int32_t cimp_mlp_1hidden_q15(
         const int32_t *w1_32 = (const int32_t *)w1_q;
         for (size_t h = 0; h < d_hidden; ++h) {
             const int32_t *w_row = w1_32 + h * d_in;
-            int64_t acc = b1_acc[h];
+            int64_t acc = CIMP_ROM_READ_I64(&b1_acc[h]);
             for (size_t i = 0; i < d_in; ++i) {
-                acc += (int64_t)x_q[i] * (int64_t)w_row[i];
+                acc += (int64_t)x_q[i] * (int64_t)CIMP_ROM_READ_I32(&w_row[i]);
             }
             int64_t shifted = cimp_round_shift_right_i64(acc, (int32_t)shift1);
             hidden_q[h] = (shifted <= 0LL) ? (q15_t)0 : cimp_sat16(shifted);
@@ -153,9 +157,9 @@ int32_t cimp_mlp_1hidden_q15(
         const q15_t *w1_16 = (const q15_t *)w1_q;
         for (size_t h = 0; h < d_hidden; ++h) {
             const q15_t *w_row = w1_16 + h * d_in;
-            int64_t acc = b1_acc[h];
+            int64_t acc = CIMP_ROM_READ_I64(&b1_acc[h]);
             for (size_t i = 0; i < d_in; ++i) {
-                acc += (int64_t)x_q[i] * (int64_t)w_row[i];
+                acc += (int64_t)x_q[i] * (int64_t)CIMP_ROM_READ_I16(&w_row[i]);
             }
             int64_t shifted = cimp_round_shift_right_i64(acc, (int32_t)shift1);
             hidden_q[h] = (shifted <= 0LL) ? (q15_t)0 : cimp_sat16(shifted);
@@ -166,12 +170,12 @@ int32_t cimp_mlp_1hidden_q15(
     if (w2_bits == 32) {
         const int32_t *w2_32 = (const int32_t *)w2_q;
         for (size_t h = 0; h < d_hidden; ++h) {
-            out_acc += (int64_t)hidden_q[h] * (int64_t)w2_32[h];
+            out_acc += (int64_t)hidden_q[h] * (int64_t)CIMP_ROM_READ_I32(&w2_32[h]);
         }
     } else {
         const q15_t *w2_16 = (const q15_t *)w2_q;
         for (size_t h = 0; h < d_hidden; ++h) {
-            out_acc += (int64_t)hidden_q[h] * (int64_t)w2_16[h];
+            out_acc += (int64_t)hidden_q[h] * (int64_t)CIMP_ROM_READ_I16(&w2_16[h]);
         }
     }
     return cimp_sat32(cimp_round_shift_right_i64(out_acc, (int32_t)shift2));

@@ -6,6 +6,7 @@
 
 #define CIMP_CONV_TILE 256
 
+#if CIMP_ENABLE_F32
 void cimp_input_norm_u8_f32(
     const uint8_t *img,
     int32_t n_pixels,
@@ -19,6 +20,7 @@ void cimp_input_norm_u8_f32(
         out[i] = ((float)img[i] * inv_255 - mean) * inv_std;
     }
 }
+#endif
 
 void cimp_input_norm_u8_q15(
     const uint8_t *img,
@@ -31,6 +33,7 @@ void cimp_input_norm_u8_q15(
     }
 }
 
+#if CIMP_ENABLE_F32
 void cimp_conv2d_f32(
     const float *in,
     int32_t cin,
@@ -146,6 +149,7 @@ void cimp_conv2d_f32(
         }
     }
 }
+#endif
 
 void cimp_conv2d_q15(
     const q15_t *in_q,
@@ -388,6 +392,7 @@ void cimp_conv2d_q15_w8(
     }
 }
 
+#if CIMP_ENABLE_F32
 void cimp_dwconv2d_f32(
     const float *in,
     int32_t c,
@@ -467,6 +472,7 @@ void cimp_dwconv2d_f32(
         }
     }
 }
+#endif
 
 void cimp_dwconv2d_q15(
     const q15_t *in_q,
@@ -634,12 +640,14 @@ void cimp_dwconv2d_q15_w8(
     }
 }
 
+#if CIMP_ENABLE_F32
 void cimp_relu_f32(const float *in, float *out, int32_t n) {
     for (int32_t i = 0; i < n; ++i) {
         float v = in[i];
         out[i] = (v > 0.0f) ? v : 0.0f;
     }
 }
+#endif
 
 void cimp_relu_q15(const q15_t *in_q, q15_t *out_q, int32_t n, int32_t out_shift) {
     for (int32_t i = 0; i < n; ++i) {
@@ -652,6 +660,7 @@ void cimp_relu_q15(const q15_t *in_q, q15_t *out_q, int32_t n, int32_t out_shift
     }
 }
 
+#if CIMP_ENABLE_F32
 void cimp_hardswish_f32(const float *in, float *out, int32_t n) {
     for (int32_t i = 0; i < n; ++i) {
         float x = in[i];
@@ -664,6 +673,7 @@ void cimp_hardswish_f32(const float *in, float *out, int32_t n) {
         }
     }
 }
+#endif
 
 void cimp_hardswish_q15(
     const q15_t *in_q,
@@ -693,6 +703,7 @@ void cimp_hardswish_q15(
     }
 }
 
+#if CIMP_ENABLE_F32
 void cimp_hardsigmoid_f32(const float *in, float *out, int32_t n) {
     for (int32_t i = 0; i < n; ++i) {
         float x = in[i];
@@ -705,6 +716,7 @@ void cimp_hardsigmoid_f32(const float *in, float *out, int32_t n) {
         }
     }
 }
+#endif
 
 void cimp_hardsigmoid_q15(
     const q15_t *in_q,
@@ -738,6 +750,7 @@ void cimp_hardsigmoid_q15(
     }
 }
 
+#if CIMP_ENABLE_F32
 void cimp_maxpool2d_2x2_f32(
     const float *in,
     int32_t c,
@@ -764,6 +777,7 @@ void cimp_maxpool2d_2x2_f32(
         }
     }
 }
+#endif
 
 void cimp_maxpool2d_2x2_q15(
     const q15_t *in_q,
@@ -792,6 +806,7 @@ void cimp_maxpool2d_2x2_q15(
     }
 }
 
+#if CIMP_ENABLE_F32
 void cimp_global_avgpool2d_f32(
     const float *in,
     int32_t c,
@@ -810,6 +825,7 @@ void cimp_global_avgpool2d_f32(
         out[ch] = (float)(acc * inv_hw);
     }
 }
+#endif
 
 void cimp_global_avgpool2d_q15(
     const q15_t *in_q,
@@ -832,6 +848,7 @@ void cimp_global_avgpool2d_q15(
     }
 }
 
+#if CIMP_ENABLE_F32
 void cimp_linear_f32(
     const float *in,
     const float *w,
@@ -854,6 +871,7 @@ void cimp_linear_f32(
         out[oc] = res;
     }
 }
+#endif
 
 void cimp_linear_q15(
     const q15_t *in_q,
@@ -949,6 +967,7 @@ void cimp_linear_logits_q15_w8(
     }
 }
 
+#if CIMP_ENABLE_F32
 void cimp_add_f32(
     const float *a,
     const float *b,
@@ -964,6 +983,7 @@ void cimp_add_f32(
         out[i] = res;
     }
 }
+#endif
 
 void cimp_add_q15(
     const q15_t *a_q,
@@ -985,6 +1005,7 @@ void cimp_add_q15(
     }
 }
 
+#if CIMP_ENABLE_F32
 void cimp_scale_channels_f32(
     const float *in,
     const float *scale,
@@ -1001,6 +1022,7 @@ void cimp_scale_channels_f32(
         }
     }
 }
+#endif
 
 void cimp_scale_channels_q15(
     const q15_t *in_q,

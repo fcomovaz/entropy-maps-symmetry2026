@@ -156,6 +156,18 @@ Exportación determinista C99, cuantización fija pre-ESP32, verificación de pa
 - `test_vectors.py`, `toolchain.py`, `build_c.py`, `parity.py`: exportación de vectores golden `golden_*.csv`, compilación vía MSVC `cl.exe`, verificación de paridad numérica y cronometraje C99.
 - `visualize_data.py`, `visualize_plots.py`: carga unificada (`load_target_bundle`), agregación de métricas `f32`/`Q15`/paridad/memoria/latencia/descriptor (`write_summary_tables` -> `summary_models_metrics.csv`, `summary_report.md`) y generación de hasta 6 figuras diagnósticas PNG (`generate_c_pipeline_visualizations`).
 
+### 8. `src/hw_test/`
+
+Orquestación del banco de pruebas en microcontrolador (**PC → MCU → PC**), protocolo binario por chunks, staging de firmware `arduino-cli`, transporte UART/TCP y reportes:
+
+- `config.py`: `load_hw_test_config(config_path, project_root, secrets_path=None)` y dataclasses inmutables (`HwTestConfig`, `BoardSpec`, `TransportConfig`, `ProtocolConfig`, `FitThresholdsConfig`, etc.) anclados a `configs/hw_test/boards.toml`.
+- `protocol.py`: CRC-16/CCITT-FALSE (`crc16_ccitt_false`), codificación/decodificación de tramas (`Frame`, `HELLO`, `FRAME_BEGIN`, `CHUNK_DATA`, `FRAME_END`, `INFER_REQ`, `RESULT_META`, `RESULT_VECT`), payloads tipados (`HelloAckPayload`, `ResultMetaPayload`, `ResultVectPayload`) y particionado de imágenes en strips.
+- `transport.py`: `PacketTransport` abstracto con implementaciones `SerialTransport` (`pyserial`, control `DTR/RTS` vía `serial_reset_on_open`) y `TcpTransport` (`socket.create_connection`, `TCP_NODELAY`).
+- `images.py`: selección determinista estratificada (`select_test_images`), carga y validación `128×128` 8-bit grayscale (`load_img2send_directory`, `validate_grayscale_128`).
+- `firmware.py`: descubrimiento de toolchain (`discover_toolchain`), ensamblado de sketch auto-contenido por `(board, model, variant)` copiando solo las fuentes C99 necesarias (`prepare_firmware_sketch`), compilación con parseo JSON + fallback regex para ESP8266 (`compile_firmware`) y flasheo con `upload_baud` (`flash_firmware`).
+- `session.py`: ejecución completa del bucle `HELLO -> FRAME_BEGIN -> CHUNK_DATA × K -> FRAME_END -> INFER_REQ -> RESULT_META (+ RESULT_VECT)` (`run_hw_session`), comparación contra el oráculo de escritorio (`load_desktop_reference`, `compare_against_reference`) y serialización de artefactos por corrida (`save_run_artifacts`).
+- `fit_report.py`, `report.py`: matriz de cabida estática/compilada (`build_fit_matrix`, `write_fit_report`), agregación de corridas medidas vs compiladas (`collect_all_summaries`, `write_hw_summary_csv`) y generación de las 4 figuras y `results/hw_test/README.md` (`generate_hw_figures`, `write_hw_readme`).
+
 ---
 
 ## Principios de diseño

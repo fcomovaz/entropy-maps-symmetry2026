@@ -30,10 +30,25 @@ c_imp/
 ├── app/
 │   └── desktop_main.c         # CLI desktop de paridad y benchmarking
 ├── tests/
-│   └── test_runtime.c         # Tests unitarios C99 independientes de código generado
+│   ├── test_runtime.c         # Tests unitarios C99 independientes de código generado
+│   └── test_streaming.c       # Paridad bit a bit Q15 streaming vs cimp_descriptor_x94_q15 (F32=0)
 ├── generated/                 # Headers/fuentes C99 autogenerados por src/c_export por target (ignorado por Git)
 └── build/                     # Binarios .exe/.obj/.pdb compilados en escritorio (ignorado por Git)
 ```
+
+---
+
+## Soporte embebido MCU (AVR, ESP8266 y ESP32)
+
+El runtime en `c_imp/runtime/` y los emisores en `src/c_export/` incorporan compatibilidad opcional para microcontroladores sin alterar la paridad de escritorio:
+
+1. **Guardas `extern "C"`:** las 7 cabeceras bajo `c_imp/runtime/*.h` y las cabeceras generadas `model_<name>.h` envuelven sus declaraciones en `#ifdef __cplusplus extern "C" { ... }` para integrarse directamente con sketches Arduino (`.ino`).
+2. **Guarda `CIMP_ENABLE_F32`:** definida por defecto en `1` dentro de `cimp_fixed_point.h`. Al compilar con `-DCIMP_ENABLE_F32=0` (como en placas solo `Q15`), se excluyen `<math.h>`, todos los arreglos `*_F32` y las funciones `*_f32` en runtime y código generado.
+3. **Almacenamiento en Flash (`CIMP_ROM` / `CIMP_ROM_READ_*`):** definidas en `cimp_fixed_point.h`. En `__AVR__` (`<avr/pgmspace.h>`) y `ESP8266` (`<pgmspace.h>`) colocan LUTs, pesos y tablas en Flash (`PROGMEM`) y los leen mediante `pgm_read_{byte,word,dword,float}` (con `CIMP_ROM_READ_I64` armado por dos lecturas `pgm_read_dword`); en escritorio y ESP32 resuelven a lectura directa sin penalización. Incluye correcciones portables para enteros de 16 bits en AVR (`cimp_clz32` vía `UINT_MAX`/`ULONG_MAX` y máscaras `UINT32_C` en `cimp_descriptor.c`).
+4. **API streaming Q15 sin `CIMP_DescriptorWorkspace` (`runtime/cimp_descriptor.{h,c}`):**
+   - `CIMP_DescStream` (`sizeof(CIMP_DescStream) = 1,060` B frente a `2,720` B de `CIMP_DescriptorWorkspace`) mantiene únicamente una banda fina $8\times 16$, acumuladores gruesos `4×4`/`2×2`/`1×1` y las 64 entropías finas.
+   - Ciclo de vida: `cimp_desc_stream_init(&s)` → `cimp_desc_stream_push_rows(&s, rows, n_rows)` (acepta franjas de `1, 2, 4, 8, 16` filas) → `cimp_desc_stream_finish_q15(&s, out_x94)`, apoyándose en `cimp_eval_single_cell_q15` y `cimp_asymmetry_q15` con salida **bit a bit idéntica** a `cimp_descriptor_x94_q15`.
+5. **Prueba C de streaming (`c_imp/tests/test_streaming.c`):** compilada con `/DCIMP_ENABLE_F32=0` mediante `build_c_streaming_test(cfg)` en `src/c_export/build_c.py` hacia `cimp_test_streaming.exe`; verifica paridad bit a bit en las 4 imágenes embebidas para `band_rows ∈ {1, 2, 4, 8, 16}`, chunks mixtos y argumentos inválidos.
 
 ---
 
@@ -115,6 +130,10 @@ Tras compilar (`verify_c_pipeline` o `export_c_pipeline --compile`), puedes invo
 # Tests unitarios C99 standalone del runtime (fixed-point, sklearn, pytorch kernels)
 .\c_imp\build\_runtime_tests\cimp_test_runtime.exe
 
+# Prueba C99 de streaming Q15 (compilada con CIMP_ENABLE_F32=0 vía build_c_streaming_test)
+.\.venv\Scripts\python.exe -c "from pathlib import Path; from src.c_export.config import load_c_imp_config; from src.c_export.build_c import build_c_streaming_test; cfg=load_c_imp_config(Path('configs/c_imp/kolektorsdd2.toml'), Path('.').resolve()); print(build_c_streaming_test(cfg).executable_path)"
+.\c_imp\build\kolektorsdd2\_streaming_test\cimp_test_streaming.exe
+
 # Descriptor x94 + clasificador tabular (ej. lr_dot en Q15 con benchmark)
 .\c_imp\build\kolektorsdd2\cimp_pipeline.exe `
   --manifest results/c_imp/kolektorsdd2/vectors/manifest.csv `
@@ -163,13 +182,18 @@ En `--mode descriptor`, `--model` acepta `x94_only`, `lr_dot` o `mlp_16_dot`.
 ### 5. Salidas generadas y limpieza
 
 - **Código C99 generado**: `c_imp/generated/<target>/` (~37 MB si se exportan las 7 CNNs completas, debido principalmente a `model_torchvision_mobilenet.c` ~30 MB).
-- **Binarios compilados**: `c_imp/build/<target>/cimp_pipeline.exe` y `c_imp/build/_runtime_tests/cimp_test_runtime.exe`.
+- **Binarios compilados**: `c_imp/build/<target>/cimp_pipeline.exe`, `c_imp/build/_runtime_tests/cimp_test_runtime.exe` y `c_imp/build/<target>/_streaming_test/cimp_test_streaming.exe`.
 - **Reportes y vectores**: `results/c_imp/<target>/` (`memory_report.json`, `parity_report.json`, `timing_benchmark.csv`, `vectors/`, `c_outputs/`). Ver la auditoría consolidada de resultados `f32`/`Q15`, presupuestos ESP32-CAM y hallazgos diagnósticos en [`../results/c_imp/README.md`](../results/c_imp/README.md).
 - **Figuras diagnósticas y resumen legible**: `results/c_imp/<target>/figures/` (`fig1_classification_f32_vs_q15.png` .. `fig6_x94_descriptor_insights.png`, `summary_models_metrics.csv`, `summary_report.md`; configurables en `[c_imp.visualization]`).
 
-Para limpiar los artefactos generados en PowerShell:
+Para limpiar los artefactos generados en PowerShell (incluyendo staging y corridas del banco MCU `hw_test`, conservando `results/c_imp/README.md` y `results/hw_test/README.md`):
 ```powershell
-foreach ($d in @("c_imp/generated", "c_imp/build", "results/c_imp", "understanding/15_c_migration_fixed_point/outputs")) {
+foreach ($d in @("c_imp/generated", "c_imp/build", "hw_test/build", "understanding/15_c_migration_fixed_point/outputs")) {
   if (Test-Path $d) { Remove-Item -Recurse -Force $d }
 }
+foreach ($r in @("results/c_imp", "results/hw_test")) {
+  if (Test-Path $r) { Get-ChildItem $r -Exclude "README.md", ".gitkeep" | Remove-Item -Recurse -Force }
+}
+# O directamente para el banco MCU:
+.\.venv\Scripts\python.exe -m experiments.hw_test clean --config configs/hw_test/boards.toml
 ```

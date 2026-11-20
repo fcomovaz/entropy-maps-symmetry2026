@@ -1,6 +1,6 @@
 # Pruebas del proyecto (`tests/`)
 
-Suites de pruebas automáticas, unitarias y de integración del proyecto: **`test_environment.py`** (CUDA real) + **29 módulos `unittest`** (`227` casos) en `tests/`, junto con **8 suites pedagógicas** (`96` casos) en `understanding/` y los tests C99 standalone en [`c_imp/tests/test_runtime.c`](../c_imp/tests/test_runtime.c).
+Suites de pruebas automáticas, unitarias y de integración del proyecto: **`test_environment.py`** (CUDA real) + **34 módulos `unittest`** (`247` casos) en `tests/`, junto con **8 suites pedagógicas** (`96` casos) en `understanding/` y los tests C99 standalone en [`c_imp/tests/test_runtime.c`](../c_imp/tests/test_runtime.c) y [`c_imp/tests/test_streaming.c`](../c_imp/tests/test_streaming.c).
 
 ---
 
@@ -59,6 +59,9 @@ $env:PYTHONPATH = (Get-Location).Path; .\.venv\Scripts\python.exe understanding/
 # 10. Pruebas de exportación C99, punto fijo Q15, paridad y visualización (task_11)
 .\.venv\Scripts\python.exe -m unittest understanding/15_c_migration_fixed_point/tests/test_c_migration_fixed_point.py -v
 .\.venv\Scripts\python.exe -m unittest discover -s tests -p "test_c_*.py" -v
+
+# 11. Pruebas del banco de pruebas en microcontrolador (task_12: protocolo, sesión mock, cabida, CLI y clean)
+.\.venv\Scripts\python.exe -m unittest discover -s tests -p "test_hw_*.py" -v
 ```
 
 ---
@@ -91,6 +94,7 @@ $env:PYTHONPATH = (Get-Location).Path; .\.venv\Scripts\python.exe understanding/
 | `test_profiling_cnn_layers.py` | Reporte completo de módulos hoja en CNN sintética en CPU sin CUDA, overhead de *hooks* acotado, `torch.profiler` ATen y *cold start* | Cobertura de `src/profiling/cnn_layers.py` |
 | `test_benchmark_cpu_fair_cli.py` | Ejecución `--dry-run` de Fase A/B (código `0`), imposición estricta de `device=cpu`, rechazo fail-fast de `--device cuda` y errores por checkpoints faltantes | Cobertura CLI de `benchmark_cpu_fair.py` y `profile_pipelines.py` |
 | `test_c_export_*.py` (`config`, `fixed_point`, `luts`, `linear`, `cnn_graph`, `visualize`) y `test_c_pipeline_parity.py` | Carga TOML C99 + `[c_imp.visualization]`, redondeo Q15, LUTs Shannon, clasificadores plegados (`lr_dot`, `mlp_16_dot`), grafo/cuantización CNN, paridad E2E MSVC C99-vs-Python y renderizado de figuras/tablas resumen | Cobertura formal de `src/c_export/`, `src/models/mlp_dot.py` y `experiments/*_c_pipeline.py` en `TemporaryDirectory` |
+| `test_hw_*.py` (`config`, `protocol`, `session`, `cli`, `fit`) y `c_imp/tests/test_streaming.c` | Carga `boards.toml`/`secrets.toml`, CRC-16/CCITT-FALSE (`"123456789" -> 0x29B1`), framing binario con ruido/fragmentación, `MockMcuTransport` E2E (`HELLO -> CHUNK_DATA -> RESULT_VECT`), paridad exacta entre `cimp_extract_x94_q15` y `CIMP_DescStream` por strips (`1, 2, 4, 8, 16` filas, `sizeof <= 1200 B`), matriz de cabida y CLI (`boards`, `images`, `build --dry-run`, `send --dry-run`, `report`, `clean`) | Cobertura formal de `src/hw_test/`, `experiments/hw_test.py` y streaming C99 sin requerir MCU físico conectado |
 | `03/test_entropy.py` | 5 tests: formulaciones Shannon E1–E5, cotas, LUTs y rankings | Utiliza artefactos cacheados de 01 |
 | `04/tests/test_models.py` | 8 tests: shapes, backward/Adam, parámetros y capas depthwise en 7 CNNs | CPU obligatorio, CUDA probado en hardware compatible |
 | `05/tests/test_symmetry_features.py` | 20 tests: simetrías LR/TB/R180, desigualdades y rangos de asimetría | Verificación matemática de residuos espaciales |

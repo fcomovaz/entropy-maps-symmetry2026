@@ -341,8 +341,8 @@ def _export_lr_dot(
             f"#define CIMP_LR_DOT_THRESHOLD_F32 0.0f\n"
             f"#define CIMP_LR_DOT_B_ACC ((int64_t){q_params.b_acc}LL)\n"
             f"#define CIMP_LR_DOT_THRESHOLD_Q ((int32_t){q_params.threshold_q})",
-            format_c_array("CIMP_LR_DOT_W_F32", w_eff, "float", per_line=8),
-            format_c_array("CIMP_LR_DOT_W_Q", q_params.w_q, w_c_type, per_line=10),
+            format_c_array("CIMP_LR_DOT_W_F32", w_eff, "float", per_line=8, rom=True, guard_macro="CIMP_ENABLE_F32"),
+            format_c_array("CIMP_LR_DOT_W_Q", q_params.w_q, w_c_type, per_line=10, rom=True),
         ]
     )
     header_path = cfg.generated_dir / "model_lr_dot.h"
@@ -438,12 +438,12 @@ def _export_mlp_16_dot(
             f"#define CIMP_MLP_16_DOT_THRESHOLD_F32 0.0f\n"
             f"#define CIMP_MLP_16_DOT_B2_ACC ((int64_t){q_params.b2_acc}LL)\n"
             f"#define CIMP_MLP_16_DOT_THRESHOLD_Q ((int32_t){q_params.threshold_q})",
-            format_c_array("CIMP_MLP_16_DOT_W1_F32", w1_eff.ravel(), "float", per_line=8),
-            format_c_array("CIMP_MLP_16_DOT_B1_F32", b1_eff, "float", per_line=8),
-            format_c_array("CIMP_MLP_16_DOT_W2_F32", w2_eff, "float", per_line=8),
-            format_c_array("CIMP_MLP_16_DOT_W1_Q", q_params.w1_q.ravel(), w1_c_type, per_line=10),
-            format_c_array("CIMP_MLP_16_DOT_B1_ACC", q_params.b1_acc, "int64_t", per_line=6),
-            format_c_array("CIMP_MLP_16_DOT_W2_Q", q_params.w2_q, w2_c_type, per_line=10),
+            format_c_array("CIMP_MLP_16_DOT_W1_F32", w1_eff.ravel(), "float", per_line=8, rom=True, guard_macro="CIMP_ENABLE_F32"),
+            format_c_array("CIMP_MLP_16_DOT_B1_F32", b1_eff, "float", per_line=8, rom=True, guard_macro="CIMP_ENABLE_F32"),
+            format_c_array("CIMP_MLP_16_DOT_W2_F32", w2_eff, "float", per_line=8, rom=True, guard_macro="CIMP_ENABLE_F32"),
+            format_c_array("CIMP_MLP_16_DOT_W1_Q", q_params.w1_q.ravel(), w1_c_type, per_line=10, rom=True),
+            format_c_array("CIMP_MLP_16_DOT_B1_ACC", q_params.b1_acc, "int64_t", per_line=6, rom=True),
+            format_c_array("CIMP_MLP_16_DOT_W2_Q", q_params.w2_q, w2_c_type, per_line=10, rom=True),
         ]
     )
     header_path = cfg.generated_dir / "model_mlp_16_dot.h"

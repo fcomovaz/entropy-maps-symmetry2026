@@ -14,6 +14,11 @@
 
 #include "cimp_fixed_point.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#if CIMP_ENABLE_F32
 /** Compute dense dot product logit = b + sum_i x[i] * w[i] in float32 (double accumulator). */
 float cimp_dense_dot_f32(const float *x, const float *w, float b, size_t n);
 
@@ -26,6 +31,7 @@ int cimp_dense_classify_f32(
     size_t n,
     float *out_logit
 );
+#endif
 
 /**
  * Compute fixed-point dense dot product with 16-bit Q-weights and 64-bit bias accumulator.
@@ -61,6 +67,7 @@ int cimp_dense_classify_q15(
     int32_t *out_logit_q
 );
 
+#if CIMP_ENABLE_F32
 /** Compute 1-hidden-layer ReLU MLP logit in float32 using caller-provided `hidden_buf[d_hidden]`. */
 float cimp_mlp_1hidden_f32(
     const float *x,
@@ -86,6 +93,7 @@ int cimp_mlp_1hidden_classify_f32(
     float *hidden_buf,
     float *out_logit
 );
+#endif
 
 /**
  * Compute 1-hidden-layer ReLU MLP logit in integer fixed-point Qm.n.
@@ -124,5 +132,9 @@ int cimp_mlp_1hidden_classify_q15(
     q15_t *hidden_q,
     int32_t *out_logit_q
 );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CIMP_INFRA_SKLEARN_H */

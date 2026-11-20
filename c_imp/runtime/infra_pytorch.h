@@ -15,6 +15,11 @@
 
 #include "cimp_fixed_point.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#if CIMP_ENABLE_F32
 /** Input uint8 image [H*W] -> normalized float32 [1, H, W]: (px/255 - mean) / std. */
 void cimp_input_norm_u8_f32(
     const uint8_t *img,
@@ -23,6 +28,7 @@ void cimp_input_norm_u8_f32(
     float std,
     float *out
 );
+#endif
 
 /** Input uint8 image [H*W] -> Q15/Qm.n [1, H, W] via 256-entry precomputed LUT. */
 void cimp_input_norm_u8_q15(
@@ -32,6 +38,7 @@ void cimp_input_norm_u8_q15(
     q15_t *out_q
 );
 
+#if CIMP_ENABLE_F32
 /** Standard Conv2d (groups=1) in float32 with optional fused ReLU. */
 void cimp_conv2d_f32(
     const float *in,
@@ -50,6 +57,7 @@ void cimp_conv2d_f32(
     int32_t hout,
     int32_t wout
 );
+#endif
 
 /** Standard Conv2d (groups=1) in fixed-point Q15 activations and 16-bit weights. */
 void cimp_conv2d_q15(
@@ -92,6 +100,7 @@ void cimp_conv2d_q15_w8(
     int32_t wout
 );
 
+#if CIMP_ENABLE_F32
 /** Depthwise Conv2d (groups=C) in float32 with optional fused ReLU. */
 void cimp_dwconv2d_f32(
     const float *in,
@@ -109,6 +118,7 @@ void cimp_dwconv2d_f32(
     int32_t hout,
     int32_t wout
 );
+#endif
 
 /** Depthwise Conv2d (groups=C) in fixed-point Q15 activations and 16-bit weights. */
 void cimp_dwconv2d_q15(
@@ -149,14 +159,18 @@ void cimp_dwconv2d_q15_w8(
     int32_t wout
 );
 
+#if CIMP_ENABLE_F32
 /** Elementwise ReLU in float32 (may run in-place when out == in). */
 void cimp_relu_f32(const float *in, float *out, int32_t n);
+#endif
 
 /** Elementwise ReLU in Q15 (with optional shift to adjust frac_bits). */
 void cimp_relu_q15(const q15_t *in_q, q15_t *out_q, int32_t n, int32_t out_shift);
 
+#if CIMP_ENABLE_F32
 /** Elementwise Hardswish in float32. */
 void cimp_hardswish_f32(const float *in, float *out, int32_t n);
+#endif
 
 /** Elementwise Hardswish in pure integer Qm.n arithmetic (no <math.h>). */
 void cimp_hardswish_q15(
@@ -167,8 +181,10 @@ void cimp_hardswish_q15(
     int frac_out
 );
 
+#if CIMP_ENABLE_F32
 /** Elementwise Hardsigmoid in float32. */
 void cimp_hardsigmoid_f32(const float *in, float *out, int32_t n);
+#endif
 
 /** Elementwise Hardsigmoid in pure integer Qm.n arithmetic (no <math.h>). */
 void cimp_hardsigmoid_q15(
@@ -179,6 +195,7 @@ void cimp_hardsigmoid_q15(
     int frac_out
 );
 
+#if CIMP_ENABLE_F32
 /** 2x2 stride-2 MaxPool2d in float32. */
 void cimp_maxpool2d_2x2_f32(
     const float *in,
@@ -189,6 +206,7 @@ void cimp_maxpool2d_2x2_f32(
     int32_t hout,
     int32_t wout
 );
+#endif
 
 /** 2x2 stride-2 MaxPool2d in Q15. */
 void cimp_maxpool2d_2x2_q15(
@@ -201,6 +219,7 @@ void cimp_maxpool2d_2x2_q15(
     int32_t wout
 );
 
+#if CIMP_ENABLE_F32
 /** Global AdaptiveAvgPool2d(1) in float32: [C, H, W] -> [C]. */
 void cimp_global_avgpool2d_f32(
     const float *in,
@@ -209,6 +228,7 @@ void cimp_global_avgpool2d_f32(
     int32_t win,
     float *out
 );
+#endif
 
 /** Global AdaptiveAvgPool2d(1) in Q15 with integer rounded spatial mean and out_shift. */
 void cimp_global_avgpool2d_q15(
@@ -220,6 +240,7 @@ void cimp_global_avgpool2d_q15(
     q15_t *out_q
 );
 
+#if CIMP_ENABLE_F32
 /** Fully connected Linear layer in float32 with optional fused ReLU. */
 void cimp_linear_f32(
     const float *in,
@@ -230,6 +251,7 @@ void cimp_linear_f32(
     int relu_fused,
     float *out
 );
+#endif
 
 /** Fully connected Linear layer producing Q15 activations (16-bit weights). */
 void cimp_linear_q15(
@@ -279,6 +301,7 @@ void cimp_linear_logits_q15_w8(
     int32_t *out_logits_q
 );
 
+#if CIMP_ENABLE_F32
 /** Elementwise residual addition in float32 with optional fused ReLU. */
 void cimp_add_f32(
     const float *a,
@@ -287,6 +310,7 @@ void cimp_add_f32(
     int32_t n,
     int relu_fused
 );
+#endif
 
 /** Elementwise residual addition in Q15 aligning two fractional precisions before sum. */
 void cimp_add_q15(
@@ -299,6 +323,7 @@ void cimp_add_q15(
     int relu_fused
 );
 
+#if CIMP_ENABLE_F32
 /** Channelwise Squeeze-and-Excite multiplication in float32: out[c,y,x] = in[c,y,x] * scale[c]. */
 void cimp_scale_channels_f32(
     const float *in,
@@ -307,6 +332,7 @@ void cimp_scale_channels_f32(
     int32_t hw,
     float *out
 );
+#endif
 
 /** Channelwise Squeeze-and-Excite multiplication in Q15. */
 void cimp_scale_channels_q15(
@@ -317,5 +343,9 @@ void cimp_scale_channels_q15(
     int32_t out_shift,
     q15_t *out_q
 );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CIMP_INFRA_PYTORCH_H */

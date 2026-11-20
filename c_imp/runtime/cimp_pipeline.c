@@ -29,6 +29,7 @@ int cimp_is_tabular_model_supported(const char *model_name) {
 }
 
 int cimp_is_cnn_model_supported(const char *model_name) {
+    (void)model_name;
 #if CIMP_HAS_CNN_ULTRA_TINY
     if (cimp_streq(model_name, "ultra_tiny")) {
         return 1;
@@ -122,6 +123,7 @@ int cimp_get_cnn_out_frac(const char *model_name) {
     return -1;
 }
 
+#if CIMP_ENABLE_F32
 int cimp_predict_tabular_f32(
     const char *model_name,
     const float *x94,
@@ -163,6 +165,7 @@ int cimp_predict_tabular_f32(
 #endif
     return CIMP_ERR_UNSUPPORTED;
 }
+#endif
 
 int cimp_predict_tabular_q15(
     const char *model_name,
@@ -212,6 +215,7 @@ int cimp_predict_tabular_q15(
     return CIMP_ERR_UNSUPPORTED;
 }
 
+#if CIMP_ENABLE_F32
 int cimp_predict_cnn_f32(
     const char *model_name,
     const uint8_t *img_u8,
@@ -220,6 +224,8 @@ int cimp_predict_cnn_f32(
     float out_logits[2],
     int *out_label
 ) {
+    (void)model_name;
+    (void)arena_bytes;
     if (img_u8 == NULL || arena == NULL || out_logits == NULL || out_label == NULL) {
         return CIMP_ERR_INVALID_ARG;
     }
@@ -288,6 +294,7 @@ int cimp_predict_cnn_f32(
 #endif
     return CIMP_ERR_UNSUPPORTED;
 }
+#endif
 
 int cimp_predict_cnn_q15(
     const char *model_name,
@@ -297,6 +304,8 @@ int cimp_predict_cnn_q15(
     int32_t out_logits_q[2],
     int *out_label
 ) {
+    (void)model_name;
+    (void)arena_bytes;
     if (img_u8 == NULL || arena == NULL || out_logits_q == NULL || out_label == NULL) {
         return CIMP_ERR_INVALID_ARG;
     }

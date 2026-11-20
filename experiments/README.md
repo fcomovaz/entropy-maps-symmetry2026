@@ -2,7 +2,7 @@
 
 Registro y puntos de entrada CLI para los experimentos reproducibles del proyecto (invocar siempre como módulo `.\.venv\Scripts\python.exe -m experiments.<modulo>` desde `code/`).
 
-## Índice rápido (Experimentos 01–10)
+## Índice rápido (Experimentos 01–11)
 
 | Experimento | Módulo CLI (`experiments/`) | Configuración TOML principal | Salida principal |
 |---|---|---|---|
@@ -16,6 +16,7 @@ Registro y puntos de entrada CLI para los experimentos reproducibles del proyect
 | **08.** Zoo de 7 CNNs ligeras (y legado *mixed*) | `evaluate_cnn`, `compare_baseline_vs_cnn` | `configs/cnn/*.toml` | `results/cnn/`, `results/comparison/` *(deprecated)* |
 | **09.** Benchmark 100 % CPU justo y profiling profundo | `benchmark_cpu_fair`, `profile_pipelines` | `configs/profiling/*.toml` | `results/comparison_cpu/`, `results/profiling/` |
 | **10.** Exportación, paridad y visualización C99 (`f32` + `q15`) | `export_c_pipeline`, `verify_c_pipeline`, `visualize_c_pipeline` | `configs/c_imp/*.toml` | `c_imp/generated/`, `c_imp/build/`, `results/c_imp/` |
+| **11.** Banco de pruebas en microcontrolador (**PC → MCU → PC**) | `hw_test` | `configs/hw_test/boards.toml` | `hw_test/img2send/`, `hw_test/build/`, `results/hw_test/` |
 
 ---
 
@@ -593,5 +594,43 @@ Ver guía completa de opciones, ejecución de binarios nativos y pruebas de Lab 
 .\.venv\Scripts\python.exe -m experiments.export_c_pipeline --config configs/c_imp/mvtec_ad.toml --object bottle --visualize
 .\.venv\Scripts\python.exe -m experiments.verify_c_pipeline --config configs/c_imp/mvtec_ad.toml --object bottle --benchmark --visualize
 ```
+
+---
+
+## Experimento 11: Banco de Pruebas en Microcontrolador (`PC → MCU → PC`, `hw_test.py`)
+
+Pipeline reproducible para compilar, flashear, transmitir imágenes reales `128×128` por chunks con framing binario (`CRC-16/CCITT-FALSE`), cronometrar en hardware (`T_total = T_selector + T_model`), verificar paridad bit a bit contra el oráculo C99 de escritorio (`cimp_desktop.exe`), generar reportes/figuras (`fit_report.{csv,md}`, `summary.csv`, `fig1..fig4`) y limpiar artefactos generados (`clean`) sobre **Arduino Nano/UNO (`ATmega328P`)**, **NodeMCU ESP8266 (`ESP-12E`)** y **ESP32-CAM (`AI-Thinker`)**.
+
+Ver documentación completa en inglés de subcomandos, protocolo binario y limpieza en [`hw_test/README.md`](../hw_test/README.md), y los resultados medidos en ESP32-CAM física (`COM3`, 12 corridas, `96/96` imágenes con `100.0 %` de paridad) y compilaciones `arduino-cli` (`25/25`) en [`results/hw_test/README.md`](../results/hw_test/README.md).
+
+### Comandos principales (PowerShell desde carpeta `code/`)
+
+```powershell
+# 1. Descubrir puertos COM, herramientas y catálogo de tarjetas
+.\.venv\Scripts\python.exe -m experiments.hw_test boards
+
+# 2. Poblar hw_test/img2send/ con 8 imágenes deterministas (4 good + 4 defect)
+.\.venv\Scripts\python.exe -m experiments.hw_test images --dataset kolektorsdd2 --count 8 --seed 42
+
+# 3. Compilar sketch para un modelo o barrer matriz de cabida (Nano, UNO, NodeMCU, ESP32-CAM)
+.\.venv\Scripts\python.exe -m experiments.hw_test build --board esp32cam --model lr_dot --variant q15
+.\.venv\Scripts\python.exe -m experiments.hw_test bench --board all --fit-only
+
+# 4. Flashear y enviar imágenes a la ESP32-CAM conectada en COM3 (UART) o por WiFi/TCP
+.\.venv\Scripts\python.exe -m experiments.hw_test flash --board esp32cam --port COM3 --model lr_dot --variant q15
+.\.venv\Scripts\python.exe -m experiments.hw_test send --board esp32cam --transport serial --port COM3 --model lr_dot --variant q15
+.\.venv\Scripts\python.exe -m experiments.hw_test send --board esp32cam --transport tcp --host 192.168.1.184 --model lr_dot --variant q15
+
+# 5. Barrido hardware completo en COM3 y regeneración de tablas/figuras
+.\.venv\Scripts\python.exe -m experiments.hw_test bench --board esp32cam --transport serial --port COM3 --models lr_dot,mlp_16_dot,ultra_tiny --variants q15,f32
+.\.venv\Scripts\python.exe -m experiments.hw_test report
+
+# 6. Limpieza (clean) de reportes, corridas y staging de compilación (preserva results/hw_test/README.md e img2send/)
+.\.venv\Scripts\python.exe -m experiments.hw_test clean --dry-run
+.\.venv\Scripts\python.exe -m experiments.hw_test clean --results-only --keep-build-cache
+.\.venv\Scripts\python.exe -m experiments.hw_test clean --staging-only
+.\.venv\Scripts\python.exe -m experiments.hw_test clean
+```
+
 
 
