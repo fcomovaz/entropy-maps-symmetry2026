@@ -7,6 +7,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** Row-major CHW flat index helper for tensor [C, H, W]. */
 #define CIMP_IDX(c, y, x, h, w) ((((int32_t)(c) * (int32_t)(h)) + (int32_t)(y)) * (int32_t)(w) + (int32_t)(x))
 
@@ -36,5 +40,9 @@ typedef struct {
     int32_t h;
     int32_t w;
 } cimp_tensor_f32;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CIMP_TENSOR_H */

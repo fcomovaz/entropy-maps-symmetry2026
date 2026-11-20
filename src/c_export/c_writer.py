@@ -46,10 +46,15 @@ def format_c_array(
     c_type: str,
     per_line: int = 12,
     hex_int8: bool = False,
+    rom: bool = False,
+    guard_macro: str | None = None,
 ) -> str:
     """Format a 1D or flattened sequence as a deterministic `static const` C99 array."""
+    if guard_macro is not None and not guard_macro.strip():
+        raise ValueError("guard_macro must be non-empty when provided")
     arr = np.asarray(values).ravel()
-    lines = [f"static const {c_type} {name}[{arr.size}] = {{"]
+    rom_attr = " CIMP_ROM" if rom else ""
+    lines = [f"static const {c_type} {name}[{arr.size}]{rom_attr} = {{"]
     if arr.size == 0:
         lines.append("    0")
     else:
@@ -68,7 +73,11 @@ def format_c_array(
             comma = "," if (i + per_line) < arr.size else ""
             lines.append(f"    {formatted}{comma}")
     lines.append("};")
-    return "\n".join(lines)
+    body = "\n".join(lines)
+    if guard_macro is not None:
+        macro = guard_macro.strip()
+        return f"#if {macro}\n{body}\n#endif /* {macro} */"
+    return body
 
 
 def write_header(

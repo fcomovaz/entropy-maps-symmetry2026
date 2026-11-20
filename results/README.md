@@ -32,6 +32,7 @@ Esta carpeta conserva diagnósticos y resultados del proyecto. Para la síntesis
 | `comparison_cpu_python/` | Salida local pre-MCU **100% Python/NumPy puro** (`--entropy-backend numpy_finest_pyramid` y `numpy_baseline`, `--no-cuda-reference`), ignorada por Git (`results/*`) |
 | `profiling/` | Reportes de profiling científico profundo (`experiments/profile_pipelines.py`): subcarpetas `<tag>/` (`kolektorsdd2` y `mvtec-ad_bottle` completos; `-inverted` verificación corta) con `environment.json`, desgloses por etapa (`x94`) y capa (`cnn`), ATen ops, `cProfile`, pruebas Mann-Whitney U, ablación $\Delta\text{F1}/\Delta\text{ms}$, 6 figuras (`fig1..fig6`) y `README.md` de hallazgos (rastreado) |
 | [c_imp/README.md](c_imp/README.md) | Auditoría y resultados consolidados de la migración a **C99 portable pre-ESP32** (`float32`, `Q15` bit-exact y `int8_per_channel` sobre `kolektorsdd2` y `mvtec_ad_bottle`): paridad Python-vs-C, memoria Flash/SRAM/PSRAM, Pareto y hallazgos de `x94` (artefactos pesados bajo `results/c_imp/*` ignorados por Git salvo este README) |
+| [hw_test/README.md](hw_test/README.md) | Auditoría de compilación cruzada (`arduino-cli`, 25/25 builds) y ejecución física en **ESP32-CAM (`COM3`, 96/96 imágenes con 100 % paridad)**: latencias `measured`, memoria SRAM/PSRAM, veredictos de `fit_report.{csv,md}` e ítems pendientes en Nano/UNO/NodeMCU/WiFi |
 
 Los checkpoints sintéticos y el fixture de `04/` no son resultados de detección real.
 Los CSV/JSON de tiempos describen el equipo y protocolo registrados, no hardware

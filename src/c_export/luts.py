@@ -220,18 +220,18 @@ def emit_config_and_lut_headers(cfg: CImpConfig) -> dict[str, dict[str, object]]
         f"#define CIMP_SRAM_BUDGET_BYTES {cfg.cnn.sram_budget_bytes}",
         f"#define CIMP_PSRAM_BUDGET_BYTES {cfg.cnn.psram_budget_bytes}",
         f"typedef {count_ctype} cimp_hist_count_t;",
-        format_c_array("CIMP_LEVELS", levels_asc, "int32_t", per_line=8),
-        format_c_array("CIMP_LEVEL_NPIX", bundle.level_npix, "int32_t", per_line=8),
-        format_c_array("CIMP_LEVEL_LOG2_N_Q15", bundle.level_log2_n_q15, "uint32_t", per_line=8),
-        format_c_array("CIMP_ASYM_SCALES", spec.asym_scales, "int32_t", per_line=8),
-        format_c_array("CIMP_ASYM_KINDS", [_kind_code(k) for k in spec.asym_kinds], "int32_t", per_line=8),
-        format_c_array("CIMP_ASYM_DIV_SHIFT", asym_div_shift, "int32_t", per_line=8),
-        format_c_array("CIMP_ASYM_INV_Q31", asym_inv_q31, "int32_t", per_line=8),
+        format_c_array("CIMP_LEVELS", levels_asc, "int32_t", per_line=8, rom=True),
+        format_c_array("CIMP_LEVEL_NPIX", bundle.level_npix, "int32_t", per_line=8, rom=True),
+        format_c_array("CIMP_LEVEL_LOG2_N_Q15", bundle.level_log2_n_q15, "uint32_t", per_line=8, rom=True),
+        format_c_array("CIMP_ASYM_SCALES", spec.asym_scales, "int32_t", per_line=8, rom=True),
+        format_c_array("CIMP_ASYM_KINDS", [_kind_code(k) for k in spec.asym_kinds], "int32_t", per_line=8, rom=True),
+        format_c_array("CIMP_ASYM_DIV_SHIFT", asym_div_shift, "int32_t", per_line=8, rom=True),
+        format_c_array("CIMP_ASYM_INV_Q31", asym_inv_q31, "int32_t", per_line=8, rom=True),
     ]
     sha_cfg = write_header(
         out_dir / "cimp_config.h",
         "CIMP_GENERATED_CONFIG_H",
-        ["<stdint.h>"],
+        ["<stdint.h>", '"cimp_fixed_point.h"'],
         "\n\n".join(cfg_body_lines),
         provenance,
     )
@@ -241,27 +241,27 @@ def emit_config_and_lut_headers(cfg: CImpConfig) -> dict[str, dict[str, object]]
     sha_qlut = write_header(
         out_dir / "lut_bin_quant.h",
         "CIMP_LUT_BIN_QUANT_H",
-        ["<stdint.h>"],
-        format_c_array("CIMP_LUT_BIN_QUANT", qlut, "uint8_t", per_line=16),
+        ["<stdint.h>", '"cimp_fixed_point.h"'],
+        format_c_array("CIMP_LUT_BIN_QUANT", qlut, "uint8_t", per_line=16, rom=True),
         provenance + [f"Quantization bins: {spec.bins}"],
     )
 
     # 3. lut_shannon.h (emits active mode tables to keep binary lean; C runtime dispatches on CIMP_SHANNON_LUT_MODE)
     shannon_parts = [
         f"/* Active Shannon LUT mode: {bundle.mode} ({bundle.byte_size} bytes) */",
-        format_c_array("CIMP_LUT_SHANNON_TERM_OFFSETS", bundle.term_offsets, "int32_t", per_line=8),
+        format_c_array("CIMP_LUT_SHANNON_TERM_OFFSETS", bundle.term_offsets, "int32_t", per_line=8, rom=True),
     ]
     if bundle.mode == "nlogn_full":
-        shannon_parts.append(format_c_array("CIMP_LUT_NLOGN", bundle.nlogn_table, "uint32_t", per_line=10))
+        shannon_parts.append(format_c_array("CIMP_LUT_NLOGN", bundle.nlogn_table, "uint32_t", per_line=10, rom=True))
     elif bundle.mode == "term_per_level":
-        shannon_parts.append(format_c_array("CIMP_LUT_SHANNON_TERM", bundle.term_table, "int16_t", per_line=12))
+        shannon_parts.append(format_c_array("CIMP_LUT_SHANNON_TERM", bundle.term_table, "int16_t", per_line=12, rom=True))
     else:
-        shannon_parts.append(format_c_array("CIMP_LUT_LOG2_MANTISSA", bundle.mantissa_table, "uint16_t", per_line=12))
+        shannon_parts.append(format_c_array("CIMP_LUT_LOG2_MANTISSA", bundle.mantissa_table, "uint16_t", per_line=12, rom=True))
 
     sha_shannon = write_header(
         out_dir / "lut_shannon.h",
         "CIMP_LUT_SHANNON_H",
-        ["<stdint.h>", '"cimp_config.h"'],
+        ["<stdint.h>", '"cimp_fixed_point.h"', '"cimp_config.h"'],
         "\n\n".join(shannon_parts),
         provenance + [f"Mode: {bundle.mode}, bytes={bundle.byte_size}"],
     )
@@ -277,14 +277,21 @@ def emit_config_and_lut_headers(cfg: CImpConfig) -> dict[str, dict[str, object]]
             f"#define CIMP_CNN_NORM_MEAN_F32 {format_c_float(cfg.cnn_cfg.data.normalize_mean)}",
             f"#define CIMP_CNN_NORM_STD_F32 {format_c_float(cfg.cnn_cfg.data.normalize_std)}",
             f"#define CIMP_CNN_INPUT_SATURATED_ENTRIES {n_sat}",
-            format_c_array("CIMP_LUT_CNN_INPUT_F32", cnn_f32_lut, "float", per_line=8),
-            format_c_array("CIMP_LUT_CNN_INPUT_Q15", cnn_q15_lut, "int16_t", per_line=12),
+            format_c_array(
+                "CIMP_LUT_CNN_INPUT_F32",
+                cnn_f32_lut,
+                "float",
+                per_line=8,
+                rom=True,
+                guard_macro="CIMP_ENABLE_F32",
+            ),
+            format_c_array("CIMP_LUT_CNN_INPUT_Q15", cnn_q15_lut, "int16_t", per_line=12, rom=True),
         ]
     )
     sha_cnn_lut = write_header(
         out_dir / "lut_cnn_input.h",
         "CIMP_LUT_CNN_INPUT_H",
-        ["<stdint.h>"],
+        ["<stdint.h>", '"cimp_fixed_point.h"'],
         cnn_lut_body,
         provenance + [f"Normalization: mean={cfg.cnn_cfg.data.normalize_mean}, std={cfg.cnn_cfg.data.normalize_std}"],
     )

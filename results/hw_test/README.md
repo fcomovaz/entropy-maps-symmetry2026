@@ -1,0 +1,89 @@
+# Hardware Test Bench Results (`results/hw_test/`)
+
+Compiler-measured footprints and physical microcontroller execution results for the portable C99 pipeline (`PC → MCU → PC`), produced by [experiments/hw_test.py](../../experiments/hw_test.py) following [hw_test/README.md](../../hw_test/README.md).
+
+> [!NOTE]
+> Heavy per-run directories under `results/hw_test/*` (`<board>/<run_id>/`, `build_cache.json`) and local `fit_report.{csv,md}` files are git-ignored (and can be cleaned at any time with `python -m experiments.hw_test clean`); this tracked `README.md` preserves the audited Stage 0, Stage 5, and Stage 9 measurements.
+
+---
+
+## Stage 0 — Compiler Output Mapping and AVR Size Spike (`measured`)
+
+Measured with `arduino-cli 1.5.2-rc.1` (`arduino:avr 1.8.8`, `esp8266:esp8266 3.1.2`, `esp32:esp32 3.3.11`) using `--format json` on a trivial empty sketch (`setup`/`loop`) and an AVR streaming spike linking `CIMP_DescStream` + `lr_dot` + `PROGMEM`.
+
+### Section Mapping in `arduino-cli compile --format json` (`measured`)
+
+| Core / Board (`FQBN`) | JSON / Output Field Parsed | Flash Used / Max (Trivial Sketch) | Static RAM Used / Max (Trivial Sketch) | Core Notes |
+|---|---|---|---|---|
+| `arduino:avr:nano:cpu=atmega328old` | `builder_result.executable_sections_size` (`text`, `data`) | `444 / 30,720 B` (`measured`) | `9 / 2,048 B` (`measured`) | `text` = Flash, `data` = static SRAM (globals + statics). |
+| `esp8266:esp8266:nodemcuv2` | `compiler_err` (`sizes.py` regex; `executable_sections_size` absent) | `231,620 / 1,048,576 B` (`IROM`, `measured`) | `28,008 / 80,192 B` (`DATA=1496, RODATA=920, BSS=25592`, `measured`); `IRAM=59,143 / 65,536 B` | Unannotated `const` (`RODATA`) stays in DRAM; requires `CIMP_ROM` (`PROGMEM`) + `pgm_read_*`. |
+| `esp32:esp32:esp32cam:PartitionScheme=huge_app` | `builder_result.executable_sections_size` (`text`, `data`) | `267,520 / 3,145,728 B` (`measured`) | `22,172 / 327,680 B` (`measured`) | No `PSRAM=enabled` menu option in `boards.txt` (PSRAM is enabled automatically by the board definition). |
+
+### AVR ATmega328P Size Spike (`arduino:avr:nano:cpu=atmega328old`, `measured`)
+
+Spike sketch with streaming state (`band_hist[8*16]` + `coarse_hist[21*16]` + `fine_ent[64]`, `1,060` B), `x94` vector (`188` B), RX buffer (`148` B), `Serial`, LUTs in `PROGMEM`, and `lr_dot` classifier (`int32_t` weights in `PROGMEM`, `int64_t` accumulator):
+
+- **Flash (`text`):** `3,864 / 30,720 B` (`12.6 %`, `measured`)
+- **Static SRAM (`data`):** `1,432 / 2,048 B` (`69.9 %`, `measured`) → `616 B` free for stack.
+- **Finding:** Streaming descriptor + `lr_dot` fits comfortably in ATmega328P; `mlp_16_dot` (~`6.2` KiB weights in `PROGMEM`) adds `0` B of static SRAM for weights.
+
+---
+
+## Stage 5 — Cross-Board `arduino-cli` Compilation (`measured`)
+
+All **25 configured builds** across the 4 boards compiled with `compile_ok = True` and `fits_budget = True` (cached in `results/hw_test/<board>/build_cache.json`). All 7 CNNs are marked `does_not_fit` on AVR and ESP8266 because their activation arenas (`163,840 B` to `2,162,688 B` `[predicted]`) exceed usable SRAM (`1,792 B` on AVR, `45,056 B` on ESP8266 without PSRAM), and `torchvision_mobilenet` is restricted to `q15` (Decision D3).
+
+| Board (`core`) | Model | Mode | Flash Used / Max (`measured`) | Static RAM Used / Max (`measured`) | Status |
+|---|---|---|---:|---:|---|
+| `nano` (`arduino:avr 1.8.8`) | `lr_dot` | `q15` | `12,780 / 30,720 B` | `1,636 / 2,048 B` | `fits_budget` (`412 B` stack headroom) |
+| `nano` (`arduino:avr 1.8.8`) | `mlp_16_dot` | `q15` | `19,038 / 30,720 B` | `1,636 / 2,048 B` | `fits_budget` (`412 B` stack headroom) |
+| `uno` (`arduino:avr 1.8.8`) | `lr_dot` | `q15` | `12,780 / 32,256 B` | `1,636 / 2,048 B` | `fits_budget` (`412 B` stack headroom) |
+| `uno` (`arduino:avr 1.8.8`) | `mlp_16_dot` | `q15` | `19,038 / 32,256 B` | `1,636 / 2,048 B` | `fits_budget` (`412 B` stack headroom) |
+| `nodemcu` (`esp8266 3.1.2`) | `lr_dot` | `q15` | `243,572 / 1,048,576 B` | `49,204 / 80,192 B` | `fits_budget` |
+| `nodemcu` (`esp8266 3.1.2`) | `lr_dot` | `f32` | `243,556 / 1,048,576 B` | `49,396 / 80,192 B` | `fits_budget` |
+| `nodemcu` (`esp8266 3.1.2`) | `mlp_16_dot` | `q15` | `249,796 / 1,048,576 B` | `49,200 / 80,192 B` | `fits_budget` |
+| `nodemcu` (`esp8266 3.1.2`) | `mlp_16_dot` | `f32` | `249,540 / 1,048,576 B` | `49,392 / 80,192 B` | `fits_budget` |
+| `esp32cam` (`esp32 3.3.11`) | `lr_dot` | `q15` / `f32` | `289,344` / `289,636 / 3,145,728 B` | `43,116` / `43,300 / 327,680 B` | `fits_budget` |
+| `esp32cam` (`esp32 3.3.11`) | `mlp_16_dot` | `q15` / `f32` | `295,512` / `295,608 / 3,145,728 B` | `43,116` / `43,300 / 327,680 B` | `fits_budget` |
+| `esp32cam` (`esp32 3.3.11`) | `ultra_tiny` | `q15` / `f32` | `292,616` / `293,676 / 3,145,728 B` | `40,204` / `40,204 / 327,680 B` | `fits_budget` |
+| `esp32cam` (`esp32 3.3.11`) | `ds_cnn` | `q15` / `f32` | `317,260` / `339,556 / 3,145,728 B` | `40,204` / `40,204 / 327,680 B` | `fits_budget` |
+| `esp32cam` (`esp32 3.3.11`) | `tiny_cnn` | `q15` / `f32` | `336,764` / `382,244 / 3,145,728 B` | `40,204` / `40,204 / 327,680 B` | `fits_budget` |
+| `esp32cam` (`esp32 3.3.11`) | `mobilenet_like` | `q15` / `f32` | `436,548` / `568,520 / 3,145,728 B` | `40,204` / `40,204 / 327,680 B` | `fits_budget` |
+| `esp32cam` (`esp32 3.3.11`) | `tiny_resnet` | `q15` / `f32` | `445,408` / `596,368 / 3,145,728 B` | `40,204` / `40,204 / 327,680 B` | `fits_budget` |
+| `esp32cam` (`esp32 3.3.11`) | `small_cnn` | `q15` / `f32` | `485,592` / `678,272 / 3,145,728 B` | `40,204` / `40,204 / 327,680 B` | `fits_budget` |
+| `esp32cam` (`esp32 3.3.11`) | `torchvision_mobilenet` | `q15` | `1,928,852 / 3,145,728 B` | `40,204 / 327,680 B` | `fits_budget` |
+
+---
+
+## Stage 9 — Physical ESP32-CAM Execution (`COM3`, UART `460800`, `measured`)
+
+Hardware tested: **ESP32-CAM (`ESP32-D0WDQ6 rev v1.0`, 4 MiB Flash, `4,194,304` B PSRAM)** mounted on an **ESP32-CAM-MB (CH340)** carrier on `COM3` (`upload_baud = 115200` for `esptool v5.3.1` stub stability; runtime UART protocol at `460800` with `serial_reset_on_open = false` and `0` retries). Executed **12 physical runs × 8 images** (`hw_test/img2send/`, `20000..20003.png` and `20042, 20056, 20068, 20084.png`), achieving **96/96 images with `100.0 %` parity**:
+
+- **All `q15` models (9/9):** `0` bit-for-bit raw logit difference vs. desktop Python/C (`max_logit_abs_diff = 0.0`) and `8/8` `x94_crc_ok` on tabular models.
+- **All tested `f32` models (3/3):** maximum logit difference $\le 5.66\times 10^{-6}$ (well below `f32_logit_abs_tol = 1e-4`).
+- **Contiguous internal DRAM finding on `ultra_tiny/q15`:** Although the `q15` arena is `163,840 B` ($\le 200,000$ B budget) and `free_heap_min = 213,208 B`, the `auto` policy fell back to **PSRAM (`arena_location = psram`)** because the largest single contiguous free block in ESP32 internal DRAM is under `160 KiB`. Even in PSRAM, `ultra_tiny/q15` finished in `169.999 ms` ($\le 500$ ms) and remains **`fits_viable`**.
+
+| Model | Mode | Arena `[predicted]` (`location` `[measured]`) | `free_heap_min` (`measured`) | `stack_hwm` (`measured`) | `free_psram_min` (`measured`) | `T_sel` ms (`measured`) | `T_model` ms (`measured`) | `T_total` ms (`measured`) | Parity (`measured`) | ROC-AUC (`offline`) | Verdict (`max_latency = 500 ms`) |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| `lr_dot` | `q15` | `0 B` (`none`) | `210,296 B` | `6,908 B` | `4,192,124 B` | `3.178` | `0.012` | **`3.190`** | `8/8` (`diff=0`) | `0.8063` | `fits_viable` |
+| `mlp_16_dot` | `q15` | `0 B` (`none`) | `210,296 B` | `6,908 B` | `4,192,124 B` | `3.180` | `0.187` | **`3.366`** | `8/8` (`diff=0`) | `0.8335` | `fits_viable` |
+| `lr_dot` | `f32` | `0 B` (`none`) | `210,112 B` | `6,892 B` | `4,192,124 B` | `5.664` | `0.085` | **`5.748`** | `8/8` (`5.66e-6`) | `0.8061` | `fits_viable` |
+| `mlp_16_dot` | `f32` | `0 B` (`none`) | `210,112 B` | `6,892 B` | `4,192,124 B` | `5.668` | `1.404` | **`7.072`** | `8/8` (`2.75e-6`) | `0.8334` | `fits_viable` |
+| `ultra_tiny` | `q15` | `163,840 B` (`psram`) | `213,208 B` | `4,944 B` | `4,024,184 B` | `0.000` | `169.999` | **`169.999`** | `8/8` (`diff=0`) | `0.8815` | `fits_viable` |
+| `ultra_tiny` | `f32` | `327,680 B` (`psram`) | `213,208 B` | `4,928 B` | `3,856,248 B` | `0.000` | `677.832` | `677.832` | `8/8` (`7.11e-7`) | `0.8815` | `fits_exceeds_latency` |
+| `ds_cnn` | `q15` | `1,081,344 B` (`psram`) | `213,208 B` | `4,944 B` | `3,078,008 B` | `0.000` | `1991.216` | `1991.216` | `8/8` (`diff=0`) | `0.8778` | `fits_exceeds_latency` |
+| `torchvision_mobilenet` | `q15` | `327,680 B` (`psram`) | `213,208 B` | `4,944 B` | `3,856,248 B` | `0.000` | `3031.872` | `3031.872` | `8/8` (`diff=0`) | `0.7411` | `fits_exceeds_latency` |
+| `mobilenet_like` | `q15` | `524,288 B` (`psram`) | `213,208 B` | `4,944 B` | `3,651,448 B` | `0.000` | `3421.949` | `3421.949` | `8/8` (`diff=0`) | `0.8623` | `fits_exceeds_latency` |
+| `tiny_cnn` | `q15` | `1,081,344 B` (`psram`) | `213,208 B` | `4,944 B` | `3,078,008 B` | `0.000` | `6195.753` | `6195.753` | `8/8` (`diff=0`) | `0.8713` | `fits_exceeds_latency` |
+| `small_cnn` | `q15` | `1,081,344 B` (`psram`) | `213,208 B` | `4,944 B` | `3,078,008 B` | `0.000` | `8629.071` | `8629.071` | `8/8` (`diff=0`) | `0.8925` | `fits_exceeds_latency` |
+| `tiny_resnet` | `q15` | `425,984 B` (`psram`) | `213,208 B` | `4,944 B` | `3,757,944 B` | `0.000` | `8664.952` | `8664.952` | `8/8` (`diff=0`) | `0.9213` | `fits_exceeds_latency` |
+
+Full 53-row (`board × model × mode`) fit tables are generated via `python -m experiments.hw_test report --config configs/hw_test/boards.toml` at `results/hw_test/fit_report.csv` and `results/hw_test/fit_report.md`.
+
+---
+
+## Items Not Verified on Physical Hardware
+
+- **Boards `nano`, `uno`, and `nodemcu`:** Compiled and verified in Stage 5 (`lr_dot` and `mlp_16_dot`, marked `not_measured` in `fit_report.md`), **not executed on physical hardware** because only the ESP32-CAM was connected during this session.
+- **`WiFi/TCP` transport (`nodemcu` and `esp32cam`):** Verified with `TcpTransport` loopback and mock socket server, **not verified on physical hardware** (requires local WiFi credentials in `configs/hw_test/secrets.toml`).
+- **Remaining 5 `f32` PSRAM CNNs on `esp32cam` (`ds_cnn`, `tiny_cnn`, `mobilenet_like`, `tiny_resnet`, `small_cnn`):** Compiled in Stage 5 (`fits_budget = True`, marked `not_measured`), **not executed on physical hardware**.
