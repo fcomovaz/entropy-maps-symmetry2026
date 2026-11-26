@@ -70,7 +70,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet('all', '0_build', '1_preprocess', '2_csv', '3_entropy', '4_asymmetry', '5_ml', '6_cnn', '7_benchmark', '8_profiling', '9_python_cpu', '10_c_embed', '11_hw_test')]
+    [ValidateSet('all', '0_build', '1_preprocess', '2_csv', '3_entropy', '4_asymmetry', '5_ml', '6_cnn', '7_benchmark', '8_profiling', '9_python_cpu', '10_c_embed', '11_hw_test', '12_report')]
     [string]$Stage = 'all',
 
     [switch]$DryRun,
@@ -666,6 +666,10 @@ if ($Stage -in @('11_hw_test')) {
     Invoke-Step -Title "Hardware Test: Generate Fit Report & Summary Tables" `
         -ArgumentList @("-m", "experiments.hw_test", "report", "--config", "configs/hw_test/boards.toml")
 
+    # 11.5 Render MDPI 300-DPI Embedded MCU Benchmark Figures (results/hw_test/figures/)
+    Invoke-Step -Title "Hardware Test: Render Embedded Benchmark Figures" `
+        -ArgumentList @("-m", "experiments.visualize_hw_test", "--config", "configs/visualization/hw_test.toml", "--overwrite")
+
     <#
     # Interactive commands for physically connected ESP32-CAM (e.g. on COM3):
     Invoke-Step -Title "Flash ESP32-CAM (lr_dot, q15)" `
@@ -674,6 +678,33 @@ if ($Stage -in @('11_hw_test')) {
     Invoke-Step -Title "Send Images to ESP32-CAM via Serial" `
         -ArgumentList @("-m", "experiments.hw_test", "send", "--config", "configs/hw_test/boards.toml", "--board", "esp32cam", "--transport", "serial", "--port", "COM3", "--model", "lr_dot", "--variant", "q15")
     #>
+}
+
+
+# =====================================================================
+#  STAGE 12: METHODOLOGY FIGURES & PAPER REPORT (MDPI 300 DPI)
+# =====================================================================
+# Generates publication-ready figures for methodology, polarity invariance,
+# and compiles results/FINAL_PAPER_REPORT.md.
+# =====================================================================
+if ($Stage -in @('12_report')) {
+    Show-StageHeader -Number "12" `
+        -Title "METHODOLOGY FIGURES & PAPER REPORT (MDPI 300 DPI)" `
+        -Subtitle "Rendering visual walkthroughs, invariance proofs & compiling final report" `
+        -Icon "📊" `
+        -Color Magenta
+
+    # 12.1 Render MDPI 300-DPI Methodology & Polarity-Invariance Figures
+    Invoke-Step -Title "Methodology: Render Visual Walkthroughs & Invariance Figures" `
+        -ArgumentList @("-m", "experiments.visualize_methodology", "--config", "configs/visualization/methodology.toml", "--overwrite")
+
+    # 12.2 Render MDPI 300-DPI Embedded MCU Benchmark Figures
+    Invoke-Step -Title "Hardware Test: Render Embedded Benchmark Figures" `
+        -ArgumentList @("-m", "experiments.visualize_hw_test", "--config", "configs/visualization/hw_test.toml", "--overwrite")
+
+    # 12.3 Generate Consolidated Markdown Paper Report
+    Invoke-Step -Title "Report: Generate Final Consolidated Paper Report (FINAL_PAPER_REPORT.md)" `
+        -ArgumentList @("-m", "experiments.generate_paper_report", "--config", "configs/reporting/paper_report.toml", "--overwrite")
 }
 
 Write-Host "╔════════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
