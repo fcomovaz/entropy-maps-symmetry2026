@@ -1,11 +1,11 @@
 # INSTRUCTIONS.md — Reproducing the pipeline from raw datasets
 
-Minimal formal runs to go from **raw MVTec-AD + KolektorSDD2** to every result reported across the entire research (Tasks 01 through 12). No dry-runs, no unit tests, no lab detours. Each stage explains **what it does**, **the governing equations**, **the exact PowerShell commands**, and **what artifacts to expect**.
+Minimal formal runs to go from **raw MVTec-AD + KolektorSDD2** to every result reported across the entire research (or run end-to-end sequentially via [reproduce_paper_pipeline.ps1](reproduce_paper_pipeline.ps1), which generates the consolidated report [results/FINAL_PAPER_REPORT.md](results/FINAL_PAPER_REPORT.md)). No dry-runs, no unit tests, no lab detours. Each stage explains **what it does**, **the governing equations**, **the exact PowerShell commands**, and **what artifacts to expect**.
 
 > [!IMPORTANT]
 > - All commands run from `code/` in PowerShell with `.\.venv\Scripts\python.exe`.
 > - Reference numbers were measured on: Windows 10, Python 3.11.9, PyTorch 2.14.0+cu126, GTX 1050, Intel i7-7700HQ, `seed = 42`. Classical-ML metrics should match closely; **CNN metrics and all latencies are hardware/driver dependent** (compare shapes, rankings, and orders of magnitude, not exact digits).
-> - Numbers below come from the repository's own documents ([HYPOTHESIS.md](HYPOTHESIS.md), [experiments/README.md](experiments/README.md), [RESUME.md](RESUME.md), [results/c_imp/README.md](results/c_imp/README.md), [results/hw_test/README.md](results/hw_test/README.md)).
+> - Numbers below come from the repository's own documents ([results/FINAL_PAPER_REPORT.md](results/FINAL_PAPER_REPORT.md), [HYPOTHESIS.md](HYPOTHESIS.md), [experiments/README.md](experiments/README.md), [RESUME.md](RESUME.md), [results/c_imp/README.md](results/c_imp/README.md), [results/hw_test/README.md](results/hw_test/README.md)).
 > - `DecisionTreeClassifier` is built without `random_state`, so `dt` metrics can vary slightly between runs (e.g. `bottle_dt` 0.6364 vs 0.5714).
 
 ---
@@ -129,10 +129,10 @@ with $T_{LR}: c \to g-1-c$, $T_{TB}: r \to g-1-r$, $T_{R180}: (r,c)\to(g-1-r,\,g
 
 ## 6. Classical classifiers, ablation and explainability (Tasks 06A & 10)
 
-**What it does.** Trains `dt`, `knn`, `lr`, `lr_dot`, `rf` on $\mathbf{x}_{94}$ (label good=0, defect=1) and automatically ablates feature subsets `x85_only`, `x9_only`, `x94_full`, `E_1x1`, `E_2x2`, `E_4x4`, `E_8x8`.
+**What it does.** Trains `dt`, `knn`, `lr`, `lr_dot`, `mlp_16_dot`, and `rf` on $\mathbf{x}_{94}$ (label good=0, defect=1) and automatically ablates feature subsets `x85_only`, `x9_only`, `x94_full`, `E_1x1`, `E_2x2`, `E_4x4`, `E_8x8`.
 
 - **Splits.** KolektorSDD2: the official `train`/`test`. MVTec-AD: `ground_truth` rows discarded, then an in-memory stratified 80/20 split (`seed = 42`); CSVs are never modified.
-- **`lr_dot`** folds `StandardScaler` + `LogisticRegression` into one dot product: $w'_i = w_i/\sigma_i,\; b' = b - \sum_i w_i\mu_i/\sigma_i$ $\rightarrow$ numerically identical to `lr` ($< 10^{-12}$), 95 parameters.
+- **`lr_dot`** folds `StandardScaler` + `LogisticRegression` into one dot product: $w'_i = w_i/\sigma_i,\; b' = b - \sum_i w_i\mu_i/\sigma_i$ $\rightarrow$ numerically identical to `lr` ($< 10^{-12}$), 95 parameters; **`mlp_16_dot`** (`MlpDotCoreClassifier`) similarly folds `StandardScaler` into its 16-ReLU hidden layer (1,537 parameters).
 - **Symmetry gain:** $\Delta F_1 = F_1(\mathbf{x}_{94}) - F_1(\mathbf{x}_{85})$. **Chance share** of $\mathbf{x}_9$ importance is $9/94 = 9.57\,\%$.
 
 ```powershell
@@ -144,9 +144,9 @@ with $T_{LR}: c \to g-1-c$, $T_{TB}: r \to g-1-r$, $T_{R180}: (r,c)\to(g-1-r,\,g
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object bottle --classifier all --overwrite
 .\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --object bottle --classifier all --inverted --overwrite
 
-# MVTec-AD: all 15 objects (Random Forest sweep)
-.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --all-objects --classifier rf
-.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --all-objects --classifier rf --inverted
+# MVTec-AD: all 15 objects (all 6 classifiers)
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --all-objects --classifier all --overwrite
+.\.venv\Scripts\python.exe -m experiments.evaluate_descriptors --config configs/classification/mvtec_ad.toml --all-objects --classifier all --inverted --overwrite
 ```
 
 **Expect** in `results/classification/<dataset>[_inverted]/<object|full>_<clf>/`:
@@ -247,55 +247,66 @@ Isolates what is lost without the C99 DLL (`numpy_finest_pyramid` vs `c_single_p
 .\.venv\Scripts\python.exe -m experiments.verify_c_pipeline --config configs/c_imp/kolektorsdd2.toml --benchmark
 .\.venv\Scripts\python.exe -m experiments.visualize_c_pipeline --config configs/c_imp/kolektorsdd2.toml
 
-# 2. MVTec-AD Bottle
+# 2. MVTec-AD (e.g. bottle; repeat --object <category> across all 15 categories for 16/16 targets)
 .\.venv\Scripts\python.exe -m experiments.export_c_pipeline --config configs/c_imp/mvtec_ad.toml --object bottle
 .\.venv\Scripts\python.exe -m experiments.verify_c_pipeline --config configs/c_imp/mvtec_ad.toml --object bottle --benchmark
 .\.venv\Scripts\python.exe -m experiments.visualize_c_pipeline --config configs/c_imp/mvtec_ad.toml --object bottle
 ```
 
 **Expect:**
-- `c_imp/generated/<target>/`: C headers, lookup tables, model weights, and golden vector CSVs.
+- `c_imp/generated/<target>/`: C headers, lookup tables, model weights (`lr_dot`, `mlp_16_dot`, and all 7 CNNs), and golden vector CSVs.
 - `results/c_imp/<target>/`: `summary_report.md`, `summary_models_metrics.csv`, `memory_report.json`, and 6 diagnostic figures (`fig1..fig6`).
-- Parity: 100% bit-exact integer matching on `q15` logits across all models.
+- Parity: 100% bit-exact integer matching on `q15` logits across all `16/16` targets (`0` raw diff).
 
 ---
 
 ## 11. Microcontroller hardware test bench (`PC → MCU → PC`) (Task 12)
 
-**What it does.** Discovers connected serial ports, stages test images with binary framing (`CRC-16/CCITT-FALSE`), evaluates hardware fit across target boards (Arduino Nano, NodeMCU ESP8266, ESP32-CAM), and compiles the hardware fit report.
+**What it does.** Discovers connected serial ports, stages 8 deterministic KolektorSDD2 test images (`hw_test/img2send/`) with binary framing (`CRC-16/CCITT-FALSE`), evaluates cross-board Flash/SRAM/PSRAM fit (`nano`, `uno`, `nodemcu`, `esp32cam`), executes live UART inference on connected MCUs, compiles the 53-row hardware fit report, and renders 5 MDPI 300-DPI hardware figures.
 
 ```powershell
 # 1. Discover boards and serial COM ports
 .\.venv\Scripts\python.exe -m experiments.hw_test boards --config configs/hw_test/boards.toml
 
-# 2. Stage 8 test images (4 good + 4 defect, seed 42)
-.\.venv\Scripts\python.exe -m experiments.hw_test images --config configs/hw_test/boards.toml --dataset kolektorsdd2 --count 8 --seed 42
+# 2. Stage 8 deterministic test images (seed 42)
+.\.venv\Scripts\python.exe -m experiments.hw_test images --config configs/hw_test/boards.toml --all
 
-# 3. Compile and evaluate fit matrix across all boards (unattended, no hardware required)
-.\.venv\Scripts\python.exe -m experiments.hw_test bench --config configs/hw_test/boards.toml --board all --fit-only
+# 3. Compile-only fit sweeps (unattended, no hardware required)
+.\.venv\Scripts\python.exe -m experiments.hw_test bench --config configs/hw_test/boards.toml --board nano --compile-only
+.\.venv\Scripts\python.exe -m experiments.hw_test bench --config configs/hw_test/boards.toml --board uno --compile-only
+.\.venv\Scripts\python.exe -m experiments.hw_test bench --config configs/hw_test/boards.toml --board nodemcu --compile-only
 
-# 4. Generate consolidated hardware fit report
+# 4. Generate consolidated 53-row hardware fit report & 5 MDPI 300-DPI figures
 .\.venv\Scripts\python.exe -m experiments.hw_test report --config configs/hw_test/boards.toml
+.\.venv\Scripts\python.exe -m experiments.visualize_hw_test --config configs/visualization/hw_test.toml --overwrite
 
-# 5. (Interactive) Flash and benchmark physically connected ESP32-CAM on COM3:
-# .\.venv\Scripts\python.exe -m experiments.hw_test flash --config configs/hw_test/boards.toml --board esp32cam --port COM3 --model lr_dot --variant q15
-# .\.venv\Scripts\python.exe -m experiments.hw_test send --config configs/hw_test/boards.toml --board esp32cam --transport serial --port COM3 --model lr_dot --variant q15
+# 5. (Interactive) Flash and benchmark physically connected MCUs (e.g. ESP32-CAM on COM5, Nano on COM4, Uno on COM6):
+# .\.venv\Scripts\python.exe -m experiments.hw_test flash --config configs/hw_test/boards.toml --board esp32cam --model lr_dot --mode q15 --port COM5
+# .\.venv\Scripts\python.exe -m experiments.hw_test send --config configs/hw_test/boards.toml --board esp32cam --model lr_dot --mode q15 --transport uart --port COM5 --all --dump-descriptor
 ```
 
 **Expect:**
-- `results/hw_test/fit_report.csv` and `fit_report.md`.
-- Summary of predicted vs measured Flash, SRAM, PSRAM, and execution latency per board.
+- `results/hw_test/fit_report.csv` and `fit_report.md` (53 rows across `nano`, `uno`, `nodemcu`, `esp32cam`).
+- `results/hw_test/figures/fig1_cross_board_all_mcus.png` .. `fig5_board_nodemcu.png` (5 MDPI 300-DPI figures).
+- Live UART measurements in `results/FINAL_PAPER_REPORT.md §6D–6D-bis` (`esp32cam` `COM5`: 12 runs, 96/96 parity; `nano` `COM4` & `uno` `COM6`: 16/16 parity each).
 
 ---
 
-## 12. Where to read the results
+## 12. Methodology figures, paper report & where to read the results
+
+```powershell
+.\.venv\Scripts\python.exe -m experiments.visualize_methodology --config configs/visualization/methodology.toml --overwrite
+.\.venv\Scripts\python.exe -m experiments.generate_paper_report --config configs/reporting/paper_report.toml --overwrite
+```
 
 | Topic | Document / Path |
 |---|---|
-| Complete hypothesis verdicts & tables | [HYPOTHESIS.md](HYPOTHESIS.md) |
+| Consolidated paper-ready report (16 targets, ESP32-CAM/Nano/Uno, captions) | [results/FINAL_PAPER_REPORT.md](results/FINAL_PAPER_REPORT.md) |
+| End-to-end sequential reproduction script | [reproduce_paper_pipeline.ps1](reproduce_paper_pipeline.ps1) |
+| Hypothesis verdicts & `486c111` baseline tables | [HYPOTHESIS.md](HYPOTHESIS.md) |
 | Classification figures and ablations | [results/classification/README.md](results/classification/README.md) |
 | 100% CPU benchmark & profiling findings | `results/profiling/<tag>/README.md` |
-| C99 export, memory & parity audit | [results/c_imp/README.md](results/c_imp/README.md) |
+| C99 export, memory & parity audit (`16/16` targets) | [results/c_imp/README.md](results/c_imp/README.md) |
 | Physical microcontroller test bench findings | [results/hw_test/README.md](results/hw_test/README.md) |
 | Complete CLI flags per experiment | [experiments/README.md](experiments/README.md) |
 | Binding project rules & conventions | [AGENTS.md](AGENTS.md) |

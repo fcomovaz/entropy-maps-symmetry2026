@@ -2,7 +2,7 @@
 
 Registro y puntos de entrada CLI para los experimentos reproducibles del proyecto (invocar siempre como módulo `.\.venv\Scripts\python.exe -m experiments.<modulo>` desde `code/`).
 
-## Índice rápido (Experimentos 01–11)
+## Índice rápido (Experimentos 01–13)
 
 | Experimento | Módulo CLI (`experiments/`) | Configuración TOML principal | Salida principal |
 |---|---|---|---|
@@ -494,7 +494,7 @@ El reporte generado en `metrics_summary.json` registra tanto el desempeño en el
 
 ## Experimento 09: Benchmarking 100 % CPU Justo (`benchmark_cpu_fair.py`) y Profiling Científico Detallado (`profile_pipelines.py`)
 
-Corrige el sesgo *mixed-device* de `results/comparison/` midiendo el pipeline tabular **$\mathbf{x}_{94}$ + clasificadores clásicos** (`dt`, `knn`, `lr`, `lr_dot`, `rf`) y las **7 arquitecturas CNN ligeras** bajo un protocolo homogéneo **100 % CPU** (`task_08` + `task_10`), además de descomponer dónde se invierte el tiempo y la memoria en cada etapa y capa y permitir conmutar el *backend* de entropía (`auto` -> `c_single_pass` C99, `numpy_finest_pyramid` 100 % Python/NumPy puro, `numpy_fused_entropy` o `numpy_baseline`).
+Corrige el sesgo *mixed-device* de `results/comparison/` midiendo el pipeline tabular **$\mathbf{x}_{94}$ + clasificadores clásicos** (`dt`, `knn`, `lr`, `lr_dot`, `mlp_16_dot`, `rf`) y las **7 arquitecturas CNN ligeras** bajo un protocolo homogéneo **100 % CPU** (`task_08` + `task_10`), además de descomponer dónde se invierte el tiempo y la memoria en cada etapa y capa y permitir conmutar el *backend* de entropía (`auto` -> `c_single_pass` C99, `numpy_finest_pyramid` 100 % Python/NumPy puro, `numpy_fused_entropy` o `numpy_baseline`).
 
 ### Protocolo científico y decisiones metodológicas
 
@@ -601,9 +601,9 @@ Ver guía completa de opciones, ejecución de binarios nativos y pruebas de Lab 
 
 ## Experimento 11: Banco de Pruebas en Microcontrolador (`PC → MCU → PC`, `hw_test.py`)
 
-Pipeline reproducible para compilar, flashear, transmitir imágenes reales `128×128` por chunks con framing binario (`CRC-16/CCITT-FALSE`), cronometrar en hardware (`T_total = T_selector + T_model`), verificar paridad bit a bit contra el oráculo C99 de escritorio (`cimp_desktop.exe`), generar reportes/figuras (`fit_report.{csv,md}`, `summary.csv`, `fig1..fig4`) y limpiar artefactos generados (`clean`) sobre **Arduino Nano/UNO (`ATmega328P`)**, **NodeMCU ESP8266 (`ESP-12E`)** y **ESP32-CAM (`AI-Thinker`)**.
+Pipeline reproducible para compilar, flashear, transmitir imágenes reales `128×128` por chunks con framing binario (`CRC-16/CCITT-FALSE`), cronometrar en hardware (`T_total = T_selector + T_model`), verificar paridad bit a bit contra el oráculo C99 de escritorio (`cimp_desktop.exe`), generar reportes/figuras (`fit_report.{csv,md}`, `summary.csv`, `fig1..fig5`) y limpiar artefactos generados (`clean`) sobre **Arduino Nano/UNO (`ATmega328P`)**, **NodeMCU ESP8266 (`ESP-12E`)** y **ESP32-CAM (`AI-Thinker`)**.
 
-Ver documentación completa en inglés de subcomandos, protocolo binario y limpieza en [`hw_test/README.md`](../hw_test/README.md), y los resultados medidos en ESP32-CAM física (`COM5`, `2026-11-26`, 12 corridas, `96/96` imágenes con `100.0 %` de paridad) y compilaciones `arduino-cli` (`25/25`) en [`results/hw_test/README.md`](../results/hw_test/README.md) y [`results/FINAL_PAPER_REPORT.md §6D`](../results/FINAL_PAPER_REPORT.md#6d-live-esp32-cam-hardware-execution--parity-uart-460800-8-staged-kolektorsdd2-images).
+Ver documentación completa en inglés de subcomandos, protocolo binario y limpieza en [`hw_test/README.md`](../hw_test/README.md), y los resultados medidos en ESP32-CAM física (`COM5`, `2026-11-26`, 12 corridas, `96/96` imágenes con `100.0 %` de paridad), Arduino Nano (`COM4`, 2 corridas, `16/16`), Arduino Uno (`COM6`, 2 corridas, `16/16`) y compilaciones `arduino-cli` (`25/25`) en [`results/hw_test/README.md`](../results/hw_test/README.md) y [`results/FINAL_PAPER_REPORT.md` §6D–6D-bis](../results/FINAL_PAPER_REPORT.md#6d-live-esp32-cam-hardware-execution--parity-uart-460800-8-staged-kolektorsdd2-images).
 
 ### Comandos principales (PowerShell desde carpeta `code/`)
 

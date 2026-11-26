@@ -8,12 +8,12 @@ No es código de producción: una implementación migra a `src/` únicamente cua
 
 ## Estado general: ¿En qué fase estamos?
 
-El proyecto ha completado la exploración por componentes, la experimentación formal en datasets reales, la optimización del descriptor en Python/NumPy puro y C99 nativo, y la migración a C99 portable `f32`/`Q15` verificada en escritorio, preparándose para la medición final en microcontrolador físico (ESP32-CAM):
+El proyecto ha completado la exploración por componentes, la experimentación formal en datasets reales, la optimización del descriptor en Python/NumPy puro y C99 nativo, la migración a C99 portable `f32`/`Q15` verificada en escritorio y la ejecución física en microcontroladores (`ESP32-CAM COM5`, `Arduino Nano COM4`, `Arduino Uno COM6`):
 
 ```
-[ Fase 1-5: Primitivas, CNNs, x94, Datasets, Profiling ] -> [ Fase 6: Opt. CPU / ML MCU ] -> [ Fase 7: Migración C99 f32/Q15 ]
-              (01..12 + experiments/)                          (13, 14 + src/)                 (15 + src/c_export/ + c_imp/)
-                    COMPLETADA                                    COMPLETADA                     COMPLETADA (Desktop Pre-MCU)
+[ Fase 1-5: Primitivas, CNNs, x94, Datasets, Profiling ] -> [ Fase 6: Opt. CPU / ML MCU ] -> [ Fase 7-8: C99 f32/Q15 + Hardware MCU ]
+              (01..12 + experiments/)                          (13, 14 + src/)                 (15 + src/c_export/ + c_imp/ + hw_test/)
+                    COMPLETADA                                    COMPLETADA                              COMPLETADA
 ```
 
 1. **Fase 1 — Primitivas matemáticas y computacionales (Completada):**
@@ -134,9 +134,9 @@ Píxeles crudos
 
 ## Qué está verificado y qué sigue abierto hacia el paper y el MCU
 
-1. **Capacidad predictiva real y ablación (`Completado` — ver [`../HYPOTHESIS.md`](../HYPOTHESIS.md)):** evaluado en MVTec-AD y KolektorSDD2 con clasificadores ligeros (`dt`, `knn`, `lr`, `lr_dot`, `rf`) frente a 7 CNNs ligeras. Confirmado el aporte de $\mathbf{x}_9$ sobre $\mathbf{x}_{85}$ y la invarianza fotométrica en imágenes sin padding; refutada la superioridad universal frente a CNNs en micro-fisuras sub-celda (`KolektorSDD2`).
+1. **Capacidad predictiva real y ablación (`Completado` — ver [`../HYPOTHESIS.md`](../HYPOTHESIS.md)):** evaluado en MVTec-AD y KolektorSDD2 con clasificadores ligeros (`dt`, `knn`, `lr`, `lr_dot`, `mlp_16_dot`, `rf`) frente a 7 CNNs ligeras. Confirmado el aporte de $\mathbf{x}_9$ sobre $\mathbf{x}_{85}$ y la invarianza fotométrica en imágenes sin padding; refutada la superioridad universal frente a CNNs en micro-fisuras sub-celda (`KolektorSDD2`).
 2. **Evaluación justa de coste total ($T_{\text{total}}$) en CPU (`Completado`):** medido extremo a extremo (`T_descriptor + T_model`) en Python puro (`numpy_baseline`, `numpy_finest_pyramid`) y con entropía en C99 (`c_single_pass`).
-3. **Migración completa a C99 portable `f32`/`Q15` en escritorio (`Completado` — ver [`../results/c_imp/README.md`](../results/c_imp/README.md)):** portados `x94` completo (incluyendo `asymmetry_g2/4/8`), `lr_dot`, `mlp_16_dot` y las 7 CNNs en `c_imp/` con cero `malloc` y paridad `Q15` bit-exacta (`0` LSB de diferencia C vs Python). Queda pendiente la **Etapa 12**: medición de ciclos, latencia Flash vs PSRAM y consumo energético en **hardware físico ESP32-CAM**.
+3. **Migración completa a C99 portable `f32`/`Q15` y ejecución en hardware MCU (`Completado` — ver [`../results/c_imp/README.md`](../results/c_imp/README.md) y [`../results/hw_test/README.md`](../results/hw_test/README.md)):** portados `x94` completo (incluyendo `asymmetry_g2/4/8`), `lr_dot`, `mlp_16_dot` y las 7 CNNs en `c_imp/` con cero `malloc` y paridad `Q15` bit-exacta (`0` LSB de diferencia C vs Python en 16/16 targets); verificada la ejecución física con `100 %` de paridad en **ESP32-CAM (`COM5`, 96/96 imágenes)**, **Arduino Nano (`COM4`, 16/16)** y **Arduino Uno (`COM6`, 16/16)** (`nodemcu` compilado 4/4 tabulares, UART bloqueado en host por `ch341ser.sys`).
 4. **Ablación de grilla fina ($16\times16$) y ruteo adaptativo por entropía:** estudiar si extender la pirámide a `g=16` (`8x8` px por celda) o usar $\mathbf{x}_{85}$ como selector rápido de parches (`top-k / threshold`) antes de una CNN reduce falsos negativos en fisuras de 1–2 px.
 
 ---

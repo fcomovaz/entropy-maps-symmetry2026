@@ -1,6 +1,6 @@
 # Pruebas del proyecto (`tests/`)
 
-Suites de pruebas automáticas, unitarias y de integración del proyecto: **`test_environment.py`** (CUDA real) + **37 módulos `unittest`** (`255` casos formales) en `tests/`, junto con **8 suites pedagógicas** (`96` casos) en `understanding/` y los tests C99 standalone en [`c_imp/tests/test_runtime.c`](../c_imp/tests/test_runtime.c) y [`c_imp/tests/test_streaming.c`](../c_imp/tests/test_streaming.c).
+Suites de pruebas automáticas, unitarias y de integración del proyecto: **`test_environment.py`** (CUDA real) + **38 módulos `unittest`** (`256` casos formales) en `tests/`, junto con **8 suites pedagógicas** (`96` casos) en `understanding/` y los tests C99 standalone en [`c_imp/tests/test_runtime.c`](../c_imp/tests/test_runtime.c) y [`c_imp/tests/test_streaming.c`](../c_imp/tests/test_streaming.c).
 
 ---
 

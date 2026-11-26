@@ -10,14 +10,14 @@ Este directorio contiene la evidencia experimental cuantitativa (`.json`, `.csv`
 
 | Carpeta / Archivo | Contenido |
 |---|---|
-| `kolektorsdd2/full_<dt\|knn\|lr\|lr_dot\|rf>/` | Resultados sobre KolektorSDD2 estándar (`split_mode = "presplit"`, Train = 2,331, Test = 1,004). |
-| `kolektorsdd2-inverted/full_<dt\|knn\|lr\|lr_dot\|rf>/` | Resultados sobre KolektorSDD2 invertido ($255 - I$ antes de letterbox). |
-| `mvtec-ad/<objeto>_<dt\|knn\|lr\|lr_dot\|rf>/` | Resultados por categoría en MVTec-AD estándar (`split_mode = "stratified"`, 80% train / 20% test en memoria, `seed = 42`, excluyendo `ground_truth`; `bottle` cubre los 5 clasificadores). |
-| `mvtec-ad-inverted/<objeto>_<dt\|knn\|lr\|lr_dot\|rf>/` | Resultados por categoría sobre MVTec-AD invertido. |
-| `mvtec-ad/mvtec_all_objects_rf_summary.csv` y `.png` | Tabla consolidada y gráfica comparativa cuando se ejecuta `--all-objects` en MVTec-AD estándar. |
-| `mvtec-ad-inverted/mvtec_all_objects_rf_summary.csv` y `.png` | Tabla consolidada y gráfica comparativa cuando se ejecuta `--all-objects` en MVTec-AD invertido. |
+| `kolektorsdd2/full_<dt\|knn\|lr\|lr_dot\|mlp_16_dot\|rf>/` | Resultados sobre KolektorSDD2 estándar (`split_mode = "presplit"`, Train = 2,331, Test = 1,004). |
+| `kolektorsdd2-inverted/full_<dt\|knn\|lr\|lr_dot\|mlp_16_dot\|rf>/` | Resultados sobre KolektorSDD2 invertido ($255 - I$ antes de letterbox). |
+| `mvtec-ad/<objeto>_<dt\|knn\|lr\|lr_dot\|mlp_16_dot\|rf>/` | Resultados por categoría en MVTec-AD estándar (`split_mode = "stratified"`, 80% train / 20% test en memoria, `seed = 42`, excluyendo `ground_truth`; las 15 categorías cubren los 6 clasificadores). |
+| `mvtec-ad-inverted/<objeto>_<dt\|knn\|lr\|lr_dot\|mlp_16_dot\|rf>/` | Resultados por categoría sobre MVTec-AD invertido. |
+| `mvtec-ad/mvtec_all_objects_<cls>_summary.csv` y `.png` | Tabla consolidada y gráfica comparativa por clasificador (`dt`, `knn`, `lr`, `lr_dot`, `mlp_16_dot`, `rf`) al ejecutar `--all-objects` en MVTec-AD estándar. |
+| `mvtec-ad-inverted/mvtec_all_objects_<cls>_summary.csv` y `.png` | Tabla consolidada y gráfica comparativa por clasificador al ejecutar `--all-objects` en MVTec-AD invertido. |
 
-Dentro de cada subcarpeta individual (`<objeto_o_full>_<dt|knn|lr|lr_dot|rf>/`) se encuentran 8 archivos:
+Dentro de cada subcarpeta individual (`<objeto_o_full>_<dt|knn|lr|lr_dot|mlp_16_dot|rf>/`) se encuentran 8 archivos:
 1. `metrics_summary.json`: Conteos por clase, métricas del descriptor activo, hallazgos de explicabilidad y tiempos desglosados (`T_data_load_s`, `T_model_train_s`, `T_model_inference_s`, `inference_ms_per_sample`).
 2. `ablation_table.csv`: Comparación de `x85_only`, `x9_only`, `x94_full`, `E_1x1`, `E_2x2`, `E_4x4` y `E_8x8`.
 3. `feature_importance.csv`: Ranking completo de las 94 características con su peso bruto y porcentaje normalizado (`share_pct`).

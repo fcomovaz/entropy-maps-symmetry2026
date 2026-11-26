@@ -17,7 +17,7 @@ Para instrucciones de compilación, opciones CLI y ejecución manual de los bina
 | **LUT Shannon `log2_mantissa`** | **Verificada (`514 B`)** | Modo `CIMP_SHANNON_LUT_MODE = 2` (`257` entradas, `8` bits de mantisa en `lut_shannon.h`). Mantiene residual `Q0.15 + LUT vs float64` alrededor de `~7.6e-6` (media) y `<= 3.8e-5` (máx. en asimetrías `85..93`), reduciendo >100× frente a `nlogn_full` (`~64 KB`). |
 | **Colapso `F1 = 0.361` en 5 CNN de `bottle`** | **Baseline PyTorch (no bug C)** | El comportamiento todo-positivo (`TP=13, FP=46, TN=0, FN=0`) ya existe en los checkpoints `float32` originales por calibración `val_f1` sobre `N_val=35` (brecha `M2` de [../../RESUME.md](../../RESUME.md)). |
 | **Deriva de `torchvision_mobilenet`** | **Esperable (`int8`)** | Único modelo con pesos `int8_per_channel`: concentra la mayor deriva cuantizada en `kolektorsdd2` (`max|Δ| = 2.5122`, `3` flips) y en `mvtec_ad_bottle` genera `r = -0.054066` al colapsar todos sus logits `f32` cerca de `-0.747`. |
-| **Observaciones menores de reporte / gráficos** | **Documentadas (§5)** | (1) `visualize_data.py` etiqueta `weight_format = q15` en `lr_dot` y `mlp_16_dot` aunque en `kolektorsdd2` se exportaron pesos de `32` bits (`weight_bits = 32`); (2) En `kolektorsdd2` `fig5` (Pareto), el offset de `tiny_cnn` `(+34, -14)` acerca su etiqueta al triángulo de `small_cnn`. |
+| **Observaciones menores de reporte / gráficos** | **Resueltas (`2026-11-26`)** | (1) `visualize_data.py` ahora etiqueta `q31` cuando `weight_bits = 32` en `lr_dot` y `mlp_16_dot` (ver §5 histórico); (2) los desplazamientos de Pareto en `fig5` de `kolektorsdd2` ya se ajustaron con `place_non_overlapping_labels` en la corrida del `2026-11-26`. |
 
 ---
 
@@ -28,7 +28,7 @@ Para instrucciones de compilación, opciones CLI y ejecución manual de los bina
 - **Tolerancias y presupuestos MCU (`configs/c_imp/kolektorsdd2.toml` y `mvtec_ad.toml`):**
   - Gates de paridad `float32`: `f32_descriptor_abs_tol = 1e-5`, `f32_logit_abs_tol = 1e-4`.
   - Presupuestos ESP32-CAM objetivo (`520 KB SRAM / 4 MB Flash / 4 MB PSRAM` físicos; límites de trabajo en TOML): `flash_budget_bytes = 2097152` (`2048 KB`), `sram_budget_bytes = 200000` (`195.3 KB`), `psram_budget_bytes = 3000000` (`~2930 KB`).
-- **Convención de latencias:** `T_total = T_selector + T_model` medida en **CPU x86 de escritorio**, no en Xtensa LX6 físico (Etapa 12 pendiente en hardware real). En x86, `Q15` usa aritmética escalar `int64` frente a instrucciones vectoriales SSE/AVX en `float32`, por lo que `bench_q15_total_ms` suele superar a `bench_f32_total_ms` en CNNs de escritorio sin reflejar la ganancia esperada en un MCU sin unidad SIMD.
+- **Convención de latencias:** `T_total = T_selector + T_model` medida en **CPU x86 de escritorio** (para las mediciones físicas en ESP32-CAM, Arduino Nano y Arduino Uno ver [`../hw_test/README.md`](../hw_test/README.md) y [`../FINAL_PAPER_REPORT.md` §6D–6D-bis](../FINAL_PAPER_REPORT.md#6d-live-esp32-cam-hardware-execution--parity-uart-460800-8-staged-kolektorsdd2-images)). En x86, `Q15` usa aritmética escalar `int64` frente a instrucciones vectoriales SSE/AVX en `float32`, por lo que `bench_q15_total_ms` suele superar a `bench_f32_total_ms` en CNNs de escritorio sin reflejar la ganancia esperada en un MCU sin unidad SIMD.
 
 ---
 
