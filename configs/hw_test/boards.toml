@@ -45,8 +45,8 @@ compile_extra_args = []
 [hw_test.boards.nano]
 # Stage 0 measured limits (arduino:avr 1.8.8, trivial sketch): text 444 / 30720 B, data 9 / 2048 B.
 # Stage 0 AVR streaming spike (CIMP_DescStream + lr_dot + PROGMEM): text 3864 / 30720 B, data 1432 / 2048 B (616 B stack margin).
-# Clone Nanos typically use old bootloader (cpu=atmega328old); switch to cpu=atmega328 if upload reports not in sync.
-fqbn = "arduino:avr:nano:cpu=atmega328old"
+# Original/Optiboot Nanos use cpu=atmega328 (115200 upload); older clone Nanos use cpu=atmega328old (57600).
+fqbn = "arduino:avr:nano:cpu=atmega328"
 firmware = "hw_avr"
 family = "avr"
 transports = ["uart"]
@@ -76,7 +76,7 @@ family = "avr"
 transports = ["uart"]
 uart_baud = 115200
 serial_reset_on_open = true
-boot_wait_s = 2.0
+boot_wait_s = 2.5
 physical_sram_bytes = 2048
 usable_sram_budget_bytes = 1792   # 2048 B physical SRAM minus 256 B minimum stack margin
 flash_app_bytes = 32256           # 32 KiB ATmega328P flash minus 512 B Optiboot bootloader

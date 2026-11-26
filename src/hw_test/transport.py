@@ -148,7 +148,10 @@ class SerialTransport:
         ser = serial.Serial()
         ser.port = self.port
         ser.baudrate = self.baudrate
-        ser.timeout = 0.1
+        # Keep a fixed short per-read timeout configured once before open(); mutating
+        # ser.timeout on an open Windows usbser.sys CDC handle (e.g. Arduino Uno
+        # ATmega16U2) triggers SetCommTimeouts mid-stream and drops incoming bytes.
+        ser.timeout = 0.05
         ser.write_timeout = 5.0
         if not self.reset_on_open:
             ser.dtr = False
@@ -184,7 +187,8 @@ class SerialTransport:
         waiting = ser.in_waiting
         if waiting > 0:
             return bytes(ser.read(min(n, waiting)))
-        ser.timeout = max(0.0, timeout_s)
+        if timeout_s <= 0.0:
+            return b""
         first = bytes(ser.read(1))
         if not first:
             return b""

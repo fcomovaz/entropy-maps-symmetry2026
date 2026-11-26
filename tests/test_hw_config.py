@@ -48,7 +48,7 @@ class TestHwConfig(unittest.TestCase):
         self.assertEqual(set(cfg.boards.keys()), {"nano", "uno", "nodemcu", "esp32cam"})
 
         nano = cfg.get_board("nano")
-        self.assertEqual(nano.fqbn, "arduino:avr:nano:cpu=atmega328old")
+        self.assertEqual(nano.fqbn, "arduino:avr:nano:cpu=atmega328")
         self.assertTrue(nano.streaming)
         self.assertEqual(nano.band_rows, 1)
         self.assertEqual(nano.max_payload_bytes, 132)
