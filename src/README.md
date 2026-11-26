@@ -166,7 +166,7 @@ Orquestación del banco de pruebas en microcontrolador (**PC → MCU → PC**), 
 - `images.py`: selección determinista estratificada (`select_test_images`), carga y validación `128×128` 8-bit grayscale (`load_img2send_directory`, `validate_grayscale_128`).
 - `firmware.py`: descubrimiento de toolchain (`discover_toolchain`), ensamblado de sketch auto-contenido por `(board, model, variant)` copiando solo las fuentes C99 necesarias (`prepare_firmware_sketch`), compilación con parseo JSON + fallback regex para ESP8266 (`compile_firmware`) y flasheo con `upload_baud` (`flash_firmware`).
 - `session.py`: ejecución completa del bucle `HELLO -> FRAME_BEGIN -> CHUNK_DATA × K -> FRAME_END -> INFER_REQ -> RESULT_META (+ RESULT_VECT)` (`run_hw_session`), comparación contra el oráculo de escritorio (`load_desktop_reference`, `compare_against_reference`) y serialización de artefactos por corrida (`save_run_artifacts`).
-- `fit_report.py`, `report.py`: matriz de cabida estática/compilada (`build_fit_matrix`, `write_fit_report`), agregación de corridas medidas vs compiladas (`collect_all_summaries`, `write_hw_summary_csv`) y generación de las 4 figuras y `results/hw_test/README.md` (`generate_hw_figures`, `write_hw_readme`).
+- `fit_report.py`, `report.py`, `visualize.py`: matriz de cabida estática/compilada (`generate_fit_report`), serialización de corridas (`write_run_report`), y renderizado de las 5 figuras MDPI 300 DPI (`run_hw_test_visualization` -> `results/hw_test/figures/fig1..fig5`).
 
 ### 9. `src/visualization/`
 

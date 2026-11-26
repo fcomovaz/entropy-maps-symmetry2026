@@ -16,7 +16,7 @@ Registro y puntos de entrada CLI para los experimentos reproducibles del proyect
 | **08.** Zoo de 7 CNNs ligeras (y legado *mixed*) | `evaluate_cnn`, `compare_baseline_vs_cnn` | `configs/cnn/*.toml` | `results/cnn/`, `results/comparison/` *(deprecated)* |
 | **09.** Benchmark 100 % CPU justo y profiling profundo | `benchmark_cpu_fair`, `profile_pipelines` | `configs/profiling/*.toml` | `results/comparison_cpu/`, `results/profiling/` |
 | **10.** Exportación, paridad y visualización C99 (`f32` + `q15`) | `export_c_pipeline`, `verify_c_pipeline`, `visualize_c_pipeline` | `configs/c_imp/*.toml` | `c_imp/generated/`, `c_imp/build/`, `results/c_imp/` |
-| **11.** Banco de pruebas en microcontrolador (**PC → MCU → PC**) | `hw_test` | `configs/hw_test/boards.toml` | `hw_test/img2send/`, `hw_test/build/`, `results/hw_test/` |
+| **11.** Banco de pruebas en microcontrolador (**PC → MCU → PC**) | `hw_test`, `visualize_hw_test` | `configs/hw_test/boards.toml`, `configs/visualization/hw_test.toml` | `hw_test/img2send/`, `hw_test/build/`, `results/hw_test/{fit_report.*,figures/}` |
 | **12.** Figuras metodológicas MDPI 300 DPI ($\mathbf{x}_{94}$ e invarianza) | `visualize_methodology` | `configs/visualization/methodology.toml` | `results/methodology/*.png` |
 | **13.** Reporte consolidado listo para manuscripto | `generate_paper_report` | `configs/reporting/paper_report.toml` | `results/FINAL_PAPER_REPORT.md` |
 
@@ -626,6 +626,7 @@ Ver documentación completa en inglés de subcomandos, protocolo binario y limpi
 # 5. Barrido hardware completo en COM5 y regeneración de tablas/figuras
 .\.venv\Scripts\python.exe -m experiments.hw_test bench --config configs/hw_test/boards.toml --board esp32cam --transport uart --port COM5 --models lr_dot mlp_16_dot ultra_tiny --modes q15 f32 --all --no-prompt
 .\.venv\Scripts\python.exe -m experiments.hw_test report --config configs/hw_test/boards.toml
+.\.venv\Scripts\python.exe -m experiments.visualize_hw_test --config configs/visualization/hw_test.toml --overwrite
 
 # 6. Limpieza (clean) de reportes, corridas y staging de compilación (preserva results/hw_test/README.md e img2send/)
 .\.venv\Scripts\python.exe -m experiments.hw_test clean --dry-run

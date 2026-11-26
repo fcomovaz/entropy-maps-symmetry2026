@@ -80,6 +80,13 @@ Hardware tested: **ESP32-CAM (`ESP32-D0WDQ6`, 4 MiB Flash, `4,194,304` B PSRAM)*
 
 Full 53-row (`board × model × mode`) fit tables are generated via `python -m experiments.hw_test report --config configs/hw_test/boards.toml` at `results/hw_test/fit_report.csv` and `results/hw_test/fit_report.md`.
 
+Five publication-grade MDPI 300-DPI figures summarizing all 4 MCUs together plus one dedicated multi-panel figure per microcontroller are generated under `results/hw_test/figures/` via `.\.venv\Scripts\python.exe -m experiments.visualize_hw_test --config configs/visualization/hw_test.toml --overwrite`:
+- `results/hw_test/figures/fig1_cross_board_all_mcus.png` — All 4 MCUs combined (feasibility matrix, arena/ceiling ratios, and live ROC-AUC vs. latency Pareto across 16 runs).
+- `results/hw_test/figures/fig2_board_esp32cam.png` — `ESP32-CAM` (`COM5`: Flash/PSRAM usage, 12-run latency breakdown vs. `500 ms`, 96-sample parity).
+- `results/hw_test/figures/fig3_board_nano.png` — `Arduino Nano` (`COM4`: streaming 2 KB SRAM vs. impossible CNN arenas, per-image timing, 16/16 Q15 parity).
+- `results/hw_test/figures/fig4_board_uno.png` — `Arduino Uno` (`COM6`: Optiboot footprint, per-image Nano-vs-Uno `<0.04%` clock reproducibility, 16/16 Q15 parity).
+- `results/hw_test/figures/fig5_board_nodemcu.png` — `NodeMCU / ESP-12E` (`0 B` PSRAM: `4/4` tabular compile fit + `COM5` `ch341ser.sys` note vs. `14/14` mathematical CNN impossibility).
+
 ---
 
 ## Live 8-bit AVR: Arduino Nano (`COM4`) & Arduino Uno (`COM6`) (`ATmega328P`, `2026-11-26`)

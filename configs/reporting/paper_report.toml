@@ -20,6 +20,7 @@ profiling_dir = "results/profiling"
 c_imp_dir = "results/c_imp"
 methodology_dir = "results/methodology"
 hw_test_fit_csv = "results/hw_test/fit_report.csv"
+hw_test_figures_dir = "results/hw_test/figures"
 output_markdown = "results/FINAL_PAPER_REPORT.md"
 seed = 42
 primary_cpu_threads = 1
@@ -187,6 +188,36 @@ script = "experiments.visualize_c_pipeline"
 meaning = "Six-panel statistical descriptor diagnostic on KolektorSDD2 test vectors: class-mean 8x8 entropy grids (normal, defect, and defect-minus-normal shift), mean x9 asymmetry bars by class, top-12 signed Cohen's d effect sizes, and Q0.15 + log2-LUT quantization error per feature index."
 caption = "Statistical diagnostics of x94 on KolektorSDD2: class-mean 8x8 spatial entropy maps and difference shift (top), multiscale asymmetry comparison, top-12 Cohen's d discriminative features, and per-feature Q0.15 quantization residuals (bottom)."
 
+[[paper_report.flagship_figures]]
+path = "results/hw_test/figures/fig1_cross_board_all_mcus.png"
+script = "experiments.visualize_hw_test"
+meaning = "Three-panel cross-microcontroller synthesis comparing Arduino Nano, Arduino Uno, NodeMCU ESP-12E, and ESP32-CAM across all 9 models: (a) categorical feasibility and live Q15/f32 latency matrix, (b) activation-arena demand normalized by each board's usable memory ceiling showing why CNNs exceed AVR/ESP8266 limits by 3.6x–603x, and (c) live on-device ROC-AUC vs. measured latency Pareto across all 16 physical runs."
+caption = "Cross-microcontroller deployment comparison across 8-bit AVR (Nano, Uno), ESP8266 (NodeMCU), and ESP32-CAM: (a) feasibility and measured latency matrix, (b) normalized activation-memory demand relative to hardware ceilings, and (c) live on-device accuracy-versus-latency Pareto frontier."
+
+[[paper_report.flagship_figures]]
+path = "results/hw_test/figures/fig2_board_esp32cam.png"
+script = "experiments.visualize_hw_test"
+meaning = "Three-panel ESP32-CAM deployment profile covering all 12 live UART runs (96/96 parity): (a) compiled 3 MiB huge_app Flash and 4 MiB SPI PSRAM allocation (highlighting ultra_tiny PSRAM placement), (b) log-scale median latency breakdown relative to the 500 ms real-time budget (showing 53.3x speedup of x94 + lr_dot/q15 over ultra_tiny/q15), and (c) per-sample hardware-vs-golden logit parity."
+caption = "Physical ESP32-CAM evaluation across 12 model configurations on KolektorSDD2: (a) Flash and SPI PSRAM utilization, (b) median on-device latency against the 500 ms deadline, and (c) numerical parity against desktop Python/C99 references (96/96 exact passes)."
+
+[[paper_report.flagship_figures]]
+path = "results/hw_test/figures/fig3_board_nano.png"
+script = "experiments.visualize_hw_test"
+meaning = "Three-panel 8-bit Arduino Nano (ATmega328P, COM4) analysis: (a) tight 2 KB SRAM budget accommodated by row-by-row CIMP_DescStream (1,060 B state, 146 B stack HWM) versus impossible 91x–603x CNN arenas, (b) per-image selector + model timing across the 8 KolektorSDD2 samples (78.42 ms lr_dot, 101.84 ms mlp_16_dot), and (c) 16/16 bit-exact Q15 parity."
+caption = "Physical Arduino Nano (8-bit ATmega328P, 2 KB SRAM) verification via row-by-row Q15 streaming: (a) SRAM footprint versus CNN impossibility bounds, (b) per-image execution time breakdown, and (c) bit-exact Q15 parity across all 16 runs."
+
+[[paper_report.flagship_figures]]
+path = "results/hw_test/figures/fig4_board_uno.png"
+script = "experiments.visualize_hw_test"
+meaning = "Three-panel 8-bit Arduino Uno (ATmega328P Optiboot, COM6) verification: (a) 32,256 B Flash and 2 KB SRAM utilization versus CNN deficit, (b) per-image timing overlaid with Arduino Nano curves proving <0.04% clock-level reproducibility across FTDI and ATmega16U2 bridges, and (c) 16/16 bit-exact Q15 parity."
+caption = "Physical Arduino Uno (ATmega328P, Optiboot 32 KB Flash) streaming Q15 results: (a) memory fit and CNN impossibility ratios, (b) per-image timing consistency overlaid against Arduino Nano, and (c) bit-exact Q15 logit agreement."
+
+[[paper_report.flagship_figures]]
+path = "results/hw_test/figures/fig5_board_nodemcu.png"
+script = "experiments.visualize_hw_test"
+meaning = "Three-panel NodeMCU / ESP-12E (ESP8266, 0 B PSRAM) feasibility and impossibility proof: (a) compiled IROM Flash (23.2%–23.8%) and DRAM (61.4%–61.6%) footprints for all 4 tabular configs with the COM5 ch341ser.sys 3.9.2024.9 UART driver note, (b) mathematical proof of CNN impossibility across Q15/f32 arenas (3.6x–48.0x usable heap), and (c) weight Flash sizes exceeding 1 MiB IROM on torchvision_mobilenet (1.56x)."
+caption = "NodeMCU / ESP-12E (ESP8266) feasibility and physical impossibility analysis: (a) compiled tabular IROM/DRAM footprints and host-driver boundary, (b) CNN activation arenas exceeding the 45 KB usable heap with zero PSRAM, and (c) weight storage versus the 1 MiB Flash partition."
+
 # ==================== PER-RUN FIGURE TEMPLATES ====================
 
 [[paper_report.figure_templates]]
@@ -336,12 +367,20 @@ outputs = "results/c_imp/<target>/figures/{summary_models_metrics.csv, summary_r
 summary = "Renders the 6-figure C99 quantization, score-scatter, confusion-matrix, parity, memory/Pareto, and x94 insight suite plus per-target summary tables (Sections 6 and 7)."
 
 [[paper_report.scripts_catalog]]
-stage = "4D. MCU Fit & Live ESP32-CAM Bench"
+stage = "4D. MCU Fit & Live Bench"
 script = "experiments.hw_test (subcommands: bench, flash, send, report)"
 configs = "configs/hw_test/boards.toml"
 status = "Executed Live on ESP32-CAM (COM5, 12×8=96/96 parity), Arduino Nano (COM4, 2×8=16/16 parity), & Arduino Uno (COM6, 2×8=16/16 parity) + Compile-Only Fit Sweep (nodemcu)"
 outputs = "results/hw_test/{fit_report.csv, fit_report.md, <board>/build_cache.json, {esp32cam,nano,uno}/20261126T*/}"
 summary = "Compiles cross-board sketches via arduino-cli, executes live UART PC->MCU->PC inference on ESP32-CAM (12 runs), Arduino Nano (2 runs), and Arduino Uno (2 runs), and builds the 53-row MCU fit matrix with physical impossibility bounds (Sections 6C–6E)."
+
+[[paper_report.scripts_catalog]]
+stage = "4E. MCU Figures"
+script = "experiments.visualize_hw_test"
+configs = "configs/visualization/hw_test.toml"
+status = "Executed (--overwrite)"
+outputs = "results/hw_test/figures/{fig1_cross_board_all_mcus.png, fig2_board_esp32cam.png, fig3_board_nano.png, fig4_board_uno.png, fig5_board_nodemcu.png}"
+summary = "Generates five MDPI 300-DPI cross-board and per-MCU publication figures (feasibility matrix, memory ceiling ratios, live Pareto, ESP32-CAM/Nano/Uno latency & parity, and NodeMCU CNN impossibility) listed in Sections 6F and 7A."
 
 [[paper_report.scripts_catalog]]
 stage = "5. Methodology Figures"
@@ -404,10 +443,10 @@ scripts = "experiments.profile_pipelines"
 
 [[paper_report.section_traceability]]
 section = "Section 6 (C99 f32/Q15 Parity, Drift, Timing & MCU Fit)"
-artifacts = "results/c_imp/*/{parity_report.json,memory_report.json,timing_benchmark.csv,figures/summary_models_metrics.csv}; results/hw_test/fit_report.csv"
-scripts = "experiments.export_c_pipeline; experiments.verify_c_pipeline; experiments.visualize_c_pipeline; experiments.hw_test"
+artifacts = "results/c_imp/*/{parity_report.json,memory_report.json,timing_benchmark.csv,figures/summary_models_metrics.csv}; results/hw_test/{fit_report.csv,figures/fig*.png}"
+scripts = "experiments.export_c_pipeline; experiments.verify_c_pipeline; experiments.visualize_c_pipeline; experiments.hw_test; experiments.visualize_hw_test"
 
 [[paper_report.section_traceability]]
 section = "Section 7 & Section 8 (Figures Inventory & Provenance)"
-artifacts = "results/{methodology,classification,cnn,comparison_cpu,profiling,c_imp}/**/*.png; configs/reporting/paper_report.toml"
-scripts = "experiments.visualize_methodology; experiments.generate_paper_report"
+artifacts = "results/{methodology,classification,cnn,comparison_cpu,profiling,c_imp,hw_test/figures}/**/*.png; configs/reporting/paper_report.toml"
+scripts = "experiments.visualize_methodology; experiments.visualize_hw_test; experiments.generate_paper_report"

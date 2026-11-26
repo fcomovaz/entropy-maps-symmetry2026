@@ -308,6 +308,9 @@ Invoke-PipelineCommand -StepLabel "6.2e Arduino Uno (8-bit ATmega328P): Run lr_d
 Invoke-PipelineCommand -StepLabel "6.3 Regenerate Consolidated 53-Row MCU Fit Report" `
     -Arguments @("-m", "experiments.hw_test", "report", "--config", "configs/hw_test/boards.toml")
 
+Invoke-PipelineCommand -StepLabel "6.4 Render MDPI 300-DPI Embedded MCU Benchmark Figures (results/hw_test/figures/)" `
+    -Arguments @("-m", "experiments.visualize_hw_test", "--config", "configs/visualization/hw_test.toml", "--overwrite")
+
 
 # ==============================================================================
 # SECTION 7: METHODOLOGY FIGURES, PAPER REPORT & FORMAL UNIT TEST VERIFICATION

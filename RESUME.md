@@ -39,7 +39,7 @@ code/
 │   ├── features/native_entropy.toml MSVC C99 DLL build flags & paths
 │   ├── optimization/entropy_maps.toml Lab 13 benchmark & sweep configuration
 │   ├── reporting/paper_report.toml  canonical FINAL_PAPER_REPORT.md inputs & settings
-│   ├── visualization/methodology.toml MDPI methodology & polarity-invariance figure settings
+│   ├── visualization/methodology.toml, hw_test.toml MDPI methodology & embedded MCU figure configs
 │   ├── c_imp/                         kolektorsdd2.toml, mvtec_ad.toml (ESP32-CAM budgets, Q15/LUT/parity & visualization)
 │   ├── hw_test/                       boards.toml, secrets.example.toml (MCU test bench budgets, FQBNs, overrides)
 │   ├── understanding/                 ml_classifiers_mcu.toml (Lab 14), c_migration_fixed_point.toml (Lab 15)

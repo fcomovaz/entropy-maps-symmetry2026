@@ -26,7 +26,7 @@ $env:PYTHONPATH = (Get-Location).Path; .\.venv\Scripts\python.exe understanding/
 .\.venv\Scripts\python.exe -m unittest understanding/15_c_migration_fixed_point/tests/test_c_migration_fixed_point.py -v
 ```
 
-Resultado esperado: `Environment verification: PASS`, `No broken requirements found.`, **255 tests formales** en **37** módulos `unittest` de `tests/` ([tests/README.md](tests/README.md), incluidos `test_sci_plots.py`, `test_visualize_methodology.py`, `test_generate_paper_report.py` y los 20 casos del banco MCU `tests/test_hw_*.py` ejecutables también con `pytest`), **96 tests de laboratorio** (`03`: 5, `04`: 8, `05`: 20, `06`: 25, `07`: 15, `13`: 13, `14`: 6, `15`: 4) y las comprobaciones C99 en `c_imp/tests/test_runtime.c` y `c_imp/tests/test_streaming.c`. En este equipo los tests CUDA deben ejecutarse, no omitirse; `test_environment.py` exige CUDA real.
+Resultado esperado: `Environment verification: PASS`, `No broken requirements found.`, **256 tests formales** en **38** módulos `unittest` de `tests/` ([tests/README.md](tests/README.md), incluidos `test_sci_plots.py`, `test_visualize_methodology.py`, `test_generate_paper_report.py` y los 21 casos del banco MCU `tests/test_hw_*.py` ejecutables también con `pytest`), **96 tests de laboratorio** (`03`: 5, `04`: 8, `05`: 20, `06`: 25, `07`: 15, `13`: 13, `14`: 6, `15`: 4) y las comprobaciones C99 en `c_imp/tests/test_runtime.c` y `c_imp/tests/test_streaming.c`. En este equipo los tests CUDA deben ejecutarse, no omitirse; `test_environment.py` exige CUDA real.
 
 Los tests de entropía `03` necesitan las salidas de `01`, ya conservadas; si faltan, ejecutar primero `understanding/01_patch_partition/patch_partition.py --patch-size 64`.
 
@@ -335,6 +335,7 @@ Aísla lo que se pierde al no usar la DLL C99 (salida local ignorada por Git):
 .\.venv\Scripts\python.exe -m experiments.hw_test bench --config configs/hw_test/boards.toml --board nano --compile-only
 .\.venv\Scripts\python.exe -m experiments.hw_test bench --config configs/hw_test/boards.toml --board esp32cam --transport uart --port COM5 --models lr_dot mlp_16_dot ultra_tiny --modes q15 f32 --all --no-prompt
 .\.venv\Scripts\python.exe -m experiments.hw_test report --config configs/hw_test/boards.toml
+.\.venv\Scripts\python.exe -m experiments.visualize_hw_test --config configs/visualization/hw_test.toml --overwrite
 
 # Clean generated staging builds and/or run reports (preserves results/hw_test/README.md and hw_test/img2send/)
 .\.venv\Scripts\python.exe -m experiments.hw_test clean --config configs/hw_test/boards.toml --dry-run
@@ -342,7 +343,7 @@ Aísla lo que se pierde al no usar la DLL C99 (salida local ignorada por Git):
 .\.venv\Scripts\python.exe -m experiments.hw_test clean --config configs/hw_test/boards.toml
 
 # Unit and integration tests for the MCU bench (pytest or unittest)
-.\.venv\Scripts\python.exe -m pytest tests/test_hw_config.py tests/test_hw_protocol.py tests/test_hw_session.py tests/test_hw_cli.py tests/test_hw_fit.py -v
+.\.venv\Scripts\python.exe -m pytest tests/test_hw_config.py tests/test_hw_protocol.py tests/test_hw_session.py tests/test_hw_cli.py tests/test_hw_fit.py tests/test_hw_visualize.py -v
 ```
 
 ### 11. Dónde leer resultados y límites conocidos

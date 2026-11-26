@@ -1,0 +1,11 @@
+# Publication-grade MDPI visualization configuration for embedded hardware results (`hw_test/`).
+# Reads only measured/compiled artifacts from results/hw_test/ and board ceilings from boards.toml.
+
+[hw_test_viz]
+hw_test_config = "configs/hw_test/boards.toml"
+fit_csv = "results/hw_test/fit_report.csv"
+results_dir = "results/hw_test"
+output_dir = "results/hw_test/figures"
+journal = "mdpi"
+palette = "editorial"
+dpi = 300
