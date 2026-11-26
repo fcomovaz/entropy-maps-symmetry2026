@@ -1,6 +1,6 @@
 # Entorno, guía de reproducción y ejecución
 
-La síntesis científica vigente (veredictos de hipótesis $H_{\text{sym}}, H_{\text{inv}}, H_{\text{pareto}}, H_{\text{univ}}, H_{\text{opt-1}}, H_{\text{opt-2}}$, tablas 100 % CPU y análisis pre-MCU Python vs. C99 vs. CNNs) vive en [HYPOTHESIS.md](HYPOTHESIS.md). El mapa técnico del código, grafo de dependencias y resumen de laboratorios vive en [RESUME.md](RESUME.md), y las reglas de trabajo en [AGENTS.md](AGENTS.md).
+La síntesis científica vigente (veredictos de hipótesis $H_{\text{sym}}, H_{\text{inv}}, H_{\text{pareto}}, H_{\text{univ}}, H_{\text{opt-1}}, H_{\text{opt-2}}$, tablas 100 % CPU y análisis pre-MCU Python vs. C99 vs. CNNs) vive en [HYPOTHESIS.md](HYPOTHESIS.md), y el **reporte maestro consolidado de la corrida final (`2026-11-26`, `seed = 42`, KolektorSDD2 + las 15 categorías MVTec-AD + ESP32-CAM live en `COM5`)** en [results/FINAL_PAPER_REPORT.md](results/FINAL_PAPER_REPORT.md) (reproducible de punta a punta mediante [reproduce_paper_pipeline.ps1](reproduce_paper_pipeline.ps1)). El mapa técnico del código, grafo de dependencias y resumen de laboratorios vive en [RESUME.md](RESUME.md), y las reglas de trabajo en [AGENTS.md](AGENTS.md).
 
 > [!IMPORTANT]
 > - Todos los comandos formales y tests (`-m src.*`, `-m experiments.*`, `-m unittest`) se ejecutan en PowerShell desde la raíz del repositorio (`code/`, localmente `D:\Publications\2026-10-Symmetry-Entropy\code`) usando `.\.venv\Scripts\python.exe`. Si el entorno ya existe y pasa las pruebas, no reinstalarlo.
@@ -26,7 +26,7 @@ $env:PYTHONPATH = (Get-Location).Path; .\.venv\Scripts\python.exe understanding/
 .\.venv\Scripts\python.exe -m unittest understanding/15_c_migration_fixed_point/tests/test_c_migration_fixed_point.py -v
 ```
 
-Resultado esperado: `Environment verification: PASS`, `No broken requirements found.`, **247 tests formales** en 34 módulos `unittest` de `tests/` ([tests/README.md](tests/README.md), incluidos los 20 casos del banco MCU `tests/test_hw_*.py` ejecutables también con `pytest`), **96 tests de laboratorio** (`03`: 5, `04`: 8, `05`: 20, `06`: 25, `07`: 15, `13`: 13, `14`: 6, `15`: 4) y las comprobaciones C99 en `c_imp/tests/test_runtime.c` y `c_imp/tests/test_streaming.c`. En este equipo los tests CUDA deben ejecutarse, no omitirse; `test_environment.py` exige CUDA real.
+Resultado esperado: `Environment verification: PASS`, `No broken requirements found.`, **255 tests formales** en **37** módulos `unittest` de `tests/` ([tests/README.md](tests/README.md), incluidos `test_sci_plots.py`, `test_visualize_methodology.py`, `test_generate_paper_report.py` y los 20 casos del banco MCU `tests/test_hw_*.py` ejecutables también con `pytest`), **96 tests de laboratorio** (`03`: 5, `04`: 8, `05`: 20, `06`: 25, `07`: 15, `13`: 13, `14`: 6, `15`: 4) y las comprobaciones C99 en `c_imp/tests/test_runtime.c` y `c_imp/tests/test_streaming.c`. En este equipo los tests CUDA deben ejecutarse, no omitirse; `test_environment.py` exige CUDA real.
 
 Los tests de entropía `03` necesitan las salidas de `01`, ya conservadas; si faltan, ejecutar primero `understanding/01_patch_partition/patch_partition.py --patch-size 64`.
 
@@ -83,14 +83,14 @@ py -3.11 -m venv .venv
 
 ## Carpetas (relativas a `code/`)
 
-* [configs/](configs/README.md): configuraciones TOML declarativas (`base.toml`, `preprocessing/`, `csv/`, `entropy/`, `asymmetry/`, `classification/`, `cnn/`, `profiling/`, `features/`, `optimization/`, `c_imp/`, `understanding/`) y `logging.py`. Ningún módulo de `src/` hardcodea parámetros o rutas.
-* [src/](src/README.md): módulos formales reutilizables (`preprocessing/`, `datasets/`, `features/` incl. C99 `entropy_pyramid`, `models/` incl. `LinearDotCoreClassifier`, `MlpDotCoreClassifier` y `cnn/`, `profiling/`, `c_export/`).
+* [configs/](configs/README.md): configuraciones TOML declarativas (`base.toml`, `preprocessing/`, `csv/`, `entropy/`, `asymmetry/`, `classification/`, `cnn/`, `profiling/`, `features/`, `optimization/`, `c_imp/`, `hw_test/`, `reporting/`, `visualization/`, `understanding/`) y `logging.py`. Ningún módulo de `src/` hardcodea parámetros o rutas.
+* [src/](src/README.md): módulos formales reutilizables (`preprocessing/`, `datasets/`, `features/` incl. C99 `entropy_pyramid`, `models/` incl. `LinearDotCoreClassifier`, `MlpDotCoreClassifier` y `cnn/`, `profiling/`, `c_export/`, `hw_test/`, `visualization/`).
 * [c_imp/](c_imp/README.md): implementación C99 portable `f32` y `q15` sin `malloc` (`runtime/`, `app/desktop_main.c`, `tests/test_runtime.c`, `tests/test_streaming.c`) con soporte MCU (`CIMP_ROM`, `CIMP_ENABLE_F32`, streaming Q15).
 * [hw_test/](hw_test/README.md): banco de pruebas hardware **PC → MCU → PC** (`firmware/` AVR/ESP8266/ESP32, `img2send/` y `src/hw_test/` para protocolo binario UART/TCP, compilación/flasheo vía `arduino-cli` y reporte Pareto).
-* [experiments/](experiments/README.md): puntos de entrada CLI para todas las corridas reproducibles (incluyendo `export_c_pipeline`, `verify_c_pipeline`, `visualize_c_pipeline` y `hw_test`).
+* [experiments/](experiments/README.md): puntos de entrada CLI para todas las corridas reproducibles (incluyendo `export_c_pipeline`, `verify_c_pipeline`, `visualize_c_pipeline`, `hw_test`, `visualize_methodology` y `generate_paper_report`, orquestados de punta a punta en [reproduce_paper_pipeline.ps1](reproduce_paper_pipeline.ps1)).
 * [understanding/](understanding/README.md): quince laboratorios pedagógicos (`01_patch_partition/` a `15_c_migration_fixed_point/`, más `07_entropy_maps_vectorized/`).
-* [tests/](tests/README.md): verificación CUDA (`test_environment.py`), 34 suites formales (`247` casos `unittest`, incluidos `20` casos en `test_hw_*.py`) y pruebas pedagógicas en `understanding/` (`96` casos).
-* [results/](results/README.md): diagnósticos, logs, clasificación ([results/classification/](results/classification/README.md)), checkpoints CNN ([results/cnn/](results/cnn/README.md)), comparación 100 % CPU justa con C99 ([results/comparison_cpu/](results/comparison_cpu/README.md)), comparativa Python puro (`results/comparison_cpu_python/`, ignorada por Git), profiling científico (`results/profiling/`), resultados de portación C99 ([results/c_imp/](results/c_imp/README.md)), resultados y reporte de ajuste en microcontroladores ([results/hw_test/](results/hw_test/README.md)) y legado [results/comparison/](results/comparison/README.md) (*deprecated*).
+* [tests/](tests/README.md): verificación CUDA (`test_environment.py`), 37 suites `unittest` (`255` casos formales, incluidos `20` casos en `test_hw_*.py`) y pruebas pedagógicas en `understanding/` (`96` casos).
+* [results/](results/README.md): [FINAL_PAPER_REPORT.md](results/FINAL_PAPER_REPORT.md), figuras metodológicas (`results/methodology/`), clasificación ([results/classification/](results/classification/README.md)), checkpoints CNN ([results/cnn/](results/cnn/README.md)), comparación 100 % CPU justa con C99 ([results/comparison_cpu/](results/comparison_cpu/README.md)), comparativa Python puro (`results/comparison_cpu_python/`, ignorada por Git), profiling científico (`results/profiling/`), resultados de portación C99 ([results/c_imp/](results/c_imp/README.md)), resultados y reporte de ajuste en microcontroladores ([results/hw_test/](results/hw_test/README.md)) y legado [results/comparison/](results/comparison/README.md) (*deprecated*).
 * [notebooks/](notebooks/README.md): cuaderno de ejecución completa en Colab ([Entropy_Maps_Full_Run.ipynb](notebooks/Entropy_Maps_Full_Run.ipynb)).
 * [data/](data/README.md): `raw/` (no incluido en Git), `preprocessed/` y `csv/`.
 * `memory/`: exportador de `README*.md` a `memory/` para sincronización con NotebookLM (`export_readmes.ps1`).
@@ -275,14 +275,15 @@ Las CNNs **no se reentrenan**: se cargan los checkpoints de la etapa 6 en CPU y 
 * `results/comparison_cpu/`: `<tag>_baseline_vs_cnn_cpu.csv`, `<tag>_cuda_reference.csv` (separado, nunca mezclado), figuras Pareto y `summary_all_datasets.csv`.
 * `results/profiling/<tag>/`: `environment.json`, `descriptor_stage_times.csv`, `classifier_times.csv`, `cnn_layer_times_<model>.csv`, `statistical_tests.csv`, `ablation_quality_vs_cost.csv`, 6 figuras y `README.md` autogenerado.
 
-**Referencia (i7-7700HQ, `threads = 1`, `B = 1`; [HYPOTHESIS.md §2.1](HYPOTHESIS.md#21-official-100-cpu-comparison-c_single_pass--ml-vs-7-cnns-threads1)):**
+**Referencia (i7-7700HQ, `threads = 1`, `B = 1`; corrida canónica `2026-11-26` en [results/FINAL_PAPER_REPORT.md](results/FINAL_PAPER_REPORT.md#3-kolektorsdd2-complete-results-standard-vs-inverted)):**
 
 | Pipeline | `kolektorsdd2` $T_{\text{total}}$ (ms) | `bottle` $T_{\text{total}}$ (ms) |
 |---|---:|---:|
-| `x94` + `lr_dot` (C99 `x85`) | **0.3799** | **0.3002** |
-| `ultra_tiny` | 0.9919 | 0.9171 |
-| `mobilenet_like` | 4.0077 | 4.1313 |
-| `rf` | 10.9062 | 5.7947 |
+| `x94` + `lr_dot` (C99 `x85`) | **0.3525** | **0.2288** |
+| `x94` + `mlp_16_dot` (C99 `x85`) | **0.3583** | **0.2345** |
+| `ultra_tiny` | 1.1220 | 0.9096 |
+| `mobilenet_like` | 3.8026 | 3.3778 |
+| `rf` | 9.6176 | 4.4885 |
 
 Esperar el mismo ordenamiento (`lr_dot` el más rápido, `2.67×–3.64×` más rápido que `ultra_tiny` en profiling con `p < 1e-50`; `lr_dot` `33×–51×` más rápido que `sklearn lr`), no milisegundos idénticos.
 
@@ -326,13 +327,13 @@ Aísla lo que se pierde al no usar la DLL C99 (salida local ignorada por Git):
 .\.venv\Scripts\python.exe -m experiments.hw_test images --config configs/hw_test/boards.toml --all
 .\.venv\Scripts\python.exe -m experiments.hw_test build --config configs/hw_test/boards.toml --board esp32cam --model lr_dot --mode q15 --dry-run
 
-# Flash and run real on-device UART inference (e.g. ESP32-CAM on COM3)
-.\.venv\Scripts\python.exe -m experiments.hw_test flash --config configs/hw_test/boards.toml --board esp32cam --model lr_dot --mode q15 --port COM3
-.\.venv\Scripts\python.exe -m experiments.hw_test send --config configs/hw_test/boards.toml --board esp32cam --model lr_dot --mode q15 --transport uart --port COM3 --all --dump-descriptor
+# Flash and run real on-device UART inference (e.g. ESP32-CAM on COM5)
+.\.venv\Scripts\python.exe -m experiments.hw_test flash --config configs/hw_test/boards.toml --board esp32cam --model lr_dot --mode q15 --port COM5
+.\.venv\Scripts\python.exe -m experiments.hw_test send --config configs/hw_test/boards.toml --board esp32cam --model lr_dot --mode q15 --transport uart --port COM5 --all --dump-descriptor
 
 # Unattended cross-compile (e.g. Nano), multi-model bench on ESP32-CAM, and global fit report
 .\.venv\Scripts\python.exe -m experiments.hw_test bench --config configs/hw_test/boards.toml --board nano --compile-only
-.\.venv\Scripts\python.exe -m experiments.hw_test bench --config configs/hw_test/boards.toml --board esp32cam --transport uart --port COM3 --models lr_dot mlp_16_dot ultra_tiny --modes q15 f32 --all --no-prompt
+.\.venv\Scripts\python.exe -m experiments.hw_test bench --config configs/hw_test/boards.toml --board esp32cam --transport uart --port COM5 --models lr_dot mlp_16_dot ultra_tiny --modes q15 f32 --all --no-prompt
 .\.venv\Scripts\python.exe -m experiments.hw_test report --config configs/hw_test/boards.toml
 
 # Clean generated staging builds and/or run reports (preserves results/hw_test/README.md and hw_test/img2send/)
@@ -348,6 +349,8 @@ Aísla lo que se pierde al no usar la DLL C99 (salida local ignorada por Git):
 
 | Consulta | Documento |
 |---|---|
+| Reporte maestro consolidado (tablas, MVTec-15, ESP32-CAM y captions) | [results/FINAL_PAPER_REPORT.md](results/FINAL_PAPER_REPORT.md) |
+| Script secuencial completo de reproducción | [reproduce_paper_pipeline.ps1](reproduce_paper_pipeline.ps1) |
 | Veredictos de hipótesis, tablas y checklist MCU | [HYPOTHESIS.md](HYPOTHESIS.md) |
 | Explicación de figuras y tablas de clasificación | [results/classification/README.md](results/classification/README.md) |
 | Hallazgos de profiling por dataset | `results/profiling/<tag>/README.md` |
@@ -358,7 +361,7 @@ Aísla lo que se pierde al no usar la DLL C99 (salida local ignorada por Git):
 | Mapa de código, grafo y reglas que muerden | [RESUME.md](RESUME.md) |
 | Reglas de desarrollo del repositorio | [AGENTS.md](AGENTS.md) |
 
-**Límites abiertos:** la ejecución física en hardware real quedó verificada en **ESP32-CAM (`COM3`, UART, 12 modelos/modos × 8 imágenes = 96/96 con 100 % de paridad; únicamente `lr_dot`, `mlp_16_dot` y `ultra_tiny/q15` son `fits_viable` $\le 500\text{ ms}$)**, mientras que **`nano`, `uno` y `nodemcu` (compilados en Stage 5), el transporte `WiFi/TCP` (requiere `configs/hw_test/secrets.toml`) y las 5 CNNs `f32` restantes en ESP32-CAM siguen pendientes de verificación física**; $\mathbf{x}_{94}$ pierde en F1 frente a CNNs en microfisuras sub-celda (`kolektorsdd2`, $H_{\text{univ}}$ refutada); de [Lab 14](understanding/14_ml_classifiers_mcu/README.md) ya se promovió `mlp_16_dot` (y se portó a C99 en `c_imp/` junto con `x94`, `lr_dot` y las 7 CNNs), quedando pendientes otros candidatos (`mlp_16_skip_dot`, `mlp_32_16_dot`, `lr_l1_dot`, etc.), barridos multi-seed / multi-categoría con guarda de no-degeneración en `val_f1` (`M2`) y selectores dinámicos de regiones.
+**Límites abiertos:** la ejecución física en hardware real quedó verificada en **ESP32-CAM (`COM5`, `2026-11-26`, UART `460800`, 12 modelos/modos × 8 imágenes = 96/96 con 100 % de paridad; `lr_dot` `3.191 ms`, `mlp_16_dot` `3.366 ms` y `ultra_tiny/q15` `170.008 ms` son `fits_viable` $\le 500\text{ ms}$)**, mientras que **`nano`, `uno` y `nodemcu` (compilados en Stage 5), el transporte `WiFi/TCP` (requiere `configs/hw_test/secrets.toml`) y las 5 CNNs `f32` restantes en ESP32-CAM siguen pendientes de verificación física**; $\mathbf{x}_{94}$ pierde en F1 frente a CNNs en microfisuras sub-celda (`kolektorsdd2`, $H_{\text{univ}}$ refutada); de [Lab 14](understanding/14_ml_classifiers_mcu/README.md) ya se promovió `mlp_16_dot` (y se portó a C99 en `c_imp/` junto con `x94`, `lr_dot` y las 7 CNNs sobre los 16 targets), quedando pendientes otros candidatos (`mlp_16_skip_dot`, `mlp_32_16_dot`, `lr_l1_dot`, etc.), barridos multi-seed con guarda de no-degeneración en `val_f1` (`M2`), `random_state` explícito en `DecisionTreeClassifier` y selectores dinámicos de regiones.
 
 ---
 

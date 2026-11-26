@@ -6,7 +6,9 @@ Esta carpeta conserva diagnósticos y resultados del proyecto. Para la síntesis
 
 | Ruta | Contenido y lectura recomendada |
 |---|---|
-| [../HYPOTHESIS.md](../HYPOTHESIS.md) | Verificación de hipótesis con resultados `seed=42` + backend C99 `entropy_pyramid` y análisis pre-MCU en puro Python vs C99 vs CNNs |
+| [FINAL_PAPER_REPORT.md](FINAL_PAPER_REPORT.md) | **Reporte maestro consolidado (`2026-11-26`, `seed = 42`):** tablas listas para paper (Sección 0, splits, MVTec-AD All-15, CPU-fair, profiling profundo, C99 16/16 targets, ESP32-CAM `COM5` + Nano `COM4` + Uno `COM6` en vivo, 1,567 PNGs con pies sugeridos y trazabilidad completa) |
+| `methodology/` | 3 figuras MDPI 300 DPI (`experiments.visualize_methodology`) con recorrido paso a paso de `x94` y prueba empírica de invarianza ante $255 - I$ |
+| [../HYPOTHESIS.md](../HYPOTHESIS.md) | Síntesis de hipótesis (`H_sym`, `H_inv`, `H_pareto`, `H_univ`, `H_opt-1`, `H_opt-2`) y comparativa pre-MCU Python vs C99 vs CNNs |
 | [environment_debug.md](environment_debug.md) | Diagnóstico histórico del 2026-09-26: reparación CUDA y verificaciones; no es un benchmark |
 | `pytorch_cuda_install.log`, `cuda_verification.log`, `environment_verification.log` | Logs locales de instalación y verificación original |
 | [01/outputs/run_summary.json](../understanding/01_patch_partition/outputs/run_summary.json) | Seis casos de partición; cada carpeta de caso incluye rejilla, reconstrucción, coordenadas y métricas |
@@ -31,8 +33,8 @@ Esta carpeta conserva diagnósticos y resultados del proyecto. Para la síntesis
 | [comparison_cpu/README.md](comparison_cpu/README.md) | Comparación oficial **100% CPU justa** (`experiments/benchmark_cpu_fair.py`, backend `auto` $\rightarrow$ C99 `c_single_pass` + `lr_dot`): CSVs `<tag>_baseline_vs_cnn_cpu.csv`, `<tag>_cuda_reference.csv`, Pareto PNGs (`_threads{1,2,4}.png`) y `summary_all_datasets.csv` |
 | `comparison_cpu_python/` | Salida local pre-MCU **100% Python/NumPy puro** (`--entropy-backend numpy_finest_pyramid` y `numpy_baseline`, `--no-cuda-reference`), ignorada por Git (`results/*`) |
 | `profiling/` | Reportes de profiling científico profundo (`experiments/profile_pipelines.py`): subcarpetas `<tag>/` (`kolektorsdd2` y `mvtec-ad_bottle` completos; `-inverted` verificación corta) con `environment.json`, desgloses por etapa (`x94`) y capa (`cnn`), ATen ops, `cProfile`, pruebas Mann-Whitney U, ablación $\Delta\text{F1}/\Delta\text{ms}$, 6 figuras (`fig1..fig6`) y `README.md` de hallazgos (rastreado) |
-| [c_imp/README.md](c_imp/README.md) | Auditoría y resultados consolidados de la migración a **C99 portable pre-ESP32** (`float32`, `Q15` bit-exact y `int8_per_channel` sobre `kolektorsdd2` y `mvtec_ad_bottle`): paridad Python-vs-C, memoria Flash/SRAM/PSRAM, Pareto y hallazgos de `x94` (artefactos pesados bajo `results/c_imp/*` ignorados por Git salvo este README) |
-| [hw_test/README.md](hw_test/README.md) | Auditoría de compilación cruzada (`arduino-cli`, 25/25 builds) y ejecución física en **ESP32-CAM (`COM3`, 96/96 imágenes con 100 % paridad)**: latencias `measured`, memoria SRAM/PSRAM, veredictos de `fit_report.{csv,md}` e ítems pendientes en Nano/UNO/NodeMCU/WiFi |
+| [c_imp/README.md](c_imp/README.md) | Auditoría y resultados consolidados de la migración a **C99 portable pre-ESP32** (`float32`, `Q15` bit-exact y `int8_per_channel` sobre **16/16 targets**: `kolektorsdd2` + las 15 categorías MVTec-AD): paridad Python-vs-C, memoria Flash/SRAM/PSRAM, Pareto y hallazgos de `x94` (artefactos pesados bajo `results/c_imp/*` ignorados por Git salvo este README) |
+| [hw_test/README.md](hw_test/README.md) | Auditoría de compilación cruzada (`arduino-cli`, 25/25 builds) y ejecución física en **ESP32-CAM (`COM5`, 12×8 = 96/96 imágenes)**, **Arduino Nano (`COM4`, 2×8 = 16/16)** y **Arduino Uno (`COM6`, 2×8 = 16/16)** con `100 %` paridad: latencias `measured`, memoria SRAM/PSRAM, veredictos de `fit_report.{csv,md}` e imposibilidades físicas en AVR/ESP8266 |
 
 Los checkpoints sintéticos y el fixture de `04/` no son resultados de detección real.
 Los CSV/JSON de tiempos describen el equipo y protocolo registrados, no hardware

@@ -1,8 +1,8 @@
 # Resultados de Comparación 100 % CPU Justa (`results/comparison_cpu/`)
 
-Este directorio almacena la comparación oficial **100 % CPU** entre los clasificadores clásicos sobre $\mathbf{x}_{94}$ (`dt`, `knn`, `lr`, `lr_dot`, `rf`, con extractor C99 `c_single_pass`) y las **7 arquitecturas CNN ligeras**, generada por `experiments.benchmark_cpu_fair`.
+Este directorio almacena la comparación oficial **100 % CPU** entre los seis clasificadores clásicos sobre $\mathbf{x}_{94}$ (`dt`, `knn`, `lr`, `lr_dot`, `mlp_16_dot`, `rf`, con extractor C99 `c_single_pass`) y las **7 arquitecturas CNN ligeras** a través de `kolektorsdd2` y las **15 categorías de MVTec-AD** (normal e invertido = `32` targets), generada por `experiments.benchmark_cpu_fair`.
 
-Para el análisis científico completo y los veredictos de hipótesis ver [../../HYPOTHESIS.md](../../HYPOTHESIS.md); para los desgloses por etapa, capa PyTorch y pruebas U de Mann-Whitney ver [../profiling/](../README.md).
+Para el consolidado numérico completo de todos los datasets ver [../FINAL_PAPER_REPORT.md](../FINAL_PAPER_REPORT.md); para síntesis histórica de hipótesis ver [../../HYPOTHESIS.md](../../HYPOTHESIS.md), y para desgloses por etapa/capa y pruebas U de Mann-Whitney ver [../profiling/](../README.md).
 
 ---
 
@@ -19,10 +19,10 @@ Para el análisis científico completo y los veredictos de hipótesis ver [../..
 
 | Archivo | Contenido |
 |---|---|
-| `summary_all_datasets.csv` | Tabla consolidada multi-dataset (`kolektorsdd2`, `kolektorsdd2-inverted`, `mvtec-ad_bottle`, `mvtec-ad-inverted_bottle`) a través de `threads ∈ {1, 2, 4}` y `batch_size ∈ {1, 32}` |
+| `summary_all_datasets.csv` | Tabla consolidada multi-dataset (`kolektorsdd2[-inverted]` y `mvtec-ad[-inverted]_*` en las 15 categorías) a través de `threads ∈ {1, 2, 4}` y `batch_size ∈ {1, 32}` |
 | `<tag>_baseline_vs_cnn_cpu.csv` | Métricas completas, conteo real de parámetros (`params_model`, `params_descriptor`), `macs`/`flops`/`ops_basis`, desglose de latencia (`t_preprocess`, `t_descriptor`, `t_model`, `t_total`, IQR, p95, IC95%, `CV%`), RAM pico (`peak_ram_mb`) y paridad CPU |
 | `<tag>_cuda_reference.csv` | Referencia secundaria opcional en GPU CUDA, **aislada** y nunca mezclada en las tablas o gráficas CPU principales |
-| `<tag>_pareto_threads{1,2,4}.png` | Fronteras de Pareto en CPU (`F1`, `ROC-AUC`, `Throughput`) para `threads = 1, 2, 4` |
+| `<tag>_pareto_threads{1,2,4}.png` | Fronteras de Pareto en CPU (`F1`, `ROC-AUC`, `Throughput`) para `threads = 1, 2, 4` (estilo MDPI 300 DPI, sin traslape de etiquetas; `96` figuras en disco) |
 
 *(Nota: la comparativa local en Python/NumPy puro `numpy_finest_pyramid` y `numpy_baseline` sin la DLL C99 se genera por separado en `results/comparison_cpu_python/`.)*
 
@@ -31,6 +31,6 @@ Para el análisis científico completo y los veredictos de hipótesis ver [../..
 ```powershell
 .\.venv\Scripts\python.exe -m experiments.benchmark_cpu_fair --config configs/profiling/kolektorsdd2.toml
 .\.venv\Scripts\python.exe -m experiments.benchmark_cpu_fair --config configs/profiling/kolektorsdd2.toml --inverted
-.\.venv\Scripts\python.exe -m experiments.benchmark_cpu_fair --config configs/profiling/mvtec_ad.toml --objects bottle
-.\.venv\Scripts\python.exe -m experiments.benchmark_cpu_fair --config configs/profiling/mvtec_ad.toml --objects bottle --inverted
+.\.venv\Scripts\python.exe -m experiments.benchmark_cpu_fair --config configs/profiling/mvtec_ad.toml --all-objects
+.\.venv\Scripts\python.exe -m experiments.benchmark_cpu_fair --config configs/profiling/mvtec_ad.toml --all-objects --inverted
 ```

@@ -168,6 +168,15 @@ Orquestación del banco de pruebas en microcontrolador (**PC → MCU → PC**), 
 - `session.py`: ejecución completa del bucle `HELLO -> FRAME_BEGIN -> CHUNK_DATA × K -> FRAME_END -> INFER_REQ -> RESULT_META (+ RESULT_VECT)` (`run_hw_session`), comparación contra el oráculo de escritorio (`load_desktop_reference`, `compare_against_reference`) y serialización de artefactos por corrida (`save_run_artifacts`).
 - `fit_report.py`, `report.py`: matriz de cabida estática/compilada (`build_fit_matrix`, `write_fit_report`), agregación de corridas medidas vs compiladas (`collect_all_summaries`, `write_hw_summary_csv`) y generación de las 4 figuras y `results/hw_test/README.md` (`generate_hw_figures`, `write_hw_readme`).
 
+### 9. `src/visualization/`
+
+Estilización editorial MDPI unificada (`300 DPI`, fuentes embebidas Type-42, paletas seguras para daltonismo y colocación de etiquetas libre de traslapes) compartida por los módulos de graficación:
+
+- `sci_plots.py`:
+  - `MdpiTheme` y `apply_mdpi_style(...)`: tema Matplotlib seguro para backend `Agg`.
+  - `place_non_overlapping_labels(...)`: algoritmo iterativo de repulsión en coordenadas de pantalla para anotaciones Pareto sin cruces.
+  - Figuras metodológicas (`plot_x94_methodology_walkthrough(...)`, `plot_polarity_inversion_comparison(...)`) consumidas por `experiments/visualize_methodology.py`.
+
 ---
 
 ## Principios de diseño

@@ -1,0 +1,413 @@
+# Configuration for aggregating canonical measured outputs into results/FINAL_PAPER_REPORT.md.
+# All directories, categories, models, figure captions, and script provenance are TOML-driven.
+
+[paper_report]
+base_config = "configs/base.toml"
+preprocessing_kolektor_config = "configs/preprocessing/kolektorsdd2.toml"
+preprocessing_mvtec_config = "configs/preprocessing/mvtec_ad.toml"
+csv_kolektor_config = "configs/csv/kolektorsdd2.toml"
+csv_mvtec_config = "configs/csv/mvtec_ad.toml"
+entropy_config = "configs/entropy/kolektorsdd2.toml"
+asymmetry_config = "configs/asymmetry/kolektorsdd2.toml"
+classification_config = "configs/classification/kolektorsdd2.toml"
+cnn_config = "configs/cnn/kolektorsdd2.toml"
+c_imp_config = "configs/c_imp/kolektorsdd2.toml"
+reproduction_script = "reproduce_paper_pipeline.ps1"
+classification_dir = "results/classification"
+cnn_dir = "results/cnn"
+comparison_cpu_dir = "results/comparison_cpu"
+profiling_dir = "results/profiling"
+c_imp_dir = "results/c_imp"
+methodology_dir = "results/methodology"
+hw_test_fit_csv = "results/hw_test/fit_report.csv"
+output_markdown = "results/FINAL_PAPER_REPORT.md"
+seed = 42
+primary_cpu_threads = 1
+primary_cpu_batch_size = 1
+throughput_cpu_batch_size = 32
+classifiers = ["dt", "knn", "lr", "lr_dot", "mlp_16_dot", "rf"]
+cnn_models = [
+    "ultra_tiny",
+    "ds_cnn",
+    "tiny_cnn",
+    "mobilenet_like",
+    "tiny_resnet",
+    "small_cnn",
+    "torchvision_mobilenet",
+]
+mvtec_matrix_models = [
+    "lr_dot",
+    "mlp_16_dot",
+    "rf",
+    "ultra_tiny",
+    "ds_cnn",
+    "mobilenet_like",
+    "tiny_resnet",
+    "small_cnn",
+]
+mvtec_object_categories = [
+    "bottle",
+    "cable",
+    "capsule",
+    "hazelnut",
+    "metal_nut",
+    "pill",
+    "screw",
+    "toothbrush",
+    "transistor",
+    "zipper",
+]
+mvtec_texture_categories = [
+    "carpet",
+    "grid",
+    "leather",
+    "tile",
+    "wood",
+]
+
+# ==================== FLAGSHIP PAPER FIGURES ====================
+
+[[paper_report.flagship_figures]]
+path = "results/methodology/kolektorsdd2_x94_methodology.png"
+script = "experiments.visualize_methodology"
+meaning = "Six-panel walkthrough on a normal vs. defective KolektorSDD2 commutator sample: (a–b) preprocessed 128x128 inputs overlaid with the 8x8 partition grid, (c) 16-bin quantized defect map, (d–e) local normalized Shannon entropy maps E_8x8 showing localized disorder around the surface crack, and (f) the 9 multiscale symmetry-breaking features (x9) contrasting normal vs. defect."
+caption = "Step-by-step extraction of the 94-dimensional multiscale entropy and spatial-asymmetry descriptor (x94) on representative normal and defective KolektorSDD2 samples: (a,b) grayscale inputs with 8x8 grid partitions, (c) B=16 intensity quantization map, (d,e) 8x8 normalized Shannon entropy maps, and (f) multiscale reflection/rotation asymmetry profile (x9)."
+
+[[paper_report.flagship_figures]]
+path = "results/methodology/mvtec_ad_bottle_x94_methodology.png"
+script = "experiments.visualize_methodology"
+meaning = "Six-panel x94 extraction walkthrough on MVTec-AD bottle (structural object with radial symmetry), showing how structural breakage perturbs local 8x8 entropy cells and elevates left-right, top-bottom, and 180-degree rotational asymmetry scores in x9."
+caption = "Multiscale entropy and asymmetry extraction (x94) on representative MVTec-AD bottle samples, illustrating how localized structural damage disrupts the radial spatial entropy distribution (d,e) and increases multiscale asymmetry magnitudes across 2x2, 4x4, and 8x8 grids (f)."
+
+[[paper_report.flagship_figures]]
+path = "results/methodology/polarity_inversion_invariance_comparison.png"
+script = "experiments.visualize_methodology"
+meaning = "Visual and quantitative verification of contrast-polarity invariance under I' = 255 - I: (a–b) standard vs. inverted inputs, (c) mirrored 16-bin intensity histograms proving exact bin permutation (b -> 15 - b), (d–e) identical E_8x8 entropy maps (max diff ~0), and (f) log-scale comparison of large mean pixel L1 shifts against near-zero x85/x9 descriptor shifts across KolektorSDD2, MVTec-AD bottle, and MVTec-AD tile."
+caption = "Empirical verification of polarity-inversion invariance (I' = 255 - I) for x94: (a,b) standard and inverted inputs, (c) exact bin-index reversal for B=16 uniform quantization, (d,e) conserved 8x8 Shannon entropy maps, and (f) normalized pixel shift versus maximum descriptor discrepancy across KolektorSDD2, MVTec-AD bottle, and MVTec-AD tile."
+
+[[paper_report.flagship_figures]]
+path = "results/classification/mvtec-ad/mvtec_all_objects_lr_dot_comparison.png"
+script = "experiments.evaluate_descriptors"
+meaning = "Two-panel MVTec-AD all-15 benchmark for the linear dot-product classifier (lr_dot): top compares F1(x85), F1(x94), and ROC-AUC(x94) per category; bottom plots the percentage of permutation feature importance contributed by the 9 symmetry features (x9) relative to the uniform 9/94 = 9.6% expectation line."
+caption = "Per-category MVTec-AD performance of x94 + lr_dot across all 15 industrial categories: (top) defect F1-score for x85 vs. x94 alongside ROC-AUC, and (bottom) total explainability importance share attributed to the nine asymmetry features (x9) compared with the 9.6% uniform baseline."
+
+[[paper_report.flagship_figures]]
+path = "results/classification/mvtec-ad/mvtec_all_objects_mlp_16_dot_comparison.png"
+script = "experiments.evaluate_descriptors"
+meaning = "Two-panel MVTec-AD all-15 benchmark for the compact 16-hidden-unit MLP (mlp_16_dot), demonstrating the strongest overall classical F1/ROC-AUC across structural objects (mean Object F1 = 0.7351) and illustrating where x9 symmetry features carry above-uniform explanatory weight (especially on textures such as tile and leather)."
+caption = "Per-category MVTec-AD classification performance and x9 asymmetry importance share for x94 + mlp_16_dot across all 15 object and texture categories."
+
+[[paper_report.flagship_figures]]
+path = "results/classification/mvtec-ad/mvtec_all_objects_rf_comparison.png"
+script = "experiments.evaluate_descriptors"
+meaning = "Two-panel MVTec-AD all-15 benchmark for Random Forest (rf), highlighting large symmetry ablation gains (+0.1056 mean F1 across all 15 categories, +0.1744 on textures) and high x9 importance concentration on symmetric/textured categories such as tile."
+caption = "Per-category MVTec-AD ablation (x85 vs. x94) and x9 feature-importance share for Random Forest, showing pronounced symmetry gains on surface texture categories."
+
+[[paper_report.flagship_figures]]
+path = "results/comparison_cpu/kolektorsdd2_pareto_threads1.png"
+script = "experiments.benchmark_cpu_fair"
+meaning = "Four-panel 100% single-thread CPU-fair comparison on standard KolektorSDD2 (batch=1 latency, batch=32 throughput): F1 vs. total latency with Pareto frontier, ROC-AUC vs. latency, F1 vs. model parameter count, and log-scale throughput ranking. Shows lr_dot and mlp_16_dot occupying the sub-millisecond Pareto frontier (~0.35–0.36 ms) while tiny_resnet leads peak F1 (0.7130) at 3.68 ms."
+caption = "Single-thread CPU-fair trade-off on standard KolektorSDD2 comparing x94 classical pipelines against seven lightweight CNNs across (a) F1 vs. end-to-end latency with Pareto frontier, (b) ROC-AUC vs. latency, (c) F1 vs. parameter count, and (d) batch-32 throughput."
+
+[[paper_report.flagship_figures]]
+path = "results/comparison_cpu/kolektorsdd2-inverted_pareto_threads1.png"
+script = "experiments.benchmark_cpu_fair"
+meaning = "Same four-panel single-thread CPU-fair Pareto analysis under polarity-inverted KolektorSDD2 images, illustrating how x94 classical models retain virtually unchanged F1/ROC-AUC (mlp_16_dot F1 = 0.4906) while CNN baselines degrade sharply (tiny_cnn -0.4056, torchvision_mobilenet collapsing to chance)."
+caption = "Single-thread CPU-fair Pareto comparison on polarity-inverted KolektorSDD2, highlighting the stability of x94 + ML pipelines versus contrast-polarity degradation across lightweight CNN architectures."
+
+[[paper_report.flagship_figures]]
+path = "results/profiling/kolektorsdd2/fig1_x94_stage_breakdown.png"
+script = "experiments.profile_pipelines"
+meaning = "Two-panel micro-profiling breakdown of the x94 descriptor under the native c_single_pass backend: left compares per-stage latency at batch=1 vs. amortized batch=32; right shows percentage share across fused quantization+histogramming, pyramid summation, entropy LUT lookup, x9 asymmetry computation, and array concatenation."
+caption = "Stage-level CPU latency breakdown of x94 feature extraction on KolektorSDD2 (c_single_pass backend, 1 CPU thread): (left) median per-stage latency at batch=1 versus amortized batch=32, and (right) proportional execution-time composition."
+
+[[paper_report.flagship_figures]]
+path = "results/profiling/kolektorsdd2/fig2_cnn_layer_heatmap.png"
+script = "experiments.profile_pipelines"
+meaning = "Two-panel CNN operator profiling on single-thread CPU: left displays a heatmap of operator-family share (conv, dwconv, pwconv, bn, activation, pool, linear) across all seven CNNs; right ranks hookless median forward latency alongside analytical MFLOPs."
+caption = "Operator-family CPU execution breakdown and hookless forward latency (batch=1, 1 CPU thread) across the seven lightweight CNN baselines on KolektorSDD2."
+
+[[paper_report.flagship_figures]]
+path = "results/profiling/kolektorsdd2/fig3_pareto_cpu_1t_b1.png"
+script = "experiments.profile_pipelines"
+meaning = "Phase B profiling view of the 1-thread, batch=1 CPU Pareto trade-off linking accuracy, ROC-AUC, parameter complexity, and throughput across all classical ML and CNN pipelines on KolektorSDD2."
+caption = "End-to-end single-thread CPU Pareto profile (batch=1) on KolektorSDD2 contrasting x94 classical classifiers and lightweight CNNs."
+
+[[paper_report.flagship_figures]]
+path = "results/profiling/kolektorsdd2/fig4_thread_scaling.png"
+script = "experiments.profile_pipelines"
+meaning = "Two-panel CPU thread-scaling study (1, 2, 4 threads): left compares absolute model-inference median latency for CNNs vs. ML classifiers; right plots CNN parallel speedup relative to ideal linear scaling, showing diminishing returns at batch=1."
+caption = "CPU multi-thread scaling sensitivity on KolektorSDD2 (batch=1): (left) median inference latency across 1–4 CPU threads for CNN and classical models, and (right) observed CNN speedup versus ideal linear scaling."
+
+[[paper_report.flagship_figures]]
+path = "results/profiling/kolektorsdd2/fig5_descriptor_scalability.png"
+script = "experiments.profile_pipelines"
+meaning = "Three-panel scalability sweep of the native x94 extractor across image resolution (64x64 to 256x256), histogram bin count (8 to 32 bins), and spatial grid hierarchy depth, verifying linear O(HW) pixel-pass scaling."
+caption = "Scalability of C99 x94 descriptor extraction across image resolution, quantization bin count, and multiscale grid hierarchy (1 CPU thread, batch=1)."
+
+[[paper_report.flagship_figures]]
+path = "results/profiling/kolektorsdd2/fig6_throughput_batch32.png"
+script = "experiments.profile_pipelines"
+meaning = "Horizontal log-scale bar chart comparing end-to-end CPU throughput (samples/s) at batch=1 versus batch=32 across all models, quantifying batching amortization gains for both x94 + ML and CNNs."
+caption = "Single-thread CPU throughput comparison (samples/s, log scale) at batch=1 versus batch=32 across x94 classical pipelines and lightweight CNNs on KolektorSDD2."
+
+[[paper_report.flagship_figures]]
+path = "results/c_imp/kolektorsdd2/figures/fig1_classification_f32_vs_q15.png"
+script = "experiments.visualize_c_pipeline"
+meaning = "Four-panel comparison of float32 versus Q15/int8 quantized inference in portable C99 on KolektorSDD2: F1, PR-AUC, ROC-AUC, and log-scale quantization margin drift annotated with exact flip counts and weight formats (q31, q15, int8_per_channel)."
+caption = "Quantization fidelity of the exported C99 models on KolektorSDD2: float32 versus fixed-point Q15/int8 (a) F1-score, (b) PR-AUC, (c) ROC-AUC, and (d) absolute decision-score drift with exact prediction-flip counts."
+
+[[paper_report.flagship_figures]]
+path = "results/c_imp/kolektorsdd2/figures/fig2_score_separation_and_quantization.png"
+script = "experiments.visualize_c_pipeline"
+meaning = "Grid of per-model scatter plots comparing Python float32 logits/margins against fixed-point Q15 scores across all 1,004 KolektorSDD2 test images, colored by ground-truth class with circled decision flips and Pearson correlation r (~0.997–1.000)."
+caption = "Per-sample decision-score agreement between float32 and fixed-point Q15 C99 implementations across all nine exported KolektorSDD2 models, showing near-unit Pearson correlation and rare flips restricted to the decision threshold."
+
+[[paper_report.flagship_figures]]
+path = "results/c_imp/kolektorsdd2/figures/fig3_confusion_matrices_q15.png"
+script = "experiments.visualize_c_pipeline"
+meaning = "Row-normalized Q15 confusion matrices (TN, FP, FN, TP counts and percentages) for all nine compiled C99 models on KolektorSDD2, detailing false-alarm vs. missed-defect trade-offs under fixed-point execution."
+caption = "Fixed-point Q15 confusion matrices on the KolektorSDD2 test set (N=1,004) for lr_dot, mlp_16_dot, and the seven exported lightweight CNNs."
+
+[[paper_report.flagship_figures]]
+path = "results/c_imp/kolektorsdd2/figures/fig4_c_parity_and_verification.png"
+script = "experiments.visualize_c_pipeline"
+meaning = "Four-panel numerical parity audit comparing compiled C99 executables against Python reference mirrors: (a) max float32 error vs. acceptance gates, (b) bit-exact Q15 raw diff = 0 and 0 label mismatches, (c) per-sample float32 error boxplots, and (d) margin-distance histogram explaining why rare Q15-vs-f32 flips happen only near threshold."
+caption = "Compiled C99-versus-Python numerical verification on KolektorSDD2 confirming float32 compliance within 1e-4, bit-exact Q15 agreement (0 raw diff, 0 label mismatches), and threshold-localized quantization flips."
+
+[[paper_report.flagship_figures]]
+path = "results/c_imp/kolektorsdd2/figures/fig5_embedded_memory_and_latency_pareto.png"
+script = "experiments.visualize_c_pipeline"
+meaning = "Four-panel embedded deployment dashboard on KolektorSDD2: (a) weight Flash footprint vs. 2 MB MCU budget, (b) peak activation arena (f32 vs. Q15) vs. 200 KB internal SRAM and 3 MB PSRAM budgets, (c) Q15 F1 vs. desktop C99 latency Pareto frontier, and (d) T_selector + T_model latency decomposition."
+caption = "Embedded memory feasibility and desktop C99 Q15 latency Pareto on KolektorSDD2: (a) model Flash storage, (b) activation RAM arena relative to 200 KB SRAM and 3 MB PSRAM limits, (c) Q15 F1 vs. latency Pareto, and (d) T_total = T_selector + T_model breakdown."
+
+[[paper_report.flagship_figures]]
+path = "results/c_imp/kolektorsdd2/figures/fig6_x94_descriptor_insights.png"
+script = "experiments.visualize_c_pipeline"
+meaning = "Six-panel statistical descriptor diagnostic on KolektorSDD2 test vectors: class-mean 8x8 entropy grids (normal, defect, and defect-minus-normal shift), mean x9 asymmetry bars by class, top-12 signed Cohen's d effect sizes, and Q0.15 + log2-LUT quantization error per feature index."
+caption = "Statistical diagnostics of x94 on KolektorSDD2: class-mean 8x8 spatial entropy maps and difference shift (top), multiscale asymmetry comparison, top-12 Cohen's d discriminative features, and per-feature Q0.15 quantization residuals (bottom)."
+
+# ==================== PER-RUN FIGURE TEMPLATES ====================
+
+[[paper_report.figure_templates]]
+pattern = "results/classification/<dataset>/<obj>_<cls>/confusion_matrix_and_curves.png"
+script = "experiments.evaluate_descriptors"
+meaning = "Three-panel diagnostic (row-normalized confusion matrix, ROC curve with AUC, and Precision-Recall curve with AP) for any individual classical classifier and dataset/object split."
+caption = "Confusion matrix, ROC curve, and Precision-Recall curve for x94 + <classifier> evaluated on <dataset/category>."
+
+[[paper_report.figure_templates]]
+pattern = "results/classification/<dataset>/<obj>_<cls>/descriptor_ablation_x85_x9_x94.png"
+script = "experiments.evaluate_descriptors"
+meaning = "Grouped bar chart comparing F1, Balanced Accuracy, and ROC-AUC across feature subsets (x85_only, x9_only, x94_full, and individual scales E_1x1..E_8x8), annotated with symmetry gain dF1 = F1(x94) - F1(x85)."
+caption = "Descriptor subset and spatial-scale ablation (x85 vs. x9 vs. x94 and E_1x1..E_8x8) for <classifier> on <dataset/category>."
+
+[[paper_report.figure_templates]]
+pattern = "results/classification/<dataset>/<obj>_<cls>/explainability_importance_breakdown.png"
+script = "experiments.evaluate_descriptors"
+meaning = "Three-panel explainability summary showing Top-K individual features (colored by entropy vs. asymmetry), total importance share (%) per pyramid scale, and cardinality-normalized mean importance per feature."
+caption = "Feature-importance explainability breakdown for x94 + <classifier> on <dataset/category>, separating spatial entropy (x85) and symmetry-breaking (x9) contributions."
+
+[[paper_report.figure_templates]]
+pattern = "results/classification/<dataset>/<obj>_<cls>/spatial_importance_heatmaps.png"
+script = "experiments.evaluate_descriptors"
+meaning = "Three 2D spatial heatmaps (2x2, 4x4, and 8x8 grids) projecting classifier feature importance back onto image grid coordinates to reveal where discriminative anomalies concentrate."
+caption = "2D spatial importance heatmaps across 2x2, 4x4, and 8x8 entropy grids for <classifier> on <dataset/category>."
+
+[[paper_report.figure_templates]]
+pattern = "results/cnn/<dataset>/<obj>/<model>/confusion_matrix_and_curves.png"
+script = "experiments.evaluate_cnn"
+meaning = "Three-panel CNN test-split diagnostic showing confusion matrix at the validation-calibrated threshold alongside ROC and Precision-Recall curves."
+caption = "Test-set confusion matrix (calibrated threshold), ROC curve, and Precision-Recall curve for <cnn_model> on <dataset/category>."
+
+[[paper_report.figure_templates]]
+pattern = "results/cnn/<dataset>/<obj>/<model>/training_curves.png"
+script = "experiments.evaluate_cnn"
+meaning = "Two-panel training convergence trace showing train/validation cross-entropy loss and validation PR-AUC/F1 across epochs with the early-stopping best epoch marked."
+caption = "Training and validation loss progression and validation PR-AUC/F1 dynamics for <cnn_model> on <dataset/category> (seed = 42)."
+
+[[paper_report.figure_templates]]
+pattern = "results/comparison_cpu/<tag>_pareto_threads{1,2,4}.png"
+script = "experiments.benchmark_cpu_fair"
+meaning = "Four-panel CPU-only Pareto comparison generated per target and thread count (1, 2, or 4 threads), plotting F1 vs. latency, ROC-AUC vs. latency, F1 vs. parameters, and throughput."
+caption = "CPU-fair comparison (threads=<T>, batch=1) of x94 classical classifiers and lightweight CNNs on <dataset/category>."
+
+[[paper_report.figure_templates]]
+pattern = "results/c_imp/<target>/figures/fig{1..6}_*.png"
+script = "experiments.visualize_c_pipeline"
+meaning = "Six-figure C99 verification and deployment suite generated for every compiled target (KolektorSDD2 and all 15 MVTec-AD categories), covering f32-vs-Q15 metrics, score scatter, Q15 confusion matrices, numerical parity gates, MCU memory/latency Pareto, and x94 statistical insights."
+caption = "C99 fixed-point deployment diagnostics (fig1–fig6) for <target>, validating bit-exact Q15 parity, memory budgets, and desktop latency."
+
+# ==================== PIPELINE SCRIPTS & ARTIFACT PROVENANCE ====================
+
+[[paper_report.scripts_catalog]]
+stage = "0. Native Build"
+script = "src.features.build_native"
+configs = "configs/features/native_entropy.toml"
+status = "Executed"
+outputs = "src/features/native/build/entropy_pyramid.dll"
+summary = "Compiles the portable C99 single-pass multiscale histogram/entropy kernel (`c_single_pass`) with MSVC x64 `/O2` used by Python profiling and evaluation."
+
+[[paper_report.scripts_catalog]]
+stage = "Precomputed Data (A)"
+script = "experiments.preprocess_kolektorsdd2 / experiments.preprocess_mvtec_ad"
+configs = "configs/preprocessing/{kolektorsdd2,mvtec_ad}.toml"
+status = "Precomputed (Verified, Not Re-run)"
+outputs = "data/preprocessed/{KolektorSDD2,mvtec-ad}[-inverted]/**/*.png"
+summary = "Deterministic 128x128 grayscale resizing/letterboxing and polarity-inversion (`255 - I`) image generation."
+
+[[paper_report.scripts_catalog]]
+stage = "Precomputed Data (B)"
+script = "experiments.export_kolektorsdd2_csv / experiments.export_mvtec_ad_csv"
+configs = "configs/csv/{kolektorsdd2,mvtec_ad}.toml"
+status = "Precomputed (Verified, Not Re-run)"
+outputs = "data/csv/{kolektorsdd2,mvtec-ad}[-inverted].csv"
+summary = "Exports flattened 128x128 pixel CSV tables with split/class metadata for downstream tabular extraction."
+
+[[paper_report.scripts_catalog]]
+stage = "Precomputed Data (C)"
+script = "experiments.export_entropy_maps"
+configs = "configs/entropy/{kolektorsdd2,mvtec_ad}.toml"
+status = "Precomputed (Verified, Not Re-run)"
+outputs = "data/csv/{kolektorsdd2,mvtec-ad}[-inverted]-entropy.csv + .json"
+summary = "Extracts the 85-dimensional multiscale normalized Shannon entropy pyramid (E_1x1, E_2x2, E_4x4, E_8x8; B=16 bins)."
+
+[[paper_report.scripts_catalog]]
+stage = "Precomputed Data (D)"
+script = "experiments.append_asymmetry_features"
+configs = "configs/asymmetry/{kolektorsdd2,mvtec_ad}.toml"
+status = "Precomputed (Verified, Not Re-run)"
+outputs = "data/csv/{kolektorsdd2,mvtec-ad}[-inverted]-entropy-full.csv + .json"
+summary = "Appends the 9 multiscale reflection/rotation entropy asymmetry features (lr, tb, rot180 across 2x2, 4x4, 8x8) forming the canonical x94 feature vector (verified in Section 2B)."
+
+[[paper_report.scripts_catalog]]
+stage = "1. Classical ML"
+script = "experiments.evaluate_descriptors"
+configs = "configs/classification/{kolektorsdd2,mvtec_ad}.toml"
+status = "Executed (--classifier all --overwrite, std+inv, KolektorSDD2 + all 15 MVTec)"
+outputs = "results/classification/.../{metrics_summary.json, ablation_table.csv, feature_importance.csv, scale_and_family_breakdown.csv, 4 diagnostic PNGs}; mvtec_all_objects_<cls>_{summary.csv,comparison.png}"
+summary = "Trains/evaluates all 6 classical classifiers (dt, knn, lr, lr_dot, mlp_16_dot, rf), runs x85/x9/x94 and E_1x1..E_8x8 ablations, computes explainability, and populates Sections 2A, 3, and 4."
+
+[[paper_report.scripts_catalog]]
+stage = "2. Lightweight CNNs"
+script = "experiments.evaluate_cnn"
+configs = "configs/cnn/{kolektorsdd2,mvtec_ad}.toml"
+status = "Executed (--model all --seeds 42 --overwrite, std+inv, KolektorSDD2 + all 15 MVTec)"
+outputs = "results/cnn/.../{checkpoint.pt, metrics_summary.json, training_history.csv, confusion_matrix_and_curves.png, training_curves.png}; mvtec_all_objects_<model>_summary.csv"
+summary = "Trains all 7 lightweight CNN architectures on GPU with stratified val early stopping and val_f1 threshold calibration, saving 224 checkpoints and populating Sections 2A, 3, and 4."
+
+[[paper_report.scripts_catalog]]
+stage = "3A. CPU-Fair Benchmark"
+script = "experiments.benchmark_cpu_fair"
+configs = "configs/profiling/{kolektorsdd2,mvtec_ad}.toml"
+status = "Executed (std+inv, KolektorSDD2 + all 15 MVTec)"
+outputs = "results/comparison_cpu/{<tag>_baseline_vs_cnn_cpu.csv, <tag>_cuda_reference.csv, summary_all_datasets.csv, <tag>_pareto_threads{1,2,4}.png}"
+summary = "Measures 100% single-thread/multi-thread CPU latencies (T_descriptor/T_preprocess, T_model, T_total, IQR, 95% CI, batch-32 throughput), populating Sections 3A, 4A, and 4B."
+
+[[paper_report.scripts_catalog]]
+stage = "3B. Deep Profiling"
+script = "experiments.profile_pipelines"
+configs = "configs/profiling/{kolektorsdd2,mvtec_ad}.toml"
+status = "Executed (full std + short inverted verification across all 32 targets)"
+outputs = "results/profiling/<tag>/{README.md, environment.json, descriptor_stage_times.csv, descriptor_scalability.csv, classifier_times.csv, cnn_architectures_summary.csv, cnn_layer_times_*.csv, cnn_thread_scaling.csv, statistical_tests.csv, ablation_quality_vs_cost.csv, fig1..fig6_*.png}"
+summary = "Profiles x94 sub-stages, resolution/bin/grid scalability, CNN operator families, thread scaling, Mann-Whitney U tests, and environment metadata (Sections 1, 2C, and 5)."
+
+[[paper_report.scripts_catalog]]
+stage = "4A. C99 Export"
+script = "experiments.export_c_pipeline"
+configs = "configs/c_imp/{kolektorsdd2,mvtec_ad}.toml"
+status = "Executed (KolektorSDD2 + all 15 MVTec objects)"
+outputs = "c_imp/generated/<target>/{cimp_config.h, cimp_luts.h, model_*.h/.c, golden_*.csv, export_manifest.json}; results/c_imp/<target>/memory_report.json"
+summary = "Exports zero-malloc portable C99 float32 and Q15/int8 headers, LUTs, folded tabular weights (lr_dot, mlp_16_dot), quantized CNN weights/arenas, golden vectors, and MCU memory budgets (Section 6)."
+
+[[paper_report.scripts_catalog]]
+stage = "4B. C99 Parity & Timing"
+script = "experiments.verify_c_pipeline"
+configs = "configs/c_imp/{kolektorsdd2,mvtec_ad}.toml"
+status = "Executed (--benchmark across all 16 targets)"
+outputs = "c_imp/build/<target>/{cimp_test_runtime.exe, cimp_pipeline.exe}; results/c_imp/<target>/{parity_report.json, parity_per_sample.csv, timing_benchmark.csv, c_outputs/}"
+summary = "Compiles C99 executables with MSVC, enforces f32 tolerance and bit-exact Q15 parity gates (0 raw diff across all 16 targets), and measures C99 desktop latencies (Section 6)."
+
+[[paper_report.scripts_catalog]]
+stage = "4C. C99 Visualization"
+script = "experiments.visualize_c_pipeline"
+configs = "configs/c_imp/{kolektorsdd2,mvtec_ad}.toml"
+status = "Executed (all 16 targets)"
+outputs = "results/c_imp/<target>/figures/{summary_models_metrics.csv, summary_report.md, fig1..fig6_*.png}"
+summary = "Renders the 6-figure C99 quantization, score-scatter, confusion-matrix, parity, memory/Pareto, and x94 insight suite plus per-target summary tables (Sections 6 and 7)."
+
+[[paper_report.scripts_catalog]]
+stage = "4D. MCU Fit & Live ESP32-CAM Bench"
+script = "experiments.hw_test (subcommands: bench, flash, send, report)"
+configs = "configs/hw_test/boards.toml"
+status = "Executed Live on ESP32-CAM (COM5, 12×8=96/96 parity), Arduino Nano (COM4, 2×8=16/16 parity), & Arduino Uno (COM6, 2×8=16/16 parity) + Compile-Only Fit Sweep (nodemcu)"
+outputs = "results/hw_test/{fit_report.csv, fit_report.md, <board>/build_cache.json, {esp32cam,nano,uno}/20261126T*/}"
+summary = "Compiles cross-board sketches via arduino-cli, executes live UART PC->MCU->PC inference on ESP32-CAM (12 runs), Arduino Nano (2 runs), and Arduino Uno (2 runs), and builds the 53-row MCU fit matrix with physical impossibility bounds (Sections 6C–6E)."
+
+[[paper_report.scripts_catalog]]
+stage = "5. Methodology Figures"
+script = "experiments.visualize_methodology"
+configs = "configs/visualization/methodology.toml"
+status = "Executed (--overwrite)"
+outputs = "results/methodology/{kolektorsdd2_x94_methodology.png, mvtec_ad_bottle_x94_methodology.png, polarity_inversion_invariance_comparison.png}"
+summary = "Generates MDPI-styled visual walkthroughs of x94 extraction and empirical proof of contrast-polarity invariance (Section 7A)."
+
+[[paper_report.scripts_catalog]]
+stage = "6. Paper Report"
+script = "experiments.generate_paper_report"
+configs = "configs/reporting/paper_report.toml"
+status = "Executed (--overwrite)"
+outputs = "results/FINAL_PAPER_REPORT.md"
+summary = "Aggregates all measured JSON/CSV outputs, profiling tables, hyperparameter specs, and figure/script metadata into this paper-ready Markdown report."
+
+[[paper_report.scripts_catalog]]
+stage = "7. Collaborator Orchestrator"
+script = "reproduce_paper_pipeline.ps1 (PowerShell)"
+configs = "All configs/**/*.toml"
+status = "Verified (-DryRun)"
+outputs = "End-to-end sequential reproduction of Sections 1A–7, including active `x85 -> x94-v1` feature generation (with Section 0 image/pixel-CSV steps `0A–0B` commented)"
+summary = "Standalone PowerShell reproduction script executing every canonical command sequentially (`seed = 42`), keeping only raw image transformations (`0A–0B`) commented out while `x85` + `x9` (`x94-v1`) extraction (`1B`) is active."
+
+[[paper_report.scripts_catalog]]
+stage = "Deprecated"
+script = "experiments.compare_baseline_vs_cnn"
+configs = "N/A (legacy CLI)"
+status = "Deprecated (Excluded)"
+outputs = "results/comparison/ (unused)"
+summary = "Legacy comparator that mixed CUDA CNN timing with CPU ML timing; explicitly excluded from all latency claims and report tables in favor of `benchmark_cpu_fair`."
+
+# ==================== REPORT SECTION TRACEABILITY ====================
+
+[[paper_report.section_traceability]]
+section = "Section 1 (Execution Audit & Environment)"
+artifacts = "results/profiling/kolektorsdd2/environment.json; results/c_imp/kolektorsdd2/parity_report.json; results/comparison_cpu/*_baseline_vs_cnn_cpu.csv; reproduce_paper_pipeline.ps1"
+scripts = "experiments.profile_pipelines; experiments.verify_c_pipeline; experiments.benchmark_cpu_fair"
+
+[[paper_report.section_traceability]]
+section = "Section 2 (Section 0 Image Transformations, Splits, Polarity & Hyperparameters)"
+artifacts = "configs/preprocessing/{kolektorsdd2,mvtec_ad}.toml; configs/csv/{kolektorsdd2,mvtec_ad}.toml; data/csv/*-entropy-full.csv; configs/{entropy,asymmetry,classification,cnn,c_imp}/kolektorsdd2.toml; results/{classification,cnn}/**/metrics_summary.json; results/profiling/kolektorsdd2/cnn_architectures_summary.csv"
+scripts = "experiments.preprocess_{kolektorsdd2,mvtec_ad}; experiments.export_{kolektorsdd2,mvtec_ad}_csv; experiments.export_entropy_maps; experiments.append_asymmetry_features; experiments.evaluate_descriptors; experiments.evaluate_cnn; experiments.profile_pipelines"
+
+[[paper_report.section_traceability]]
+section = "Section 3 (KolektorSDD2 Complete Results)"
+artifacts = "results/classification/kolektorsdd2[-inverted]/full_*/{metrics_summary.json,ablation_table.csv}; results/cnn/kolektorsdd2[-inverted]/full/*/metrics_summary.json; results/comparison_cpu/kolektorsdd2[-inverted]_baseline_vs_cnn_cpu.csv"
+scripts = "experiments.evaluate_descriptors; experiments.evaluate_cnn; experiments.benchmark_cpu_fair"
+
+[[paper_report.section_traceability]]
+section = "Section 4 (MVTec-AD All-15 Results)"
+artifacts = "results/classification/mvtec-ad[-inverted]/*/{metrics_summary.json,ablation_table.csv}; results/cnn/mvtec-ad[-inverted]/*/*/metrics_summary.json; results/comparison_cpu/mvtec-ad[-inverted]_*_baseline_vs_cnn_cpu.csv"
+scripts = "experiments.evaluate_descriptors; experiments.evaluate_cnn; experiments.benchmark_cpu_fair"
+
+[[paper_report.section_traceability]]
+section = "Section 5 (Deep CPU Micro-Profiling & Significance)"
+artifacts = "results/profiling/kolektorsdd2/{descriptor_stage_times.csv,descriptor_scalability.csv,cnn_architectures_summary.csv,cnn_thread_scaling.csv,statistical_tests.csv,ablation_quality_vs_cost.csv}"
+scripts = "experiments.profile_pipelines"
+
+[[paper_report.section_traceability]]
+section = "Section 6 (C99 f32/Q15 Parity, Drift, Timing & MCU Fit)"
+artifacts = "results/c_imp/*/{parity_report.json,memory_report.json,timing_benchmark.csv,figures/summary_models_metrics.csv}; results/hw_test/fit_report.csv"
+scripts = "experiments.export_c_pipeline; experiments.verify_c_pipeline; experiments.visualize_c_pipeline; experiments.hw_test"
+
+[[paper_report.section_traceability]]
+section = "Section 7 & Section 8 (Figures Inventory & Provenance)"
+artifacts = "results/{methodology,classification,cnn,comparison_cpu,profiling,c_imp}/**/*.png; configs/reporting/paper_report.toml"
+scripts = "experiments.visualize_methodology; experiments.generate_paper_report"

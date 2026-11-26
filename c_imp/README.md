@@ -1,6 +1,6 @@
 # Implementación C99 portable pre-ESP32 (`c_imp/`)
 
-Implementación C99 pura (escritorio Windows x64 vía MSVC `cl.exe` y lista para portación a MCU ESP32-CAM) en **doble modo aritmético** (`float32` y punto fijo entero `Q15` sin `<math.h>` ni asignación dinámica `malloc`/`free` en inferencia) para:
+Implementación C99 pura (escritorio Windows x64 vía MSVC `cl.exe` y lista para portación a MCU ESP32-CAM — ya verificada en hardware real en `../results/hw_test/README.md` y consolidada en `../results/FINAL_PAPER_REPORT.md` §6) en **doble modo aritmético** (`float32` y punto fijo entero `Q15` sin `<math.h>` ni asignación dinámica `malloc`/`free` en inferencia) para:
 
 1. **Descriptor multiescala + asimetría $\mathbf{x}_{94}$ (`runtime/cimp_descriptor.{h,c}`):**
    - Cuantización de píxeles vía LUT de 256 entradas (`lut_bin_quant.h`), histograma en grilla fina $8\times 8$, suma piramidal ascendente ($8\times 8 \to 4\times 4 \to 2\times 2 \to 1\times 1$), cálculo de entropía Shannon vía LUT (`nlogn_full`, `term_per_level` o `log2_mantissa` seleccionable en TOML) y 9 residuos de asimetría LR/TB/R180.

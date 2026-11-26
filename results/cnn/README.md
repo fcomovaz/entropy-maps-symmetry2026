@@ -12,8 +12,8 @@ Los archivos pesados (`.pt`, `.csv`, `.json`, `.png`) están excluidos de Git me
 results/cnn/
 ├── kolektorsdd2/full/<modelo>/
 ├── kolektorsdd2-inverted/full/<modelo>/
-├── mvtec-ad/<objeto>/<modelo>/              # canónico en disco: bottle/
-└── mvtec-ad-inverted/<objeto>/<modelo>/     # canónico en disco: bottle/
+├── mvtec-ad/<objeto>/<modelo>/              # las 15 categorías en disco (mvtec_all_objects_<modelo>_summary.csv)
+└── mvtec-ad-inverted/<objeto>/<modelo>/     # las 15 categorías invertidas en disco
 ```
 
 Modelos evaluados en el zoo (`<modelo>`):

@@ -2,7 +2,7 @@
 
 Síntesis técnica y auditoría de resultados de la migración a **C99 portable pre-ESP32-CAM** (`float32` y punto fijo entero `Q15` / `int8_per_channel` sin `malloc` en inferencia), generados según la especificación de [../../tasks/task_11.md](../../tasks/task_11.md) mediante `experiments.export_c_pipeline`, `experiments.verify_c_pipeline` y `experiments.visualize_c_pipeline`.
 
-Para instrucciones de compilación, opciones CLI y ejecución manual de los binarios nativos ver [../../c_imp/README.md](../../c_imp/README.md). Los archivos pesados bajo `results/c_imp/<target>/` (`vectors/`, `c_outputs/`, `figures/`, CSV/JSON locales) permanecen excluidos de Git; este documento consolida en texto y tablas los hallazgos verificados.
+Para instrucciones de compilación, opciones CLI y ejecución manual de los binarios nativos ver [../../c_imp/README.md](../../c_imp/README.md). **Estado vigente (`2026-11-26`):** los **16/16 targets** (`kolektorsdd2` + las 15 categorías de MVTec-AD) están exportados, verificados (`0` LSB raw diff en `Q15`, `f32_max_abs_diff <= 4.364e-05` bajo `1e-4`) y visualizados en disco (ver el consolidado 16-target en [../FINAL_PAPER_REPORT.md §6](../FINAL_PAPER_REPORT.md#6-c99-f32--q15-parity-latency--memory-summary)); las tablas de las secciones 3–4 abajo conservan el desglose por muestra de los targets principales `kolektorsdd2` y `mvtec_ad_bottle` (y las observaciones de formato/Pareto en §5 ya quedaron resueltas en la corrida del `2026-11-26`). Los archivos pesados bajo `results/c_imp/<target>/` (`vectors/`, `c_outputs/`, `figures/`, CSV/JSON locales) permanecen excluidos de Git; este documento consolida en texto y tablas los hallazgos verificados.
 
 ---
 

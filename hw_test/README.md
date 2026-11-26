@@ -91,7 +91,7 @@ code/
 ### ESP32-CAM (`esp32cam`)
 - **FQBN:** `esp32:esp32:esp32cam:PartitionScheme=huge_app` (`3,145,728` B app partition). **Do not append `PSRAM=enabled`:** in `esp32:esp32 3.3.11`, PSRAM is enabled automatically by the `esp32cam` board definition and `arduino-cli` rejects `PSRAM=enabled`.
 - **With a generic USB-TTL adapter:** Wire `5V → 5V`, `GND → GND`, `U0T → RX`, `U0R → TX`. To flash, jumper **`GPIO0 → GND`** and press **RST**; after upload completes, remove the `GPIO0` jumper and press **RST** again.
-- **With an ESP32-CAM-MB carrier board (CH340, verified on `COM3`):**
+- **With an ESP32-CAM-MB carrier board (CH340, verified on `COM3`/`COM5`):**
   - RTS auto-reset enters download mode automatically without manual `GPIO0` jumpering (pass `--no-prompt` to `bench` to skip the interactive pause).
   - **Upload speed vs. runtime UART speed:** `esptool v5.3.1` over CH340 fails at `460800`/`230400` after stub handoff; `boards.toml` sets **`upload_baud = 115200`** (`--upload-property upload.speed=115200`), while runtime binary protocol communication runs at **`uart_baud = 460800`** with `0` retries.
   - **No reset on serial open:** `serial_reset_on_open = false` is required on Windows so `pyserial` disables `DTR`/`RTS` before `open()` and does not hold the board in reset/bootloader mode.
@@ -133,24 +133,24 @@ Set-Location D:\Publications\2026-10-Symmetry-Entropy\code
 # 4. Compile single-model firmware (updates results/hw_test/<board>/build_cache.json)
 .\.venv\Scripts\python.exe -m experiments.hw_test build --config configs/hw_test/boards.toml --board esp32cam --model ultra_tiny --mode q15
 
-# 5. Compile and flash a board over serial (e.g. ESP32-CAM on COM3 or Nano on COM4)
-.\.venv\Scripts\python.exe -m experiments.hw_test flash --config configs/hw_test/boards.toml --board esp32cam --model lr_dot --mode q15 --port COM3
+# 5. Compile and flash a board over serial (e.g. ESP32-CAM on COM5 or Nano on COM4)
+.\.venv\Scripts\python.exe -m experiments.hw_test flash --config configs/hw_test/boards.toml --board esp32cam --model lr_dot --mode q15 --port COM5
 
 # 6. Send images over UART (optional --dump-descriptor fetches all 94 x94 features on tabular models)
-.\.venv\Scripts\python.exe -m experiments.hw_test send --config configs/hw_test/boards.toml --board esp32cam --model lr_dot --mode q15 --transport uart --port COM3 --all --dump-descriptor
+.\.venv\Scripts\python.exe -m experiments.hw_test send --config configs/hw_test/boards.toml --board esp32cam --model lr_dot --mode q15 --transport uart --port COM5 --all --dump-descriptor
 
 # 7. Send a single image over UART
-.\.venv\Scripts\python.exe -m experiments.hw_test send --config configs/hw_test/boards.toml --board esp32cam --model lr_dot --mode q15 --transport uart --port COM3 --image 20042.png
+.\.venv\Scripts\python.exe -m experiments.hw_test send --config configs/hw_test/boards.toml --board esp32cam --model lr_dot --mode q15 --transport uart --port COM5 --image 20042.png
 
 # 8. Send images over WiFi/TCP (after flashing with --transport wifi and reading the device IP)
-.\.venv\Scripts\python.exe -m experiments.hw_test flash --config configs/hw_test/boards.toml --board esp32cam --model lr_dot --mode q15 --transport wifi --port COM3
+.\.venv\Scripts\python.exe -m experiments.hw_test flash --config configs/hw_test/boards.toml --board esp32cam --model lr_dot --mode q15 --transport wifi --port COM5
 .\.venv\Scripts\python.exe -m experiments.hw_test send --config configs/hw_test/boards.toml --board esp32cam --model lr_dot --mode q15 --transport wifi --host 192.168.1.50 --all
 
 # 9. Unattended compile sweep across all models for a board without flashing
 .\.venv\Scripts\python.exe -m experiments.hw_test bench --config configs/hw_test/boards.toml --board nano --compile-only
 
 # 10. Compile all + flash and measure a subset of models on ESP32-CAM (--no-prompt skips GPIO0 pause)
-.\.venv\Scripts\python.exe -m experiments.hw_test bench --config configs/hw_test/boards.toml --board esp32cam --transport uart --port COM3 --models lr_dot mlp_16_dot ultra_tiny --modes q15 f32 --all --no-prompt
+.\.venv\Scripts\python.exe -m experiments.hw_test bench --config configs/hw_test/boards.toml --board esp32cam --transport uart --port COM5 --models lr_dot mlp_16_dot ultra_tiny --modes q15 f32 --all --no-prompt
 
 # 11. Generate/refresh consolidated results/hw_test/fit_report.{csv,md}
 .\.venv\Scripts\python.exe -m experiments.hw_test report --config configs/hw_test/boards.toml

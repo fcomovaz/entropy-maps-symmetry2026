@@ -7,6 +7,8 @@
 
 > [!NOTE]
 > **Exact scope of on-disk artifacts (`486c111`):** Formal post-merge runs on `main` cover `kolektorsdd2` (`normal` and `inverted`) and `mvtec-ad_bottle` (`normal` and `inverted`), along with isolated pure-Python comparisons under `results/comparison_cpu_python/` (Git-ignored). Any reference to `mvtec-ad_tile` or the `--all-objects` Random Forest sweep explicitly originates from the historical `bf4a29f` snapshot documented in [results/classification/README.md](results/classification/README.md).
+>
+> **Updated canonical 2026-11-26 sweep (full 15-category MVTec-AD + KolektorSDD2 + live ESP32-CAM):** The tables below preserve the `486c111` post-merge baseline snapshot; for complete updated measurements across **all 15 MVTec-AD categories**, KolektorSDD2, C99 `f32`/`Q15` on `16/16` targets, and physical **ESP32-CAM (`COM5`)** runs, see [results/FINAL_PAPER_REPORT.md](results/FINAL_PAPER_REPORT.md) and [results/hw_test/README.md](results/hw_test/README.md) (reproducible end-to-end via [reproduce_paper_pipeline.ps1](reproduce_paper_pipeline.ps1)).
 
 ---
 

@@ -55,35 +55,63 @@ All **25 configured builds** across the 4 boards compiled with `compile_ok = Tru
 
 ---
 
-## Stage 9 — Physical ESP32-CAM Execution (`COM3`, UART `460800`, `measured`)
+## Stage 9 — Physical ESP32-CAM Execution (`COM5`, UART `460800`, `2026-11-26`, `measured`)
 
-Hardware tested: **ESP32-CAM (`ESP32-D0WDQ6 rev v1.0`, 4 MiB Flash, `4,194,304` B PSRAM)** mounted on an **ESP32-CAM-MB (CH340)** carrier on `COM3` (`upload_baud = 115200` for `esptool v5.3.1` stub stability; runtime UART protocol at `460800` with `serial_reset_on_open = false` and `0` retries). Executed **12 physical runs × 8 images** (`hw_test/img2send/`, `20000..20003.png` and `20042, 20056, 20068, 20084.png`), achieving **96/96 images with `100.0 %` parity**:
+Hardware tested: **ESP32-CAM (`ESP32-D0WDQ6`, 4 MiB Flash, `4,194,304` B PSRAM)** mounted on an **ESP32-CAM-MB (CH340)** carrier on `COM5` (`upload_baud = 115200` for `esptool v5.3.1` stub stability; runtime UART protocol at `460800` with `serial_reset_on_open = false` and `0` retries). Executed **12 physical runs × 8 images** (`hw_test/img2send/`, `20000..20003.png` and `20042, 20056, 20068, 20084.png`), achieving **96/96 images with `100.0 %` parity**:
 
 - **All `q15` models (9/9):** `0` bit-for-bit raw logit difference vs. desktop Python/C (`max_logit_abs_diff = 0.0`) and `8/8` `x94_crc_ok` on tabular models.
-- **All tested `f32` models (3/3):** maximum logit difference $\le 5.66\times 10^{-6}$ (well below `f32_logit_abs_tol = 1e-4`).
-- **Contiguous internal DRAM finding on `ultra_tiny/q15`:** Although the `q15` arena is `163,840 B` ($\le 200,000$ B budget) and `free_heap_min = 213,208 B`, the `auto` policy fell back to **PSRAM (`arena_location = psram`)** because the largest single contiguous free block in ESP32 internal DRAM is under `160 KiB`. Even in PSRAM, `ultra_tiny/q15` finished in `169.999 ms` ($\le 500$ ms) and remains **`fits_viable`**.
+- **All tested `f32` models (3/3):** maximum logit difference $\le 5.66\times 10^{-6}$ (well below `f32_logit_abs_tol = 1e-4`) and `8/8` `x94_crc_ok` on tabular models.
+- **Contiguous internal DRAM finding on `ultra_tiny/q15`:** Although the `q15` arena is `163,840 B` ($\le 200,000$ B budget) and `free_heap_min = 213,208 B`, the `auto` policy fell back to **PSRAM (`arena_location = psram`)** because the largest single contiguous free block in ESP32 internal DRAM is under `160 KiB`. Even in PSRAM, `ultra_tiny/q15` finished in `170.008 ms` ($\le 500$ ms) and remains **`fits_viable`**.
 
 | Model | Mode | Arena `[predicted]` (`location` `[measured]`) | `free_heap_min` (`measured`) | `stack_hwm` (`measured`) | `free_psram_min` (`measured`) | `T_sel` ms (`measured`) | `T_model` ms (`measured`) | `T_total` ms (`measured`) | Parity (`measured`) | ROC-AUC (`offline`) | Verdict (`max_latency = 500 ms`) |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| `lr_dot` | `q15` | `0 B` (`none`) | `210,296 B` | `6,908 B` | `4,192,124 B` | `3.178` | `0.012` | **`3.190`** | `8/8` (`diff=0`) | `0.8063` | `fits_viable` |
-| `mlp_16_dot` | `q15` | `0 B` (`none`) | `210,296 B` | `6,908 B` | `4,192,124 B` | `3.180` | `0.187` | **`3.366`** | `8/8` (`diff=0`) | `0.8335` | `fits_viable` |
-| `lr_dot` | `f32` | `0 B` (`none`) | `210,112 B` | `6,892 B` | `4,192,124 B` | `5.664` | `0.085` | **`5.748`** | `8/8` (`5.66e-6`) | `0.8061` | `fits_viable` |
-| `mlp_16_dot` | `f32` | `0 B` (`none`) | `210,112 B` | `6,892 B` | `4,192,124 B` | `5.668` | `1.404` | **`7.072`** | `8/8` (`2.75e-6`) | `0.8334` | `fits_viable` |
-| `ultra_tiny` | `q15` | `163,840 B` (`psram`) | `213,208 B` | `4,944 B` | `4,024,184 B` | `0.000` | `169.999` | **`169.999`** | `8/8` (`diff=0`) | `0.8815` | `fits_viable` |
-| `ultra_tiny` | `f32` | `327,680 B` (`psram`) | `213,208 B` | `4,928 B` | `3,856,248 B` | `0.000` | `677.832` | `677.832` | `8/8` (`7.11e-7`) | `0.8815` | `fits_exceeds_latency` |
-| `ds_cnn` | `q15` | `1,081,344 B` (`psram`) | `213,208 B` | `4,944 B` | `3,078,008 B` | `0.000` | `1991.216` | `1991.216` | `8/8` (`diff=0`) | `0.8778` | `fits_exceeds_latency` |
-| `torchvision_mobilenet` | `q15` | `327,680 B` (`psram`) | `213,208 B` | `4,944 B` | `3,856,248 B` | `0.000` | `3031.872` | `3031.872` | `8/8` (`diff=0`) | `0.7411` | `fits_exceeds_latency` |
-| `mobilenet_like` | `q15` | `524,288 B` (`psram`) | `213,208 B` | `4,944 B` | `3,651,448 B` | `0.000` | `3421.949` | `3421.949` | `8/8` (`diff=0`) | `0.8623` | `fits_exceeds_latency` |
-| `tiny_cnn` | `q15` | `1,081,344 B` (`psram`) | `213,208 B` | `4,944 B` | `3,078,008 B` | `0.000` | `6195.753` | `6195.753` | `8/8` (`diff=0`) | `0.8713` | `fits_exceeds_latency` |
-| `small_cnn` | `q15` | `1,081,344 B` (`psram`) | `213,208 B` | `4,944 B` | `3,078,008 B` | `0.000` | `8629.071` | `8629.071` | `8/8` (`diff=0`) | `0.8925` | `fits_exceeds_latency` |
+| `lr_dot` | `q15` | `0 B` (`none`) | `210,296 B` | `6,908 B` | `4,192,124 B` | `3.178` | `0.012` | **`3.191`** | `8/8` (`diff=0`) | `0.8063` | `fits_viable` |
+| `mlp_16_dot` | `q15` | `0 B` (`none`) | `210,296 B` | `6,908 B` | `4,192,124 B` | `3.179` | `0.187` | **`3.366`** | `8/8` (`diff=0`) | `0.8335` | `fits_viable` |
+| `lr_dot` | `f32` | `0 B` (`none`) | `210,112 B` | `6,892 B` | `4,192,124 B` | `5.663` | `0.085` | **`5.748`** | `8/8` (`5.66e-6`) | `0.8061` | `fits_viable` |
+| `mlp_16_dot` | `f32` | `0 B` (`none`) | `210,112 B` | `6,892 B` | `4,192,124 B` | `5.668` | `1.405` | **`7.073`** | `8/8` (`2.75e-6`) | `0.8334` | `fits_viable` |
+| `ultra_tiny` | `q15` | `163,840 B` (`psram`) | `213,208 B` | `4,944 B` | `4,024,184 B` | `0.000` | `170.008` | **`170.008`** | `8/8` (`diff=0`) | `0.8815` | `fits_viable` |
+| `ultra_tiny` | `f32` | `327,680 B` (`psram`) | `213,208 B` | `4,928 B` | `3,856,248 B` | `0.000` | `677.834` | `677.834` | `8/8` (`7.11e-7`) | `0.8815` | `fits_exceeds_latency` |
+| `ds_cnn` | `q15` | `1,081,344 B` (`psram`) | `213,208 B` | `4,944 B` | `3,078,008 B` | `0.000` | `1991.234` | `1991.234` | `8/8` (`diff=0`) | `0.8778` | `fits_exceeds_latency` |
+| `torchvision_mobilenet` | `q15` | `327,680 B` (`psram`) | `213,208 B` | `4,944 B` | `3,856,248 B` | `0.000` | `3031.870` | `3031.870` | `8/8` (`diff=0`) | `0.7411` | `fits_exceeds_latency` |
+| `mobilenet_like` | `q15` | `524,288 B` (`psram`) | `213,208 B` | `4,944 B` | `3,651,448 B` | `0.000` | `3421.959` | `3421.959` | `8/8` (`diff=0`) | `0.8623` | `fits_exceeds_latency` |
+| `tiny_cnn` | `q15` | `1,081,344 B` (`psram`) | `213,208 B` | `4,944 B` | `3,078,008 B` | `0.000` | `6195.723` | `6195.723` | `8/8` (`diff=0`) | `0.8713` | `fits_exceeds_latency` |
+| `small_cnn` | `q15` | `1,081,344 B` (`psram`) | `213,208 B` | `4,944 B` | `3,078,008 B` | `0.000` | `8629.045` | `8629.045` | `8/8` (`diff=0`) | `0.8925` | `fits_exceeds_latency` |
 | `tiny_resnet` | `q15` | `425,984 B` (`psram`) | `213,208 B` | `4,944 B` | `3,757,944 B` | `0.000` | `8664.952` | `8664.952` | `8/8` (`diff=0`) | `0.9213` | `fits_exceeds_latency` |
 
 Full 53-row (`board × model × mode`) fit tables are generated via `python -m experiments.hw_test report --config configs/hw_test/boards.toml` at `results/hw_test/fit_report.csv` and `results/hw_test/fit_report.md`.
 
 ---
 
+## Live 8-bit AVR: Arduino Nano (`COM4`) & Arduino Uno (`COM6`) (`ATmega328P`, `2026-11-26`)
+
+Hardware tested: **Arduino Nano (`ATmega328P`, 8-bit @ 16 MHz, `30,720 B` Flash, `2,048 B` SRAM, `0 B` PSRAM; Optiboot `cpu=atmega328` over FTDI FT232R `COM4`)** and **Arduino Uno (`ATmega328P`, 8-bit @ 16 MHz, `32,256 B` Flash, `2,048 B` SRAM, `0 B` PSRAM; Optiboot over ATmega16U2 `COM6`)** (`uart_baud = 115200`, `serial_reset_on_open = true`, row-by-row `CIMP_DescStream` with `band_rows = 1`, `max_payload = 132 B`). Executed **4 physical runs × 8 images** (`hw_test/img2send/`), achieving **32/32 images with `100.0 %` bit-exact parity (`diff = 0`)**:
+
+| Board | Model | Mode | Flash / Max (`measured`) | Static RAM / Max (`measured`) | `free_ram_boot` (`measured`) | `stack_hwm` (`measured`) | `T_sel` ms (`measured`) | `T_model` ms (`measured`) | `T_total` ms (`measured`) | Parity (`measured`) | Verdict (`max_latency = 500 ms`) |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| `nano` | `lr_dot` | `q15` | `12,780 / 30,720 B` (`41.6%`) | `1,636 / 2,048 B` (`79.9%`) | `222 B` | `146 B` | `76.838` | `1.576` | **`78.418`** | `8/8` (`diff=0`) | `fits_viable` |
+| `nano` | `mlp_16_dot` | `q15` | `19,038 / 30,720 B` (`62.0%`) | `1,636 / 2,048 B` (`79.9%`) | `230 B` | `154 B` | `77.020` | `24.830` | **`101.844`** | `8/8` (`diff=0`) | `fits_viable` |
+| `uno` | `lr_dot` | `q15` | `12,780 / 32,256 B` (`39.6%`) | `1,636 / 2,048 B` (`79.9%`) | `222 B` | `146 B` | `76.816` | `1.574` | **`78.396`** | `8/8` (`diff=0`) | `fits_viable` |
+| `uno` | `mlp_16_dot` | `q15` | `19,038 / 32,256 B` (`59.0%`) | `1,636 / 2,048 B` (`79.9%`) | `230 B` | `154 B` | `77.060` | `24.830` | **`101.882`** | `8/8` (`diff=0`) | `fits_viable` |
+
+All 7 CNNs (`q15`) are physically impossible on `nano` and `uno` (`does_not_fit`): predicted activation arenas (`163,840–1,081,344 B`) exceed `1,792 B` usable SRAM by `91.4×–603.4×`. *(Engineering note: official Arduino Uno ATmega16U2 `usbser.sys` requires `boot_wait_s = 2.5` and keeping a constant `Serial` per-read timeout so mid-stream `SetCommTimeouts` calls do not drop USB-CDC bytes.)*
+
+---
+
+## NodeMCU / ESP-12E (`nodemcu`) Feasibility & Live `COM5` Attempt (`2026-11-26`)
+
+- **Compiled & Feasible Tabular Models (`4/4` `compile_ok = True`):**
+  - `lr_dot/q15`: `243,572 / 1,048,576 B` IROM (`23.2%`), `49,204 / 80,192 B` DRAM (`61.4%`), `384 B` weights, `0 B` arena.
+  - `lr_dot/f32`: `243,556 / 1,048,576 B` IROM (`23.2%`), `49,396 / 80,192 B` DRAM (`61.6%`), `384 B` weights, `0 B` arena.
+  - `mlp_16_dot/q15`: `249,796 / 1,048,576 B` IROM (`23.8%`), `49,200 / 80,192 B` DRAM (`61.4%`), `6,216 B` weights, `0 B` arena.
+  - `mlp_16_dot/f32`: `249,540 / 1,048,576 B` IROM (`23.8%`), `49,392 / 80,192 B` DRAM (`61.6%`), `6,216 B` weights, `0 B` arena.
+- **Why All 7 CNNs Are Physically Impossible on ESP8266 (`14/14` `does_not_fit`):**
+  - ESP8266 (`nodemcuv2`) has **`0 B` external PSRAM** and only `45,056 B` usable heap (out of `80,192 B` physical DRAM after SDK/WiFi/stack reserve). Even the smallest CNN (`ultra_tiny/q15`) requires a `163,840 B` activation arena (`3.64×` usable DRAM and `2.04×` total physical DRAM), while `ds_cnn`, `tiny_cnn`, and `small_cnn` require `1,081,344 B` (`q15`) to `2,162,688 B` (`f32`) (`24.0×–48.0×` usable DRAM). Furthermore, `torchvision_mobilenet` weights (`1,633,714 B`) exceed the entire `1,048,576 B` (`1 MiB`) IROM app partition (`1.56×`).
+- **Live `COM5` UART Attempt (`2026-11-26`):** `nodemcu_lr_dot_q15_uart` compiled and flashed via `arduino-cli`, but host serial configuration (`pyserial` at `115200`/`230400`/`460800` and `.NET System.IO.Ports.SerialPort` at `115200`) failed with Windows `ERROR_GEN_FAILURE` (code 31) on `USB-SERIAL CH340` (`VID_1A86:PID_7523`) under WCH driver `ch341ser.sys 3.9.2024.9` (which rejects `SetCommState()` on non-genuine CH340 bridges). Live `nodemcu` latency therefore remains `not_measured` on this host unless run via an FTDI/CP2102 USB-TTL adapter, an older `ch341ser.sys` driver, or `WiFi/TCP` (`secrets.toml`).
+
+---
+
 ## Items Not Verified on Physical Hardware
 
-- **Boards `nano`, `uno`, and `nodemcu`:** Compiled and verified in Stage 5 (`lr_dot` and `mlp_16_dot`, marked `not_measured` in `fit_report.md`), **not executed on physical hardware** because only the ESP32-CAM was connected during this session.
+- **Board `nodemcu` (ESP8266):** All 4 tabular configs (`lr_dot`, `mlp_16_dot` in `q15` and `f32`) are compile-verified (`compile_ok = True`), and `nodemcu_lr_dot_q15_uart` flashed, but live UART on `COM5` was blocked at host `SetCommState()` by WCH `ch341ser.sys 3.9.2024.9` (all 7 CNNs on AVR and ESP8266 are mathematically `does_not_fit` due to SRAM/Flash/0-PSRAM limits).
 - **`WiFi/TCP` transport (`nodemcu` and `esp32cam`):** Verified with `TcpTransport` loopback and mock socket server, **not verified on physical hardware** (requires local WiFi credentials in `configs/hw_test/secrets.toml`).
 - **Remaining 5 `f32` PSRAM CNNs on `esp32cam` (`ds_cnn`, `tiny_cnn`, `mobilenet_like`, `tiny_resnet`, `small_cnn`):** Compiled in Stage 5 (`fits_budget = True`, marked `not_measured`), **not executed on physical hardware**.
