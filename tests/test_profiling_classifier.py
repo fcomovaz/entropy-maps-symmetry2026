@@ -21,6 +21,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.models.descriptor_classifier import LinearDotCoreClassifier
+from src.models.mlp_dot import MlpDotCoreClassifier
 from src.profiling.classifier_profile import (
     count_classical_model_params,
     estimate_classical_inference_ops,
@@ -119,6 +120,49 @@ class TestProfilingClassifier(unittest.TestCase):
         self.assertIsNotNone(rec_dot.direct_core_stats)
         self.assertIsNotNone(rec_dot.sklearn_dispatch_overhead_ms)
         self.assertGreater(rec_dot.predict_stats.median_ms, 0.0)
+
+    def test_mlp_16_dot_params_ops_and_profile(self) -> None:
+        rng = np.random.default_rng(42)
+        x_train = rng.normal(loc=0.4, scale=0.15, size=(60, 94)).astype(np.float64)
+        y_train = (x_train[:, 0] + 0.5 * x_train[:, 1] > 0.6).astype(np.int64)
+        x_test = rng.normal(loc=0.4, scale=0.15, size=(20, 94)).astype(np.float64)
+
+        mlp_clf = MlpDotCoreClassifier(
+            hidden_dims=(16,),
+            epochs=20,
+            learning_rate=0.002,
+            weight_decay=0.05,
+            dropout=0.1,
+            positive_weight_mode="balanced",
+            train_threads=1,
+            random_state=42,
+        )
+        mlp_clf.fit(x_train, y_train)
+
+        mlp_params = count_classical_model_params(mlp_clf)
+        self.assertEqual(mlp_params.params_model, 1537)
+        self.assertEqual(mlp_params.scaler_params, 0)
+
+        mlp_ops = estimate_classical_inference_ops(mlp_clf, n_features=94)
+        self.assertEqual(mlp_ops.analytical_macs, 1520)
+        self.assertEqual(mlp_ops.analytical_flops, 3056)
+
+        rec_mlp = profile_classifier(
+            model=mlp_clf,
+            classifier_name="mlp_16_dot",
+            X_test=x_test,
+            n_train=60,
+            threads=1,
+            batch_size=1,
+            warmup_iters=2,
+            timed_iters=20,
+            max_real_samples=20,
+            bootstrap_resamples=30,
+            seed=42,
+        )
+        self.assertEqual(rec_mlp.classifier_name, "mlp_16_dot")
+        self.assertIsNotNone(rec_mlp.direct_core_stats)
+        self.assertGreater(rec_mlp.predict_stats.median_ms, 0.0)
 
 
 if __name__ == "__main__":

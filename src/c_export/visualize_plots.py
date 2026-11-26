@@ -11,6 +11,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+from src.visualization import PALETTES, annotate_points_non_overlapping, apply_style
 from .config import CImpConfig
 from .visualize_data import (
     DescriptorFeatureInsights,
@@ -21,14 +22,14 @@ from .visualize_data import (
     write_summary_tables,
 )
 
-
-_COLOR_F32 = "#2b6cb0"
-_COLOR_Q15 = "#dd6b20"
-_COLOR_INT8 = "#805ad5"
-_COLOR_NEG = "#3182ce"
-_COLOR_POS = "#e53e3e"
-_COLOR_PARETO = "#2f855a"
-_COLOR_GATE = "#c53030"
+_MDPI_PAL = PALETTES["editorial"]
+_COLOR_F32 = _MDPI_PAL[0]
+_COLOR_Q15 = _MDPI_PAL[3]
+_COLOR_INT8 = _MDPI_PAL[4]
+_COLOR_NEG = _MDPI_PAL[5]
+_COLOR_POS = _MDPI_PAL[1]
+_COLOR_PARETO = _MDPI_PAL[2]
+_COLOR_GATE = _MDPI_PAL[1]
 
 
 def _pick_pareto_legend_loc(
@@ -61,90 +62,6 @@ def _pick_pareto_legend_loc(
         return (-hits, min_d)
 
     return max(candidates, key=lambda item: _clearance(item[1]))
-
-
-def _rects_overlap(a: tuple[float, float, float, float], b: tuple[float, float, float, float]) -> bool:
-    """Return True if two `[x0, x1, y0, y1]` rectangles overlap or nearly touch."""
-    return not (a[1] < b[0] or a[0] > b[1] or a[3] < b[2] or a[2] > b[3])
-
-
-def _annotate_pareto_labels(
-    ax_p: plt.Axes,
-    timed: list[ModelSeriesBundle],
-    costs: list[float],
-    quals: list[float],
-    lx_lim: tuple[float, float],
-    y_lim: tuple[float, float],
-    legend_rect: tuple[float, float, float, float],
-) -> None:
-    """Place non-overlapping model annotations inside plot bounds with short leader lines."""
-    lx0, lx1 = lx_lim
-    y0, y1 = y_lim
-    lx_span = max(1e-6, lx1 - lx0)
-    y_span = max(1e-6, y1 - y0)
-
-    def _to_norm(cx: float, qy: float) -> tuple[float, float]:
-        return ((math.log10(max(cx, 1e-4)) - lx0) / lx_span, (qy - y0) / y_span)
-
-    placed_boxes: list[tuple[float, float, float, float]] = [legend_rect]
-    pt_norms = [_to_norm(c, q) for c, q in zip(costs, quals)]
-
-    # Approximate axes width/height in points for conversion from offset points -> norm coords
-    ax_w_pt, ax_h_pt = 450.0, 260.0
-    cand_offsets: list[tuple[int, int]] = []
-    for rad_y in (8, -14, 18, -24, 30, -34, 44, -46):
-        for off_x in (7, -60, 18, -88, -32, 34):
-            cand_offsets.append((off_x, rad_y))
-
-    for m_item, cx, qy in sorted(zip(timed, costs, quals), key=lambda t: (t[1], t[2])):
-        ux, vy = _to_norm(cx, qy)
-        est_w = min(0.32, 0.014 + 0.0105 * len(m_item.name))
-        est_h = 0.048
-        best_off = (7, 8)
-        best_box: tuple[float, float, float, float] | None = None
-        best_score = -1e9
-
-        for ox, oy in cand_offsets:
-            bx0 = ux + ox / ax_w_pt
-            bx1 = bx0 + est_w
-            by_anchor = vy + oy / ax_h_pt
-            by0 = by_anchor if oy >= 0 else (by_anchor - est_h)
-            by1 = by0 + est_h
-
-            in_bounds = 0.015 <= bx0 and bx1 <= 0.985 and 0.02 <= by0 and by1 <= 0.98
-            rect = (bx0 - 0.008, bx1 + 0.008, by0 - 0.008, by1 + 0.008)
-            rect_collisions = sum(1 for r in placed_boxes if _rects_overlap(rect, r))
-            marker_hits = sum(
-                1 for mx, my in pt_norms if (bx0 - 0.015) <= mx <= (bx1 + 0.015) and (by0 - 0.015) <= my <= (by1 + 0.015)
-            )
-            dist_pen = math.hypot(ox / 35.0, oy / 25.0)
-            score = (
-                (1000.0 if in_bounds else -1000.0)
-                - 200.0 * rect_collisions
-                - 60.0 * marker_hits
-                - dist_pen
-            )
-            if score > best_score:
-                best_score = score
-                best_off = (ox, oy)
-                best_box = rect
-                if in_bounds and rect_collisions == 0 and marker_hits == 0 and dist_pen < 0.6:
-                    break
-
-        if best_box is not None:
-            placed_boxes.append(best_box)
-        need_leader = math.hypot(best_off[0], best_off[1]) > 14.0
-        ax_p.annotate(
-            m_item.name,
-            (cx, qy),
-            xytext=best_off,
-            textcoords="offset points",
-            fontsize=8.0,
-            arrowprops={"arrowstyle": "-", "color": "#718096", "lw": 0.7, "alpha": 0.75}
-            if need_leader
-            else None,
-            zorder=5,
-        )
 
 
 def _compute_pareto_indices(costs: list[float], qualities: list[float]) -> set[int]:
@@ -237,8 +154,8 @@ def _plot_fig1_classification(
     ax_d = axes[1, 1]
     mean_d = np.array([max(1e-6, m.score_diff_mean) for m in ordered])
     max_d = np.array([max(1e-6, m.score_diff_max) for m in ordered])
-    ax_d.barh(y_pos + bar_h / 2.0, mean_d, height=bar_h, color="#319795", label="Mean |score_Q15 - score_F32|")
-    ax_d.barh(y_pos - bar_h / 2.0, max_d, height=bar_h, color="#d53f8c", alpha=0.85, label="Max |score_Q15 - score_F32|")
+    ax_d.barh(y_pos + bar_h / 2.0, mean_d, height=bar_h, color=_MDPI_PAL[5], label="Mean |score_Q15 - score_F32|")
+    ax_d.barh(y_pos - bar_h / 2.0, max_d, height=bar_h, color=_MDPI_PAL[4], alpha=0.85, label="Max |score_Q15 - score_F32|")
     ax_d.set_xscale("log")
     min_xlim = min(1e-4, float(np.min(mean_d)) * 0.4)
     max_xlim = max(float(np.max(max_d)) * 28.0, 1e-1)
@@ -457,7 +374,7 @@ def _plot_fig4_c_parity(
     )
     ax_a.axvline(
         cfg.verification.f32_descriptor_abs_tol,
-        color="#b7791f",
+        color=_MDPI_PAL[3],
         linestyle=":",
         linewidth=1.4,
         label=f"Descriptor gate ({cfg.verification.f32_descriptor_abs_tol:.0e})",
@@ -659,7 +576,6 @@ def _plot_fig5_memory_and_latency(
             for c, q in zip(costs, quals)
         ]
         legend_loc, legend_rect = _pick_pareto_legend_loc(pt_norms)
-        _annotate_pareto_labels(ax_p, timed, costs, quals, x_lim_log, y_lim, legend_rect)
 
         if pareto_idx:
             pts = sorted([(costs[i], quals[i]) for i in pareto_idx], key=lambda item: item[0])
@@ -680,6 +596,16 @@ def _plot_fig5_memory_and_latency(
         ax_p.set_title("Quality vs Embedded Q15 Latency Pareto")
         ax_p.grid(True, which="both", linestyle=":", alpha=0.5)
         ax_p.legend(fontsize=8, loc=legend_loc)
+        annotate_points_non_overlapping(
+            ax_p,
+            [m.name for m in timed],
+            costs,
+            quals,
+            xscale="log",
+            fontsize=8.0,
+            reserved_boxes_axes=[legend_rect],
+            zorder=5,
+        )
 
         # Latency breakdown T_selector + T_model for f32 and q15
         timed_sorted = sorted(timed, key=lambda m: float(m.bench_q15_total_ms or 0.0))
@@ -691,7 +617,7 @@ def _plot_fig5_memory_and_latency(
         tot_f32 = np.array([max(1e-4, float(m.bench_f32_total_ms or 0.0)) for m in timed_sorted])
 
         ax_l.barh(y_t + 0.18, tot_f32, height=0.34, color=_COLOR_F32, alpha=0.75, label="Total C float32 (ms/img)")
-        ax_l.barh(y_t - 0.18, np.maximum(sel_q15, 1e-4), height=0.34, color="#319795", label="Q15 Selector (T_selector)")
+        ax_l.barh(y_t - 0.18, np.maximum(sel_q15, 1e-4), height=0.34, color=_MDPI_PAL[5], label="Q15 Selector (T_selector)")
         ax_l.barh(
             y_t - 0.18,
             np.maximum(mod_q15, 0.0),
@@ -809,6 +735,7 @@ def _plot_fig6_x94_descriptor(
 
 def generate_c_pipeline_visualizations(cfg: CImpConfig) -> VisualizationReport:
     """Load target CSV/JSON artifacts and render diagnostic figures + human-readable summary."""
+    apply_style("mdpi", palette="editorial")
     bundle = load_target_bundle(cfg)
     out_dir = cfg.visualization_dir
     out_dir.mkdir(parents=True, exist_ok=True)

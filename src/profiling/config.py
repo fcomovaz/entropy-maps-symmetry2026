@@ -11,7 +11,7 @@ import psutil
 
 from src.features.entropy_maps import validate_entropy_backend
 
-ALLOWED_PROFILING_CLASSIFIERS: tuple[str, ...] = ("dt", "knn", "lr", "lr_dot", "rf")
+ALLOWED_PROFILING_CLASSIFIERS: tuple[str, ...] = ("dt", "knn", "lr", "lr_dot", "mlp_16_dot", "rf")
 
 
 def _require(table: Mapping[str, object], key: str, where: str) -> object:

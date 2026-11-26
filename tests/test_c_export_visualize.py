@@ -11,6 +11,7 @@ from dataclasses import replace
 import json
 import math
 from pathlib import Path
+import re
 import sys
 import tempfile
 import unittest
@@ -284,7 +285,7 @@ class TestCExportVisualize(unittest.TestCase):
     def test_visualization_config_validation(self) -> None:
         cfg = load_c_imp_config(Path("configs/c_imp/kolektorsdd2.toml"), PROJECT_ROOT)
         self.assertEqual(cfg.visualization.output_subdir, "figures")
-        self.assertEqual(cfg.visualization.dpi, 160)
+        self.assertEqual(cfg.visualization.dpi, 300)
         self.assertEqual(cfg.visualization.top_k_worst_errors, 10)
         self.assertEqual(cfg.visualization_dir, cfg.results_dir / "figures")
 
@@ -298,7 +299,7 @@ class TestCExportVisualize(unittest.TestCase):
                 load_c_imp_config(no_vis, PROJECT_ROOT)
 
             bad_dpi = tmp_dir / "bad_dpi.toml"
-            bad_dpi.write_text(base_text.replace("dpi = 160", "dpi = 0"), encoding="utf-8")
+            bad_dpi.write_text(re.sub(r"dpi\s*=\s*\d+", "dpi = 0", base_text), encoding="utf-8")
             with self.assertRaises(ValueError):
                 load_c_imp_config(bad_dpi, PROJECT_ROOT)
 
@@ -404,6 +405,33 @@ class TestCExportVisualize(unittest.TestCase):
             md_text = report.summary_md_path.read_text(encoding="utf-8")
             self.assertIn("ultra_tiny", md_text)
             self.assertIn("fig6_x94_descriptor_insights.png", md_text)
+
+    def test_tabular_weight_format_reports_q31_when_weight_bits_32(self) -> None:
+        base_cfg = load_c_imp_config(Path("configs/c_imp/kolektorsdd2.toml"), PROJECT_ROOT)
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = _clone_config_with_tmp_paths(base_cfg, Path(tmp))
+            _write_minimal_golden_fixtures(cfg, single_class=False)
+            _write_enriched_verify_fixtures(cfg)
+
+            (cfg.generated_dir / "export_manifest.json").write_text(
+                json.dumps(
+                    {
+                        "tabular_models": {
+                            "lr_dot": {"weight_bits": 32, "weight_bytes": 384},
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            bundle = load_target_bundle(cfg)
+            by_name = {m.name: m for m in bundle.models}
+            self.assertEqual(by_name["lr_dot"].weight_format, "q31")
+
+            report = generate_c_pipeline_visualizations(cfg)
+            with report.summary_csv_path.open("r", newline="", encoding="utf-8") as f:
+                rows = {row["model"]: row for row in csv.DictReader(f)}
+            self.assertEqual(rows["lr_dot"]["weight_format"], "q31")
+            self.assertEqual(rows["ultra_tiny"]["weight_format"], "q15")
 
     def test_cli_dry_run_real_run_and_missing_dir_error(self) -> None:
         base_text = (PROJECT_ROOT / "configs/c_imp/kolektorsdd2.toml").read_text(encoding="utf-8")

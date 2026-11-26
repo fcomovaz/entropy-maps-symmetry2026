@@ -79,5 +79,5 @@ top_k_features = 15
 
 [classification.output]
 results_dir = "results/classification"
-dpi = 160
+dpi = 300
 float_precision = 6

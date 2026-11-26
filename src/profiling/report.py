@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 from dataclasses import asdict
+import math
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -18,6 +19,9 @@ from .cnn_layers import CnnLayerProfileReport, CnnThreadScalingRecord
 from .descriptor_stages import DescriptorProfileReport, DescriptorScalabilityRecord
 from .environment import EnvironmentSnapshot
 from .timing import StatisticalComparisonResult
+from src.visualization import PALETTES, annotate_points_non_overlapping, apply_style
+
+_MDPI_PAL = PALETTES["editorial"]
 
 
 def _fmt_float(val: float | None, precision: int = 6) -> str:
@@ -615,6 +619,85 @@ def write_ablation_cost_csv(
     return output_path
 
 
+def _finalize_scatter_panel(
+    ax: plt.Axes,
+    labels: Sequence[str],
+    x_vals: Sequence[float],
+    y_vals: Sequence[float],
+    *,
+    xlabel: str,
+    ylabel: str,
+    title: str,
+) -> None:
+    """Configure log-x bounds, sparse legend corner, and collision-free labels."""
+    ax.set_xscale("log")
+    if x_vals and y_vals:
+        lx = [math.log10(max(1e-4, float(v))) for v in x_vals]
+        lx_min, lx_max = min(lx), max(lx)
+        lx_span = max(0.8, lx_max - lx_min)
+        x_lim_log = (lx_min - 0.14 * lx_span, lx_max + 0.22 * lx_span)
+        ax.set_xlim(10.0 ** x_lim_log[0], 10.0 ** x_lim_log[1])
+
+        y_min, y_max = min(y_vals), max(y_vals)
+        y_span = max(0.08, y_max - y_min)
+        y_lo = max(-0.02, y_min - 0.16 * y_span) if y_min >= 0.0 else (y_min - 0.16 * y_span)
+        y_hi = min(1.04, y_max + 0.16 * y_span) if y_max <= 1.02 else (y_max + 0.16 * y_span)
+        ax.set_ylim(y_lo, y_hi)
+
+        pt_norms = [
+            ((math.log10(max(1e-4, float(xv))) - x_lim_log[0]) / max(1e-6, x_lim_log[1] - x_lim_log[0]),
+             (float(yv) - y_lo) / max(1e-6, y_hi - y_lo))
+            for xv, yv in zip(x_vals, y_vals)
+        ]
+        leg_candidates: tuple[tuple[str, tuple[float, float, float, float]], ...] = (
+            ("lower right", (0.58, 0.99, 0.02, 0.24)),
+            ("upper left", (0.02, 0.44, 0.76, 0.98)),
+            ("lower left", (0.02, 0.44, 0.02, 0.24)),
+            ("upper right", (0.58, 0.99, 0.76, 0.98)),
+        )
+        leg_loc, leg_rect = max(
+            leg_candidates,
+            key=lambda item: (
+                -sum(
+                    1
+                    for ux, vy in pt_norms
+                    if (item[1][0] - 0.03) <= ux <= (item[1][1] + 0.03)
+                    and (item[1][2] - 0.04) <= vy <= (item[1][3] + 0.04)
+                ),
+                min(
+                    (
+                        math.hypot(
+                            max(item[1][0] - ux, 0.0, ux - item[1][1]),
+                            max(item[1][2] - vy, 0.0, vy - item[1][3]),
+                        )
+                        for ux, vy in pt_norms
+                    ),
+                    default=1.0,
+                ),
+            ),
+        )
+    else:
+        leg_loc = "best"
+        leg_rect = (0.0, 0.0, 0.0, 0.0)
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    ax.legend(fontsize=8, loc=leg_loc)
+    ax.grid(True, which="both", linestyle=":", alpha=0.5)
+    if x_vals and y_vals:
+        annotate_points_non_overlapping(
+            ax,
+            labels,
+            x_vals,
+            y_vals,
+            xscale="log",
+            fontsize=7.8,
+            reserved_boxes_axes=[leg_rect],
+            zorder=5,
+        )
+
+
 def plot_cpu_comparison_pareto(
     output_path: Path,
     rows: Sequence[Mapping[str, Any]],
@@ -625,6 +708,7 @@ def plot_cpu_comparison_pareto(
     dpi: int = 160,
 ) -> Path | None:
     """Render CPU-only comparison panels for a specific thread count without mixing GPU rows."""
+    apply_style("mdpi", palette="editorial")
     cpu_primary = [
         r
         for r in rows
@@ -650,8 +734,8 @@ def plot_cpu_comparison_pareto(
     # 1. F1 vs Total CPU Latency (log x + IQR bars + Pareto front)
     ax1 = axes[0, 0]
     for fam, subset, color, marker, label in (
-        ("ml", ml_rows, "#1f77b4", "o", "Classical ML (x94)"),
-        ("cnn", cnn_rows, "#d62728", "^", "Lightweight CNNs"),
+        ("ml", ml_rows, _MDPI_PAL[0], "o", "Classical ML (x94)"),
+        ("cnn", cnn_rows, _MDPI_PAL[1], "^", "Lightweight CNNs"),
     ):
         if not subset:
             continue
@@ -672,14 +756,6 @@ def plot_cpu_comparison_pareto(
             label=label,
             zorder=3,
         )
-        for r in subset:
-            ax1.annotate(
-                str(r["model"]),
-                (max(1e-4, float(r["t_total_ms_median"])), float(r["f1"])),
-                fontsize=8,
-                xytext=(5, 4),
-                textcoords="offset points",
-            )
 
     if pareto_idx:
         p_pts = sorted(
@@ -689,7 +765,7 @@ def plot_cpu_comparison_pareto(
         ax1.plot(
             [max(1e-4, float(r["t_total_ms_median"])) for r in p_pts],
             [float(r["f1"]) for r in p_pts],
-            color="#2ca02c",
+            color=_MDPI_PAL[2],
             linestyle="--",
             linewidth=1.6,
             marker="*",
@@ -697,18 +773,21 @@ def plot_cpu_comparison_pareto(
             label="Pareto Frontier",
             zorder=4,
         )
-    ax1.set_xscale("log")
-    ax1.set_xlabel("Total CPU Latency ms/sample (log scale, +-0.5 IQR)")
-    ax1.set_ylabel("F1 Score")
-    ax1.set_title("F1 vs Total CPU Latency")
-    ax1.legend(fontsize=8)
-    ax1.grid(True, which="both", linestyle=":", alpha=0.5)
+    _finalize_scatter_panel(
+        ax1,
+        [str(r["model"]) for r in cpu_primary],
+        [max(1e-4, float(r["t_total_ms_median"])) for r in cpu_primary],
+        [float(r["f1"]) for r in cpu_primary],
+        xlabel="Total CPU Latency ms/sample (log scale, +-0.5 IQR)",
+        ylabel="F1 Score",
+        title="F1 vs Total CPU Latency",
+    )
 
     # 2. ROC-AUC vs Total CPU Latency (log x)
     ax2 = axes[0, 1]
     for subset, color, marker, label in (
-        (ml_rows, "#1f77b4", "o", "Classical ML (x94)"),
-        (cnn_rows, "#d62728", "^", "Lightweight CNNs"),
+        (ml_rows, _MDPI_PAL[0], "o", "Classical ML (x94)"),
+        (cnn_rows, _MDPI_PAL[1], "^", "Lightweight CNNs"),
     ):
         if not subset:
             continue
@@ -721,26 +800,21 @@ def plot_cpu_comparison_pareto(
             label=label,
             zorder=3,
         )
-        for r in subset:
-            ax2.annotate(
-                str(r["model"]),
-                (max(1e-4, float(r["t_total_ms_median"])), float(r["roc_auc"])),
-                fontsize=8,
-                xytext=(5, 4),
-                textcoords="offset points",
-            )
-    ax2.set_xscale("log")
-    ax2.set_xlabel("Total CPU Latency ms/sample (log scale)")
-    ax2.set_ylabel("ROC-AUC")
-    ax2.set_title("ROC-AUC vs Total CPU Latency")
-    ax2.legend(fontsize=8)
-    ax2.grid(True, which="both", linestyle=":", alpha=0.5)
+    _finalize_scatter_panel(
+        ax2,
+        [str(r["model"]) for r in cpu_primary],
+        [max(1e-4, float(r["t_total_ms_median"])) for r in cpu_primary],
+        [float(r["roc_auc"]) for r in cpu_primary],
+        xlabel="Total CPU Latency ms/sample (log scale)",
+        ylabel="ROC-AUC",
+        title="ROC-AUC vs Total CPU Latency",
+    )
 
     # 3. F1 vs Model Parameters (log x)
     ax3 = axes[1, 0]
     for subset, color, marker, label in (
-        (ml_rows, "#1f77b4", "o", "Classical ML (params_model)"),
-        (cnn_rows, "#d62728", "^", "Lightweight CNNs"),
+        (ml_rows, _MDPI_PAL[0], "o", "Classical ML (params_model)"),
+        (cnn_rows, _MDPI_PAL[1], "^", "Lightweight CNNs"),
     ):
         if not subset:
             continue
@@ -753,20 +827,15 @@ def plot_cpu_comparison_pareto(
             label=label,
             zorder=3,
         )
-        for r in subset:
-            ax3.annotate(
-                str(r["model"]),
-                (max(1, int(r["params_model"])), float(r["f1"])),
-                fontsize=8,
-                xytext=(5, 4),
-                textcoords="offset points",
-            )
-    ax3.set_xscale("log")
-    ax3.set_xlabel("Model Parameters (log scale)")
-    ax3.set_ylabel("F1 Score")
-    ax3.set_title("F1 vs Real Model Parameter Count")
-    ax3.legend(fontsize=8)
-    ax3.grid(True, which="both", linestyle=":", alpha=0.5)
+    _finalize_scatter_panel(
+        ax3,
+        [str(r["model"]) for r in cpu_primary],
+        [float(max(1, int(r["params_model"]))) for r in cpu_primary],
+        [float(r["f1"]) for r in cpu_primary],
+        xlabel="Model Parameters (log scale)",
+        ylabel="F1 Score",
+        title="F1 vs Real Model Parameter Count",
+    )
 
     # 4. Throughput comparison (batch=1 vs batch=32 when available)
     ax4 = axes[1, 1]
@@ -781,7 +850,7 @@ def plot_cpu_comparison_pareto(
     tp_sorted = sorted(tp_source, key=lambda r: float(r["throughput_samples_s"]), reverse=False)
     labels_tp = [str(r["model"]) for r in tp_sorted]
     vals_tp = [float(r["throughput_samples_s"]) for r in tp_sorted]
-    cols_tp = ["#1f77b4" if r["family"] == "ml" else "#d62728" for r in tp_sorted]
+    cols_tp = [_MDPI_PAL[0] if r["family"] == "ml" else _MDPI_PAL[1] for r in tp_sorted]
     ax4.barh(labels_tp, vals_tp, color=cols_tp)
     ax4.set_xscale("log")
     ax4.set_xlabel(f"Throughput samples/s (log scale, batch={throughput_batch_size if cpu_tp else primary_batch_size})")
@@ -809,6 +878,7 @@ def generate_profiling_figures(
     dpi: int = 160,
 ) -> list[Path]:
     """Generate the 6 structured publication figures for Phase B deep profiling."""
+    apply_style("mdpi", palette="editorial")
     output_dir.mkdir(parents=True, exist_ok=True)
     generated: list[Path] = []
 
@@ -830,12 +900,12 @@ def generate_profiling_figures(
     bn_vals = [bn_map.get(s, 0.0) for s in stage_names]
 
     y_pos = np.arange(len(stage_names))
-    axes1[0].barh(y_pos + 0.18, b1_vals[::-1], height=0.35, color="#1f77b4", label="batch=1")
+    axes1[0].barh(y_pos + 0.18, b1_vals[::-1], height=0.35, color=_MDPI_PAL[0], label="batch=1")
     axes1[0].barh(
         y_pos - 0.18,
         bn_vals[::-1],
         height=0.35,
-        color="#ff7f0e",
+        color=_MDPI_PAL[3],
         label=f"batch={desc_report.batch_n_size} (amortized/img)",
     )
     axes1[0].set_yticks(y_pos)
@@ -849,21 +919,21 @@ def generate_profiling_figures(
 
     # Stacked percentage summary grouped by macro-family (supports baseline, NumPy single-pass, and C99)
     macro_specs = (
-        ("Quantization LUT", "#4c72b0", lambda s: s.stage == "quantize_pixels"),
-        ("C99 Fused Quant+Hist", "#4c72b0", lambda s: s.stage == "c_fine_hist"),
+        ("Quantization LUT", _MDPI_PAL[0], lambda s: s.stage == "quantize_pixels"),
+        ("C99 Fused Quant+Hist", _MDPI_PAL[0], lambda s: s.stage == "c_fine_hist"),
         (
             "Histograms",
-            "#dd8452",
+            _MDPI_PAL[1],
             lambda s: s.stage == "fine_grid_histograms" or s.stage.startswith("region_histograms"),
         ),
-        ("Pyramid Child Sum", "#e5ae38", lambda s: s.stage in {"c_pyramid_sum", "pyramid_sum"}),
+        ("Pyramid Child Sum", _MDPI_PAL[3], lambda s: s.stage in {"c_pyramid_sum", "pyramid_sum"}),
         (
             "Entropy LUT",
-            "#55a868",
+            _MDPI_PAL[2],
             lambda s: s.stage in {"c_entropy_lut", "fused_entropy"} or s.stage.startswith("normalized_entropy"),
         ),
-        ("Asymmetry x9", "#8172b3", lambda s: s.stage.startswith("asymmetry_")),
-        ("Concat / Assembly", "#937860", lambda s: s.stage.startswith("concat_")),
+        ("Asymmetry x9", _MDPI_PAL[4], lambda s: s.stage.startswith("asymmetry_")),
+        ("Concat / Assembly", _MDPI_PAL[7], lambda s: s.stage.startswith("concat_")),
     )
     left = 0.0
     for m_name, col, pred in macro_specs:
@@ -928,8 +998,10 @@ def generate_profiling_figures(
         axes2[1].barh(
             [r.model_name for r in sorted_reps],
             [r.hookless_stats.median_ms for r in sorted_reps],
-            color="#d62728",
+            color=_MDPI_PAL[1],
         )
+        max_ms = max((r.hookless_stats.median_ms for r in sorted_reps), default=1.0)
+        axes2[1].set_xlim(0.0, max(max_ms * 1.42, 1e-3))
         for idx_s, r in enumerate(sorted_reps):
             axes2[1].text(
                 r.hookless_stats.median_ms,
@@ -1049,9 +1121,10 @@ def generate_profiling_figures(
             meds = [r.median_ms for r in sub]
             iqrs = [r.iqr_ms * 0.5 for r in sub]
             x_idx = np.arange(len(labels))
-            ax.errorbar(x_idx, meds, yerr=iqrs, marker="o", capsize=4, lw=2, color="#1f77b4")
+            ax.errorbar(x_idx, meds, yerr=iqrs, marker="o", capsize=4, lw=2, color=_MDPI_PAL[0])
             for i_pt, val_ms in enumerate(meds):
                 ax.annotate(f"{val_ms:.3f} ms", (x_idx[i_pt], val_ms), xytext=(0, 6), textcoords="offset points", ha="center", fontsize=8)
+            ax.set_ylim(0.0, max(meds + [0.05]) * 1.18)
             ax.set_xticks(x_idx)
             ax.set_xticklabels(labels, fontsize=8, rotation=15)
             ax.set_ylabel("Median Time per Image (ms)")
@@ -1088,8 +1161,8 @@ def generate_profiling_figures(
         y_i = np.arange(len(common_models))
         tp32 = [float(cpu_b32[m]["throughput_samples_s"]) for m in common_models]
         tp1 = [float(cpu_b1[m]["throughput_samples_s"]) if m in cpu_b1 else 0.0 for m in common_models]
-        ax6.barh(y_i + 0.18, tp32, height=0.35, color="#2ca02c", label=f"batch={throughput_batch_size}")
-        ax6.barh(y_i - 0.18, tp1, height=0.35, color="#1f77b4", label=f"batch={primary_batch_size}")
+        ax6.barh(y_i + 0.18, tp32, height=0.35, color=_MDPI_PAL[2], label=f"batch={throughput_batch_size}")
+        ax6.barh(y_i - 0.18, tp1, height=0.35, color=_MDPI_PAL[0], label=f"batch={primary_batch_size}")
         ax6.set_xscale("log")
         ax6.set_yticks(y_i)
         ax6.set_yticklabels(common_models, fontsize=9)

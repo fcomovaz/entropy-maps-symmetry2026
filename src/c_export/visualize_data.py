@@ -491,7 +491,8 @@ def load_target_bundle(cfg: CImpConfig) -> TargetVisualizationBundle:
         m_mem = mem_by_model.get(name, {})
         if family == "tabular":
             t_meta = tabular_meta.get(name, {})
-            w_fmt = "q15"
+            w_bits = int(t_meta["weight_bits"]) if "weight_bits" in t_meta else 16
+            w_fmt = "q31" if w_bits == 32 else ("q7" if w_bits == 8 else "q15")
             w_flash = int(t_meta["weight_bytes"]) if "weight_bytes" in t_meta else None
             arena_f32 = None
             arena_q15 = None

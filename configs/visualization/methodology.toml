@@ -1,0 +1,17 @@
+# Publication-grade MDPI methodology & polarity-inversion figure configuration.
+# Dataset and feature extraction paths are resolved dynamically from configs/base.toml,
+# configs/entropy/*.toml, and configs/asymmetry/*.toml.
+
+[methodology_viz]
+base_config = "configs/base.toml"
+kolektor_entropy_config = "configs/entropy/kolektorsdd2.toml"
+kolektor_asymmetry_config = "configs/asymmetry/kolektorsdd2.toml"
+mvtec_entropy_config = "configs/entropy/mvtec_ad.toml"
+mvtec_asymmetry_config = "configs/asymmetry/mvtec_ad.toml"
+output_dir = "results/methodology"
+journal = "mdpi"
+palette = "editorial"
+dpi = 300
+seed = 42
+mvtec_object = "bottle"
+mvtec_texture = "tile"

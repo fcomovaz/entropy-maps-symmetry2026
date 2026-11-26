@@ -13,7 +13,7 @@ overwrite = true
 seed = 42
 objects = ["bottle"]
 default_object = "bottle"
-classifiers = ["dt", "knn", "lr", "lr_dot", "rf"]
+classifiers = ["dt", "knn", "lr", "lr_dot", "mlp_16_dot", "rf"]
 models = [
     "ultra_tiny",
     "ds_cnn",
@@ -62,13 +62,13 @@ include_checkpoint_load_and_cold_start = true
 bootstrap_resamples = 1000
 confidence_level = 0.95
 mann_whitney_alpha = 0.05
-ml_baseline_models = ["dt", "lr", "lr_dot", "rf"]
+ml_baseline_models = ["dt", "lr", "lr_dot", "mlp_16_dot", "rf"]
 cnn_reference_models = ["ds_cnn", "ultra_tiny"]
 ablation_subsets = ["x85_only", "x9_only", "x94_full"]
 
 [profiling.output]
 comparison_cpu_dir = "results/comparison_cpu"
 profiling_dir = "results/profiling"
-dpi = 160
+dpi = 300
 float_precision = 6
 run_full_profiling_on_inverted = false

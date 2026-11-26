@@ -37,7 +37,10 @@ class TestProfilingConfig(unittest.TestCase):
         self.assertEqual(kol_cfg.protocol.primary_batch_size, 1)
         self.assertEqual(kol_cfg.descriptor.entropy_backend, "auto")
         self.assertIn("lr_dot", kol_cfg.classifiers)
+        self.assertIn("mlp_16_dot", kol_cfg.classifiers)
         self.assertIn("lr_dot", kol_cfg.statistics.ml_baseline_models)
+        self.assertIn("mlp_16_dot", kol_cfg.statistics.ml_baseline_models)
+        self.assertEqual(kol_cfg.output.dpi, 300)
         self.assertIn(1, kol_cfg.protocol.effective_threads_list())
         self.assertTrue(kol_cfg.base_config_path.is_absolute())
         self.assertTrue(kol_cfg.classification_config_path.is_file())
@@ -49,6 +52,8 @@ class TestProfilingConfig(unittest.TestCase):
         self.assertEqual(mv_cfg.protocol.device, "cpu")
         self.assertEqual(mv_cfg.descriptor.entropy_backend, "auto")
         self.assertIn("lr_dot", mv_cfg.classifiers)
+        self.assertIn("mlp_16_dot", mv_cfg.classifiers)
+        self.assertEqual(mv_cfg.output.dpi, 300)
         self.assertEqual(resolve_target_objects(mv_cfg), ("bottle",))
         self.assertEqual(
             resolve_target_objects(mv_cfg, objects=["bottle", "tile"]),

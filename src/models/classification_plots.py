@@ -17,10 +17,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from src.models.descriptor_classifier import ClassificationMetrics, ExplainabilityReport
+from src.visualization import PALETTES, apply_style
 
-COLOR_ENTROPY = "#1f618d"
-COLOR_ASYMMETRY = "#d35400"
-COLOR_FULL = "#117a65"
+_MDPI_PAL = PALETTES["editorial"]
+COLOR_ENTROPY = _MDPI_PAL[0]
+COLOR_ASYMMETRY = _MDPI_PAL[1]
+COLOR_FULL = _MDPI_PAL[2]
+COLOR_ACCENT = _MDPI_PAL[4]
+COLOR_NEUTRAL = _MDPI_PAL[6]
 
 
 def plot_confusion_and_curves(
@@ -30,6 +34,7 @@ def plot_confusion_and_curves(
     dpi: int,
 ) -> Path:
     """Render 1x3 figure with Confusion Matrix, ROC Curve, and Precision-Recall Curve."""
+    apply_style("mdpi", palette="editorial")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig, axes = plt.subplots(1, 3, figsize=(15.5, 4.6))
 
@@ -74,7 +79,7 @@ def plot_confusion_and_curves(
         lw=2.2,
         label=f"ROC-AUC = {metrics.roc_auc:.4f}",
     )
-    ax_roc.plot([0.0, 1.0], [0.0, 1.0], color="#7f8c8d", ls="--", lw=1.2, label="Random (0.50)")
+    ax_roc.plot([0.0, 1.0], [0.0, 1.0], color=COLOR_NEUTRAL, ls="--", lw=1.2, label="Random (0.50)")
     ax_roc.set_xlim(-0.02, 1.02)
     ax_roc.set_ylim(-0.02, 1.05)
     ax_roc.set_xlabel("False Positive Rate (FPR)")
@@ -121,6 +126,7 @@ def plot_subset_ablation(
     dpi: int,
 ) -> Path:
     """Render grouped bar chart comparing F1, Balanced Accuracy, and ROC-AUC across feature subsets."""
+    apply_style("mdpi", palette="editorial")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig, ax = plt.subplots(figsize=(12.5, 5.2))
 
@@ -179,6 +185,7 @@ def plot_explainability_breakdown(
     dpi: int,
 ) -> Path:
     """Render 1x3 figure with Top-K features, Total Share % by scale, and Mean Importance per feature."""
+    apply_style("mdpi", palette="editorial")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig, axes = plt.subplots(1, 3, figsize=(16.5, 5.2))
 
@@ -273,6 +280,7 @@ def plot_spatial_importance_heatmaps(
     dpi: int,
 ) -> Path:
     """Render 1x3 figure of 2D spatial importance heatmaps for 2x2, 4x4, and 8x8 entropy grids."""
+    apply_style("mdpi", palette="editorial")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     scales = sorted(report.spatial_heatmaps.keys())
     n_panels = max(1, len(scales))
@@ -343,6 +351,7 @@ def plot_all_objects_summary(
     dpi: int,
 ) -> Path:
     """Render multi-object comparison chart for MVTec-AD (F1 for x85_only vs x94_full and x9 share %)."""
+    apply_style("mdpi", palette="editorial")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig, axes = plt.subplots(2, 1, figsize=(13.5, 8.2), sharex=True)
 
@@ -358,7 +367,7 @@ def plot_all_objects_summary(
     ax0 = axes[0]
     ax0.bar(x - width, f1_x85, width, label="F1 (x85 Entropy only)", color=COLOR_ENTROPY)
     ax0.bar(x, f1_x94, width, label="F1 (x94 Full = x85 + x9)", color=COLOR_FULL)
-    ax0.bar(x + width, auc_x94, width, label="ROC-AUC (x94 Full)", color="#8e44ad")
+    ax0.bar(x + width, auc_x94, width, label="ROC-AUC (x94 Full)", color=COLOR_ACCENT)
     ax0.set_ylim(0.0, 1.18)
     ax0.set_ylabel("Score")
     ax0.set_title(f"{title_prefix} — Per-Object Classification Performance (x85 vs x94)", fontweight="bold")
@@ -378,7 +387,7 @@ def plot_all_objects_summary(
             va="bottom",
             fontsize=8,
         )
-    ax1.axhline(9.0 / 94.0 * 100.0, color="#2c3e50", ls="--", lw=1.2, label="Uniform expectation (9/94 = 9.6%)")
+    ax1.axhline(9.0 / 94.0 * 100.0, color=COLOR_NEUTRAL, ls="--", lw=1.2, label="Uniform expectation (9/94 = 9.6%)")
     ax1.set_xticks(x, labels=objects, rotation=30, ha="right")
     ax1.set_ylabel("x9 Symmetry Share (%)")
     ax1.set_ylim(0.0, max(x9_share + [20.0]) * 1.2)

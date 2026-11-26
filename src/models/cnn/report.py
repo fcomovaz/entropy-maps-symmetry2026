@@ -15,6 +15,7 @@ import numpy as np
 import torch
 
 from src.models.descriptor_classifier import ClassificationMetrics
+from src.visualization import PALETTES, apply_style
 from .benchmark import BenchmarkRecord
 from .config import CnnConfig
 from .data import CnnDatasetPartition
@@ -242,6 +243,8 @@ def plot_confusion_and_curves(
     dpi: int = 160,
 ) -> Path:
     """Render 3-panel figure: Confusion Matrix, ROC Curve, and PR Curve."""
+    apply_style("mdpi", palette="editorial")
+    pal = PALETTES["editorial"]
     output_dir.mkdir(parents=True, exist_ok=True)
     out_file = output_dir / "confusion_matrix_and_curves.png"
 
@@ -256,7 +259,7 @@ def plot_confusion_and_curves(
     # 1. Confusion Matrix
     cm = np.array(metrics.confusion_matrix)
     ax_cm = axes[0]
-    cax = ax_cm.matshow(cm, cmap="Blues", alpha=0.8)
+    cax = ax_cm.imshow(cm, cmap="Blues", alpha=0.88)
     fig.colorbar(cax, ax=ax_cm, fraction=0.046, pad=0.04)
 
     classes = ["Good (0)", "Defect (1)"]
@@ -277,19 +280,19 @@ def plot_confusion_and_curves(
             pct = (count / total_samples * 100) if total_samples > 0 else 0
             row_pct = (count / cm[i].sum() * 100) if cm[i].sum() > 0 else 0
             text = f"{count}\n({pct:.1f}%)\n[Row: {row_pct:.1f}%]"
-            color = "white" if count > (cm.max() / 2) else "black"
-            ax_cm.text(j, i, text, ha="center", va="center", color=color, fontsize=8)
+            color = "white" if count > (cm.max() * 0.55) else "#1B2631"
+            ax_cm.text(j, i, text, ha="center", va="center", color=color, fontsize=8, fontweight="bold")
 
     # 2. ROC Curve
     ax_roc = axes[1]
     ax_roc.plot(
         metrics.fpr,
         metrics.tpr,
-        color="#1f77b4",
+        color=pal[0],
         lw=2,
         label=f"ROC (AUC = {metrics.roc_auc:.4f})",
     )
-    ax_roc.plot([0, 1], [0, 1], color="gray", lw=1, linestyle="--", label="Chance")
+    ax_roc.plot([0, 1], [0, 1], color=pal[6], lw=1, linestyle="--", label="Chance")
     ax_roc.set_xlim([-0.02, 1.02])
     ax_roc.set_ylim([-0.02, 1.02])
     ax_roc.set_xlabel("False Positive Rate", fontsize=10)
@@ -303,7 +306,7 @@ def plot_confusion_and_curves(
     ax_pr.plot(
         metrics.pr_recall,
         metrics.pr_precision,
-        color="#ff7f0e",
+        color=pal[1],
         lw=2,
         label=f"PR (AUC = {metrics.pr_auc:.4f})",
     )
@@ -328,6 +331,8 @@ def plot_training_curves(
     dpi: int = 160,
 ) -> Path:
     """Render training and validation progression curves."""
+    apply_style("mdpi", palette="editorial")
+    pal = PALETTES["editorial"]
     output_dir.mkdir(parents=True, exist_ok=True)
     out_file = output_dir / "training_curves.png"
 
@@ -344,9 +349,9 @@ def plot_training_curves(
     fig.suptitle(f"{model_name.upper()} Training Dynamics", fontsize=12, fontweight="bold")
 
     # Loss
-    axes[0].plot(epochs, train_loss, label="Train Loss", color="#1f77b4", lw=1.8)
+    axes[0].plot(epochs, train_loss, label="Train Loss", color=pal[0], lw=1.8)
     if any(vl > 0 for vl in val_loss):
-        axes[0].plot(epochs, val_loss, label="Val Loss", color="#d62728", lw=1.8, linestyle="--")
+        axes[0].plot(epochs, val_loss, label="Val Loss", color=pal[1], lw=1.8, linestyle="--")
     axes[0].set_xlabel("Epoch", fontsize=10)
     axes[0].set_ylabel("Cross Entropy Loss", fontsize=10)
     axes[0].set_title("Loss Progression", fontsize=11)
@@ -355,12 +360,12 @@ def plot_training_curves(
 
     # Validation Metrics
     if any(v > 0 for v in val_pr_auc):
-        axes[1].plot(epochs, val_pr_auc, label="Val PR-AUC", color="#2ca02c", lw=1.8)
+        axes[1].plot(epochs, val_pr_auc, label="Val PR-AUC", color=pal[2], lw=1.8)
     if any(v > 0 for v in val_f1):
-        axes[1].plot(epochs, val_f1, label="Val F1", color="#ff7f0e", lw=1.8, linestyle=":")
+        axes[1].plot(epochs, val_f1, label="Val F1", color=pal[3], lw=1.8, linestyle=":")
     axes[1].axvline(
         train_res.best_epoch,
-        color="black",
+        color="#222222",
         linestyle="-.",
         lw=1,
         label=f"Best Epoch ({train_res.best_epoch})",

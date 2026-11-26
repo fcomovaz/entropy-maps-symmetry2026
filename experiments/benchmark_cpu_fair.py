@@ -232,7 +232,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def resolve_selected_classifiers(raw_arg: Sequence[str] | None, cfg: ProfilingConfig) -> tuple[str, ...]:
     """Validate and normalize requested classical ML classifiers."""
-    allowed = {"dt", "knn", "lr", "lr_dot", "rf"}
+    allowed = {"dt", "knn", "lr", "lr_dot", "mlp_16_dot", "rf"}
     if not raw_arg:
         chosen = cfg.classifiers
     elif len(raw_arg) == 1 and raw_arg[0].lower() == "all":

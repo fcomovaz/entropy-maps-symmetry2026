@@ -79,5 +79,5 @@ timing_timed_iters = 300
 
 [c_imp.visualization]
 output_subdir = "figures"
-dpi = 160
+dpi = 300
 top_k_worst_errors = 10
